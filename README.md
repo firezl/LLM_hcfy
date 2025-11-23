@@ -1,4 +1,4 @@
-# 简约划词翻译 (Simple Selection Translator)
+# LLM 划词翻译 (LLM Selection Translator)
 
 一个轻量级、现代化的浏览器划词翻译扩展，支持多种翻译引擎，特别优化了对 OpenAI 及兼容大模型（如 DeepSeek, Moonshot）的流式输出支持，并具备“思考过程”显示功能。
 
