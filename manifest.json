@@ -13,6 +13,12 @@
         "16": "icons/favicon-16x16.png",
         "48": "icons/favicon-48x48.png"
     },
+    "browser_specific_settings": {
+        "gecko": {
+            "id": "simple-translator@linji.dev",
+            "strict_min_version": "109.0"
+        }
+    },
     "content_scripts": [
         {
             "matches": ["<all_urls>"],

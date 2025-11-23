@@ -33,11 +33,11 @@
 
 -   **API 地址**: 填入 OpenAI 官方或兼容 API 的地址（例如 `https://api.openai.com/v1/chat/completions` 或您的代理地址）。
 -   **API Key**: 填入您的 API 密钥 (`sk-...`)。
--   **翻译模型**: 用于常规翻译的模型，如 `gpt-4o-mini`, `hunyuan-mt`。
--   **思考模型**: (可选) 启用“显示思考”时使用的模型，如 `Jan-v1`。
--   **显示思考过程**: 开启后，如果模型返回思考内容（通过 `<<<THOUGHT>>>` 标记或 `reasoning_content` 字段），弹窗中将显示可折叠的思考区域。
+-   **翻译模型**: 用于常规翻译的模型，如 `gpt-4o-mini`。
+-   **思考模型**: (可选) 启用“显示思考”时使用的模型，如 `gpt-5`。
+-   **显示思考过程**: 开启后，如果模型返回思考内容（通过 `<think>` 标记或 `reasoning_content` 字段），弹窗中将显示可折叠的思考区域。
 
-### 2. 其他引擎
+### 2. 其他引擎（还没有实现）
 
 -   **百度翻译**: 需在 [百度翻译开放平台](https://api.fanyi.baidu.com/) 申请通用翻译 API，填入 AppID 和 Secret。
 -   **Google / Bing**: 需填入对应的 API Key。
