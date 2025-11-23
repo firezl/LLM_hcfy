@@ -17,13 +17,29 @@
 
 本扩展目前为开发者预览版，需通过“加载已解压的扩展”方式安装：
 
-1.  **下载代码**：将本项目下载并解压到本地文件夹（确保包含 `manifest.json`）。
-2.  **打开扩展管理**：
-    -   **Edge**: 在地址栏输入 `edge://extensions/`
-    -   **Chrome**: 在地址栏输入 `chrome://extensions/`
-3.  **开启开发者模式**：在页面左下角（Edge）或右上角（Chrome）开启“开发人员模式”。
-4.  **加载扩展**：点击“加载解压缩的扩展” (Load unpacked)，选择本项目所在的文件夹。
-5.  **完成**：浏览器工具栏将出现插件图标，建议将其固定以便快速访问设置。
+### 📦 安装指南 (GitHub Release)
+
+由于本扩展尚未上架应用商店，您需要手动安装：
+
+1.  在 [Releases](../../releases) 页面下载最新的 `.zip` 压缩包并解压。
+
+### Chrome / Edge 安装
+
+1.  打开扩展管理页面：
+    -   **Chrome**: 输入 `chrome://extensions`
+    -   **Edge**: 输入 `edge://extensions`
+2.  开启右上角的 **"开发者模式" (Developer mode)**。
+3.  点击 **"加载已解压的扩展程序" (Load unpacked)**。
+4.  选择解压后的文件夹即可。
+
+### Firefox 安装
+
+1.  在 [Releases](../../releases) 页面下载最新的 `.xpi` 文件。
+2.  在 Firefox 地址栏输入 `about:addons`。
+3.  点击右上角的齿轮图标 ⚙️。
+4.  选择 **"从文件安装附加组件" (Install Add-on From File)**。
+5.  选择下载的 `.xpi` 文件。
+    -   _注意：未签名的 XPI 文件只能在 Firefox 开发者版 (Developer Edition) 或 Nightly 版本中安装，或者通过 `about:debugging` 临时加载。普通版 Firefox 必须安装经过 Mozilla 签名的扩展。_
 
 ## ⚙️ 配置说明
 
@@ -35,7 +51,7 @@
 -   **API Key**: 填入您的 API 密钥 (`sk-...`)。
 -   **翻译模型**: 用于常规翻译的模型，如 `gpt-4o-mini`。
 -   **思考模型**: (可选) 启用“显示思考”时使用的模型，如 `gpt-5`。
--   **显示思考过程**: 开启后，如果模型返回思考内容（通过 `<think>` 标记或 `reasoning_content` 字段），弹窗中将显示可折叠的思考区域。
+-   **显示思考过程**: 开启后，如果模型返回思考内容（通过 `ground_truth` 标记或 `reasoning_content` 字段），弹窗中将显示可折叠的思考区域。
 
 ### 2. 其他引擎（还没有实现）
 
