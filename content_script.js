@@ -6,6 +6,9 @@
     const BUBBLE_ID = "jyt-translate-bubble";
 
     let lastSelection = "";
+    let isPinned = false;
+    let lastMouseX = 0;
+    let lastMouseY = 0;
 
     function createButton() {
         let btn = document.getElementById(BUTTON_ID);
@@ -29,7 +32,14 @@
         b.innerHTML = `
       <div class="jyt-header">
         <span class="jyt-title">翻译</span>
-        <button class="jyt-close">×</button>
+        <div class="jyt-controls">
+          <button class="jyt-pin" title="固定窗口">
+            <svg viewBox="0 0 24 24"><path d="M16,12V4H17V2H7V4H8V12L6,14V16H11.2V22H12.8V16H18V14L16,12Z" /></svg>
+          </button>
+          <button class="jyt-close" title="关闭">
+            <svg viewBox="0 0 24 24"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z" /></svg>
+          </button>
+        </div>
       </div>
       <div class="jyt-content">
         <div class="jyt-stream" id="jyt-stream"></div>
@@ -37,11 +47,73 @@
       </div>
     `;
         document.body.appendChild(b);
-        b.querySelector(".jyt-close").addEventListener(
-            "click",
-            () => (b.style.display = "none")
-        );
+
+        // Drag functionality
+        const header = b.querySelector(".jyt-header");
+        let isDragging = false;
+        let startX, startY, initialLeft, initialTop;
+
+        header.addEventListener("mousedown", (e) => {
+            // Prevent drag if clicking buttons
+            if (e.target.closest("button")) return;
+
+            isDragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+
+            const rect = b.getBoundingClientRect();
+            initialLeft = rect.left;
+            initialTop = rect.top;
+
+            header.style.cursor = "grabbing";
+            e.preventDefault(); // Prevent text selection
+        });
+
+        document.addEventListener("mousemove", (e) => {
+            if (!isDragging) return;
+
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+
+            // Use fixed positioning logic or update absolute position relative to document
+            // Since we use absolute positioning with window.scrollX/Y in positionBubble,
+            // we should update left/top.
+            // Note: b.style.left includes 'px'.
+
+            b.style.left = `${initialLeft + dx + window.scrollX}px`;
+            b.style.top = `${initialTop + dy + window.scrollY}px`;
+        });
+
+        document.addEventListener("mouseup", () => {
+            if (isDragging) {
+                isDragging = false;
+                header.style.cursor = "move";
+            }
+        });
+
+        // Event listeners
+        b.querySelector(".jyt-close").addEventListener("click", () => {
+            b.style.display = "none";
+            isPinned = false;
+            updatePinState(b);
+        });
+
+        b.querySelector(".jyt-pin").addEventListener("click", (e) => {
+            isPinned = !isPinned;
+            updatePinState(b);
+            e.stopPropagation();
+        });
+
         return b;
+    }
+
+    function updatePinState(bubble) {
+        const pinBtn = bubble.querySelector(".jyt-pin");
+        if (isPinned) {
+            pinBtn.classList.add("active");
+        } else {
+            pinBtn.classList.remove("active");
+        }
     }
 
     function onTranslateClick(e) {
@@ -49,6 +121,10 @@
         if (!selection) return;
         const bubble = createBubble();
         bubble.style.display = "block";
+
+        isPinned = false;
+        updatePinState(bubble);
+
         positionBubble(bubble, e.clientX, e.clientY);
         setBubbleLoading(bubble, true);
         // get settings and call translate
@@ -73,17 +149,18 @@
         bubble.querySelector("#jyt-thought-content").innerText = "";
     }
 
-    function positionButton(btn, rect) {
-        const x = rect.right - 50 + window.scrollX;
-        const y = rect.bottom + 8 + window.scrollY;
-        btn.style.left = x + "px";
-        btn.style.top = y + "px";
+    function positionButton(btn, x, y) {
+        // Position button near mouse cursor (bottom-right)
+        const offsetX = 12;
+        const offsetY = 12;
+        btn.style.left = x + offsetX + window.scrollX + "px";
+        btn.style.top = y + offsetY + window.scrollY + "px";
         btn.style.display = "block";
     }
 
     function positionBubble(bubble, x, y) {
-        bubble.style.left = x + 8 + "px";
-        bubble.style.top = y + 8 + "px";
+        bubble.style.left = x + 8 + window.scrollX + "px";
+        bubble.style.top = y + 8 + window.scrollY + "px";
         bubble.style.display = "block";
     }
 
@@ -120,42 +197,16 @@
         thoughtEl.innerText = "";
 
         try {
-            if (engine === "openai") {
-                // custom OpenAI-like API with streaming support
-                await openaiTranslateStream(
-                    text,
-                    from,
-                    to,
-                    settings,
-                    streamEl,
-                    thoughtEl,
-                    thoughtDetails // Pass details element to control visibility
-                );
-            } else if (engine === "google") {
-                const res = await googleTranslate(text, from, to, settings);
-                streamEl.innerText = res;
-            } else if (engine === "bing") {
-                const res = await bingTranslate(text, from, to, settings);
-                streamEl.innerText = res;
-            } else if (engine === "baidu") {
-                const res = await baiduTranslate(text, from, to, settings);
-                streamEl.innerText = res;
-            } else {
-                // auto choose OpenAI if api key exists, otherwise fallback to Google/Bing
-                if (settings.openai_api_key && settings.openai_api_url) {
-                    await openaiTranslateStream(
-                        text,
-                        from,
-                        to,
-                        settings,
-                        streamEl,
-                        thoughtEl
-                    );
-                } else {
-                    const res = await googleTranslate(text, from, to, settings);
-                    streamEl.innerText = res;
-                }
-            }
+            // Always use OpenAI-like API (LLM)
+            await openaiTranslateStream(
+                text,
+                from,
+                to,
+                settings,
+                streamEl,
+                thoughtEl,
+                thoughtDetails
+            );
         } catch (err) {
             streamEl.innerText = "翻译失败: " + err.message;
         }
@@ -378,71 +429,7 @@
     }
 
     // --- Placeholder adapters ---
-    async function googleTranslate(text, from, to, settings) {
-        // requires user to set Google Cloud Translate API key in settings.openai_api_key (reuse field) or extend settings
-        const key = settings.google_api_key || settings.openai_api_key;
-        if (!key) throw new Error("缺少 Google API Key，请在扩展设置中配置");
-        const url = `https://translation.googleapis.com/language/translate/v2?key=${encodeURIComponent(
-            key
-        )}`;
-        const body = {
-            q: text,
-            target: to === "zh" ? "zh-CN" : "en",
-            format: "text",
-        };
-        const r = await fetch(url, {
-            method: "POST",
-            body: JSON.stringify(body),
-            headers: { "Content-Type": "application/json" },
-        });
-        const j = await r.json();
-        if (j.error) throw new Error(j.error.message || "Google 翻译错误");
-        return j.data.translations[0].translatedText;
-    }
-
-    async function bingTranslate(text, from, to, settings) {
-        const key = settings.bing_api_key;
-        const region = settings.bing_region || "";
-        if (!key) throw new Error("缺少 Bing 翻译 API Key，请在扩展设置中配置");
-        const url = `https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&to=${encodeURIComponent(
-            to === "zh" ? "zh-Hans" : "en"
-        )}`;
-        const r = await fetch(url, {
-            method: "POST",
-            body: JSON.stringify([{ Text: text }]),
-            headers: {
-                "Ocp-Apim-Subscription-Key": key,
-                "Content-Type": "application/json",
-                "Ocp-Apim-Subscription-Region": region,
-            },
-        });
-        const j = await r.json();
-        if (j.error) throw new Error(JSON.stringify(j));
-        return j[0].translations[0].text;
-    }
-
-    async function baiduTranslate(text, from, to, settings) {
-        // Baidu Translate requires appid+secret + sign.
-        const appid = settings.baidu_appid;
-        const secret = settings.baidu_secret;
-        if (!appid || !secret)
-            throw new Error("缺少百度翻译 AppID/Secret，请在扩展设置中配置");
-
-        const url = `https://fanyi-api.baidu.com/api/trans/vip/translate`;
-        const salt = Date.now();
-        const sign = md5(appid + text + salt + secret);
-        const params = new URLSearchParams();
-        params.append("q", text);
-        params.append("from", from === "zh" ? "zh" : "auto");
-        params.append("to", to === "zh" ? "zh" : "en");
-        params.append("appid", appid);
-        params.append("salt", salt);
-        params.append("sign", sign);
-        const r = await fetch(url + "?" + params.toString());
-        const j = await r.json();
-        if (j.error_code) throw new Error(JSON.stringify(j));
-        return j.trans_result.map((t) => t.dst).join("\n");
-    }
+    // Legacy adapters (Google, Bing, Baidu) removed as per request. Only LLM is supported.
 
     async function openaiTranslateStream(
         text,
@@ -466,11 +453,11 @@
         // Build prompt
         let prompt = `请把这段文字翻译为${
             to === "zh" ? "中文" : "英文"
-        }。输入:\n${text}`;
+        }，不要有多余的输出。输入:\n${text}`;
         if (isThinking) {
             prompt = `请把这段文字翻译为${
                 to === "zh" ? "中文" : "英文"
-            }，并在输出中包含思考部分，用特殊分隔符<<<THOUGHT>>>思考内容<<<END>>>。只需返回翻译内容的文字流和思考（可选）。输入:\n${text}`;
+            }，不要有多余的输出。输入:\n${text}`;
         }
 
         const body = {
@@ -518,9 +505,8 @@
                                 if (delta.content) {
                                     buffer += delta.content;
                                     // Check for thought markers in buffer
-                                    const tstart =
-                                        buffer.indexOf("<<<THOUGHT>>>");
-                                    const tend = buffer.indexOf("<<<END>>>");
+                                    const tstart = buffer.indexOf("<think>");
+                                    const tend = buffer.indexOf("</think>");
 
                                     if (
                                         tstart !== -1 &&
@@ -530,7 +516,7 @@
                                         // Extract thought
                                         const thought = buffer
                                             .substring(
-                                                tstart + "<<<THOUGHT>>>".length,
+                                                tstart + "<think>".length,
                                                 tend
                                             )
                                             .trim();
@@ -545,7 +531,7 @@
                                             tstart
                                         );
                                         const after = buffer.substring(
-                                            tend + "<<<END>>>".length
+                                            tend + "</think>".length
                                         );
                                         buffer = before + after;
                                         streamEl.innerText = buffer;
@@ -553,21 +539,17 @@
                                         // Partial thought
                                         const cleanBuffer = buffer
                                             .replace(
-                                                /<<<THOUGHT>>>[\s\S]*?<<<END>>>/g,
+                                                /<think>[\s\S]*?<\/think>/g,
                                                 ""
                                             )
-                                            .replace(
-                                                /<<<THOUGHT>>>[\s\S]*/g,
-                                                ""
-                                            );
+                                            .replace(/<think>[\s\S]*/g, "");
                                         streamEl.innerText = cleanBuffer;
 
                                         // Update thoughtEl with partial thought if we are inside one
                                         if (tstart !== -1 && tend === -1) {
                                             thoughtEl.innerText =
                                                 buffer.substring(
-                                                    tstart +
-                                                        "<<<THOUGHT>>>".length
+                                                    tstart + "<think>".length
                                                 );
                                             if (isThinking && thoughtDetails)
                                                 thoughtDetails.style.display =
@@ -602,6 +584,14 @@
     createBubble();
 
     document.addEventListener("mouseup", (e) => {
+        // Capture mouse position immediately
+        const mouseX = e.clientX;
+        const mouseY = e.clientY;
+
+        // If clicking on the button, do not trigger selection logic which might hide it
+        const btn = document.getElementById(BUTTON_ID);
+        if (btn && (e.target === btn || btn.contains(e.target))) return;
+
         setTimeout(() => {
             const sel = window.getSelection();
             if (!sel) {
@@ -611,29 +601,48 @@
             const text = sel.toString();
             if (text && text.trim().length > 0) {
                 lastSelection = text;
-                const range = sel.getRangeAt(0);
-                const rect = range.getBoundingClientRect();
-                if (rect) positionButton(btn, rect);
+                // Pass mouse coordinates instead of rect
+                positionButton(btn, mouseX, mouseY);
             } else {
                 hideButton();
             }
         }, 10);
     });
 
-    // hide UI on scroll or click outside
+    // hide UI on click outside
+    /* 
+    // Removed scroll listener as per user request: scrolling should not close the window
     document.addEventListener(
         "scroll",
-        () => {
+        (e) => {
+            const bubble = document.getElementById(BUBBLE_ID);
+            // If scrolling inside the bubble, do not hide
+            if (bubble && bubble.contains(e.target)) return;
+
             hideButton();
+
+            if (!isPinned) {
+                if (bubble) bubble.style.display = "none";
+            }
         },
         true
     );
+    */
+
     document.addEventListener("click", (e) => {
         const btn = document.getElementById(BUTTON_ID);
         const bubble = document.getElementById(BUBBLE_ID);
-        if (!btn) return;
-        if (e.target === btn) return;
+
+        // If click is on the button or bubble, ignore
+        if (btn && (e.target === btn || btn.contains(e.target))) return;
         if (bubble && bubble.contains(e.target)) return;
-        hideButton();
+
+        // Clicked outside
+        hideButton(); // This hides the button
+
+        // Only hide bubble if NOT pinned
+        if (bubble && !isPinned) {
+            bubble.style.display = "none";
+        }
     });
 })();

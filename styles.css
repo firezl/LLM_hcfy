@@ -81,6 +81,8 @@
     margin-bottom: 12px;
     padding-bottom: 8px;
     border-bottom: 1px solid var(--jyt-border);
+    cursor: move; /* Add move cursor */
+    user-select: none; /* Prevent text selection while dragging */
 }
 
 .jyt-title {
@@ -101,18 +103,46 @@
     border-radius: 2px;
 }
 
+.jyt-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.jyt-pin,
 .jyt-close {
     background: transparent;
     border: 0;
-    font-size: 20px;
-    line-height: 1;
-    color: #999;
     cursor: pointer;
-    padding: 0 4px;
-    transition: color 0.2s;
+    padding: 4px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #999;
+    transition: all 0.2s;
 }
+
+.jyt-pin:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: #666;
+}
+
+.jyt-pin.active {
+    color: var(--jyt-primary);
+    background: rgba(24, 119, 242, 0.1);
+}
+
 .jyt-close:hover {
+    background-color: #f0f0f0;
     color: #333;
+}
+
+.jyt-pin svg,
+.jyt-close svg {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
 }
 
 .jyt-content {
@@ -185,13 +215,20 @@
 }
 
 /* options page styles */
+/* 
+   Note: These styles were previously applied to 'body' globally, causing layout shifts on some websites.
+   If this CSS is used for an options page, please wrap the options page content in a specific class 
+   and target that class instead of 'body'.
+*/
+/* 
 body {
     background: #f5f7fa;
     margin: 0;
     padding: 20px;
     display: flex;
     justify-content: center;
-}
+} 
+*/
 
 .jyt-form {
     background: #fff;
@@ -199,7 +236,7 @@ body {
     border-radius: 12px;
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.05);
     width: 100%;
-    max-width: 600px;
+    max-width: 800px; /* Increased from 600px */
     font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
