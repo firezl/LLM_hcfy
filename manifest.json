@@ -1,0 +1,24 @@
+{
+    "manifest_version": 3,
+    "name": "简约划词翻译",
+    "description": "在网页划词后快速翻译，支持百度/Google/Bing/OpenAI 流式输出与设置页面",
+    "version": "0.1.0",
+    "permissions": ["storage", "activeTab", "scripting"],
+    "host_permissions": ["https://*/*", "http://*/*"],
+    "action": {
+        "default_title": "简约划词翻译",
+        "default_popup": "options.html"
+    },
+    "icons": {
+        "16": "icons/favicon-16x16.png",
+        "48": "icons/favicon-48x48.png"
+    },
+    "content_scripts": [
+        {
+            "matches": ["<all_urls>"],
+            "js": ["content_script.js"],
+            "css": ["styles.css"],
+            "run_at": "document_idle"
+        }
+    ]
+}

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>简约划词翻译 - 设置</title>
+        <link rel="stylesheet" href="styles.css" />
+    </head>
+    <body>
+        <div class="jyt-form">
+            <h2>简约划词翻译 设置</h2>
+
+            <div class="jyt-section">
+                <div class="jyt-section-title">基础设置</div>
+                <label>是否启用划词翻译</label>
+                <select id="enable_select">
+                    <option value="on">开启</option>
+                    <option value="off">关闭（使用快捷键）</option>
+                </select>
+
+                <label>首选翻译引擎</label>
+                <select id="engine_select">
+                    <option value="auto">自动（优先 OpenAI）</option>
+                    <option value="openai">OpenAI（流式）</option>
+                    <option value="google">Google</option>
+                    <option value="bing">Bing</option>
+                    <option value="baidu">百度</option>
+                </select>
+            </div>
+
+            <div class="jyt-section">
+                <div class="jyt-section-title">OpenAI / 大模型配置</div>
+                <label>API 地址</label>
+                <input
+                    id="openai_api_url"
+                    type="text"
+                    placeholder="https://api.openai.com/v1/chat/completions"
+                />
+                <div class="jyt-hint">
+                    支持 OpenAI 官方或兼容接口（如 DeepSeek, Moonshot 等）
+                </div>
+
+                <label>API Key</label>
+                <input
+                    id="openai_api_key"
+                    type="password"
+                    placeholder="sk-..."
+                />
+
+                <label>翻译模型</label>
+                <input
+                    id="openai_model"
+                    type="text"
+                    placeholder="gpt-4o-mini"
+                />
+                <div class="jyt-hint">用于常规翻译任务的模型</div>
+
+                <label>思考模型 (Thinking Model)</label>
+                <input
+                    id="openai_thinking_model"
+                    type="text"
+                    placeholder="Jan-v1"
+                />
+                <div class="jyt-hint">
+                    启用“显示思考”时使用的模型，通常支持思维链
+                </div>
+
+                <label>是否显示思考过程</label>
+                <select id="show_thoughts">
+                    <option value="false">否</option>
+                    <option value="true">是</option>
+                </select>
+            </div>
+
+            <div class="jyt-section">
+                <div class="jyt-section-title">其他引擎配置</div>
+                <label>Google API Key</label>
+                <input id="google_api_key" type="text" />
+
+                <label>Bing API Key</label>
+                <input id="bing_api_key" type="text" />
+
+                <label>Bing Region (可选)</label>
+                <input id="bing_region" type="text" />
+
+                <label>百度 AppID</label>
+                <input id="baidu_appid" type="text" />
+
+                <label>百度 Secret</label>
+                <input id="baidu_secret" type="text" />
+            </div>
+
+            <div class="jyt-section">
+                <div class="jyt-section-title">外观设置</div>
+                <label>自定义字体</label>
+                <input
+                    id="font_family"
+                    type="text"
+                    placeholder="例如: 'Microsoft YaHei', 'Segoe UI'"
+                />
+            </div>
+
+            <div class="jyt-btn-group">
+                <button id="save">保存设置</button>
+                <button id="reset">恢复默认</button>
+            </div>
+        </div>
+        <script src="options.js"></script>
+    </body>
+</html>
