@@ -215,6 +215,16 @@
 }
 
 /* options page styles */
+#jyt-options-body {
+    width: 350px;
+    min-height: 400px;
+    background: #fff;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    overflow-x: hidden; /* Prevent horizontal scroll */
+}
+
 /* 
    Note: These styles were previously applied to 'body' globally, causing layout shifts on some websites.
    If this CSS is used for an options page, please wrap the options page content in a specific class 
@@ -232,26 +242,27 @@ body {
 
 .jyt-form {
     background: #fff;
-    padding: 32px;
-    border-radius: 12px;
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.05);
+    padding: 16px;
+    border-radius: 0;
+    box-shadow: none;
     width: 100%;
-    max-width: 800px; /* Increased from 600px */
+    max-width: 100%;
     font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    box-sizing: border-box;
 }
 
 .jyt-form h2 {
     margin-top: 0;
-    margin-bottom: 24px;
-    font-size: 22px;
+    margin-bottom: 12px;
+    font-size: 16px;
     color: #333;
-    border-bottom: 2px solid #f0f0f0;
-    padding-bottom: 16px;
+    border-bottom: 1px solid #f0f0f0;
+    padding-bottom: 8px;
 }
 
 .jyt-section {
-    margin-bottom: 24px;
-    padding-bottom: 16px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
     border-bottom: 1px solid #f0f0f0;
 }
 .jyt-section:last-child {
@@ -259,16 +270,16 @@ body {
 }
 
 .jyt-section-title {
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 600;
     color: #444;
-    margin-bottom: 16px;
+    margin-bottom: 8px;
 }
 
 .jyt-form label {
     display: block;
-    margin: 12px 0 6px;
-    font-size: 14px;
+    margin: 8px 0 2px;
+    font-size: 12px;
     color: #555;
     font-weight: 500;
 }
@@ -277,10 +288,10 @@ body {
 .jyt-form select,
 .jyt-form input[type="password"] {
     width: 100%;
-    padding: 10px;
+    padding: 6px;
     border: 1px solid #ddd;
-    border-radius: 6px;
-    font-size: 14px;
+    border-radius: 4px;
+    font-size: 12px;
     transition: border-color 0.2s;
     box-sizing: border-box;
 }
@@ -293,17 +304,17 @@ body {
 }
 
 .jyt-btn-group {
-    margin-top: 24px;
+    margin-top: 16px;
     display: flex;
-    gap: 12px;
+    gap: 8px;
 }
 
 button#save,
 button#reset {
-    padding: 10px 20px;
+    padding: 6px 12px;
     border: none;
-    border-radius: 6px;
-    font-size: 14px;
+    border-radius: 4px;
+    font-size: 12px;
     font-weight: 600;
     cursor: pointer;
     transition: background 0.2s;
@@ -327,7 +338,7 @@ button#reset:hover {
 }
 
 .jyt-hint {
-    font-size: 12px;
+    font-size: 11px;
     color: #888;
-    margin-top: 4px;
+    margin-top: 2px;
 }
