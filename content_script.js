@@ -344,10 +344,10 @@
                                         streamEl.innerText = buffer;
                                     }
                                 }
-                                // Handle native reasoning_content if available (e.g. DeepSeek)
+                                // Handle native reasoning_content if available (e.g. DeepSeek, GLM-4)
                                 if (delta.reasoning_content) {
-                                    thoughtEl.innerText =
-                                        (thoughtEl.innerText || "") +
+                                    thoughtEl.textContent =
+                                        (thoughtEl.textContent || "") +
                                         delta.reasoning_content;
                                     if (isThinking && thoughtDetails)
                                         thoughtDetails.style.display = "block";
