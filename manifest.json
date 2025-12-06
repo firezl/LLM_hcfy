@@ -2,7 +2,7 @@
     "manifest_version": 3,
     "name": "LLM划词翻译",
     "description": "在网页划词后快速翻译，支持OpenAI及兼容大模型流式输出与设置页面",
-    "version": "0.1.2",
+    "version": "0.1.3",
     "permissions": ["storage"],
     "host_permissions": ["https://*/*", "http://*/*"],
     "action": {
