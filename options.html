@@ -17,11 +17,19 @@
                     <option value="off">关闭（使用快捷键）</option>
                 </select>
 
+                <label>翻译快捷键</label>
+                <input
+                    id="translate_shortcut"
+                    type="text"
+                    placeholder="例如: Alt+T / Ctrl+Shift+Y"
+                />
+                <div class="jyt-hint">
+                    点击输入框后直接按键录制快捷键；留空表示不启用快捷键。
+                </div>
+
                 <label>首选翻译引擎</label>
                 <select id="engine_select">
-                    <option value="auto">
-                        自动（优先浏览器 Translation API）
-                    </option>
+                    <option value="auto">自动（优先 OpenAI API）</option>
                     <option value="browser">
                         浏览器 Translation API（实验）
                     </option>
@@ -59,7 +67,7 @@
                 </select>
             </div>
 
-            <div class="jyt-section">
+            <div class="jyt-section" id="openai_section">
                 <div class="jyt-section-title">OpenAI / 大模型配置</div>
                 <label>API 地址</label>
                 <input

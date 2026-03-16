@@ -1,22 +1,39 @@
 // content_script.js
-// 负责监听划词、显示翻译按钮与弹窗，调用翻译适配器并支持 OpenAI 流式输出
+// Handles selection UI, browser built-in translation path, and background fallback.
 
 (function () {
     const BUTTON_ID = "jyt-translate-btn";
     const BUBBLE_ID = "jyt-translate-bubble";
+    const DEFAULT_SETTINGS = {
+        enabled: "on",
+        engine: "auto",
+        translate_shortcut: "",
+        source_lang: "auto",
+        target_lang: "auto",
+        openai_api_url: "",
+        openai_api_key: "",
+        openai_model: "gpt-4o-mini",
+        openai_thinking_model: "gpt-5-thinking",
+        show_thoughts: false,
+        font_family: "",
+        bubble_width_percent: 52,
+        bubble_height_percent: 58,
+    };
 
     let lastSelection = "";
     let isPinned = false;
     let translatePort = null;
     let activeRequest = null;
+    let runtimeSettings = { ...DEFAULT_SETTINGS };
+
     const translatorCache = new Map();
-    let i18nDetectorInitPromise = null;
+    let translationModelReady = false;
+    let languageDetectorModelReady = false;
+    let languageDetectorInstance = null;
 
     function clampPercent(value, fallback) {
         const n = Number(value);
-        if (!Number.isFinite(n)) {
-            return fallback;
-        }
+        if (!Number.isFinite(n)) return fallback;
         return Math.max(5, Math.min(95, n));
     }
 
@@ -30,6 +47,7 @@
     function createButton() {
         let btn = document.getElementById(BUTTON_ID);
         if (btn) return btn;
+
         btn = document.createElement("div");
         btn.id = BUTTON_ID;
         btn.innerText = "翻译";
@@ -41,12 +59,13 @@
     }
 
     function createBubble() {
-        let b = document.getElementById(BUBBLE_ID);
-        if (b) return b;
-        b = document.createElement("div");
-        b.id = BUBBLE_ID;
-        b.className = "jyt-bubble";
-        b.innerHTML = `
+        let bubble = document.getElementById(BUBBLE_ID);
+        if (bubble) return bubble;
+
+        bubble = document.createElement("div");
+        bubble.id = BUBBLE_ID;
+        bubble.className = "jyt-bubble";
+        bubble.innerHTML = `
       <div class="jyt-header">
         <span class="jyt-title">翻译</span>
         <div class="jyt-controls">
@@ -63,120 +82,71 @@
         <details class="jyt-thought" id="jyt-thought"><summary>思考（展开）</summary><div id="jyt-thought-content"></div></details>
       </div>
     `;
-        document.body.appendChild(b);
+        document.body.appendChild(bubble);
 
-        // Drag functionality
-        const header = b.querySelector(".jyt-header");
+        const header = bubble.querySelector(".jyt-header");
         let isDragging = false;
-        let startX, startY, initialLeft, initialTop;
+        let startX = 0;
+        let startY = 0;
+        let initialLeft = 0;
+        let initialTop = 0;
 
         header.addEventListener("mousedown", (e) => {
-            // Prevent drag if clicking buttons
             if (e.target.closest("button")) return;
-
             isDragging = true;
             startX = e.clientX;
             startY = e.clientY;
-
-            const rect = b.getBoundingClientRect();
+            const rect = bubble.getBoundingClientRect();
             initialLeft = rect.left;
             initialTop = rect.top;
-
             header.style.cursor = "grabbing";
-            e.preventDefault(); // Prevent text selection
+            e.preventDefault();
         });
 
         document.addEventListener("mousemove", (e) => {
             if (!isDragging) return;
-
             const dx = e.clientX - startX;
             const dy = e.clientY - startY;
-
-            // Use fixed positioning logic or update absolute position relative to document
-            // Since we use absolute positioning with window.scrollX/Y in positionBubble,
-            // we should update left/top.
-            // Note: b.style.left includes 'px'.
-
-            b.style.left = `${initialLeft + dx + window.scrollX}px`;
-            b.style.top = `${initialTop + dy + window.scrollY}px`;
+            bubble.style.left = `${initialLeft + dx + window.scrollX}px`;
+            bubble.style.top = `${initialTop + dy + window.scrollY}px`;
         });
 
         document.addEventListener("mouseup", () => {
-            if (isDragging) {
-                isDragging = false;
-                header.style.cursor = "move";
-            }
+            if (!isDragging) return;
+            isDragging = false;
+            header.style.cursor = "move";
         });
 
-        // Event listeners
-        b.querySelector(".jyt-close").addEventListener("click", () => {
-            b.style.display = "none";
+        bubble.querySelector(".jyt-close").addEventListener("click", () => {
+            bubble.style.display = "none";
             isPinned = false;
-            updatePinState(b);
+            updatePinState(bubble);
         });
 
-        b.querySelector(".jyt-pin").addEventListener("click", (e) => {
+        bubble.querySelector(".jyt-pin").addEventListener("click", (e) => {
             isPinned = !isPinned;
-            updatePinState(b);
+            updatePinState(bubble);
             e.stopPropagation();
         });
 
-        return b;
+        return bubble;
     }
 
     function updatePinState(bubble) {
         const pinBtn = bubble.querySelector(".jyt-pin");
-        if (isPinned) {
-            pinBtn.classList.add("active");
-        } else {
-            pinBtn.classList.remove("active");
-        }
-    }
-
-    function onTranslateClick(e) {
-        const selection = lastSelection.trim();
-        if (!selection) return;
-        const bubble = createBubble();
-        bubble.style.display = "block";
-
-        isPinned = false;
-        updatePinState(bubble);
-
-        positionBubble(bubble, e.clientX, e.clientY);
-        setBubbleLoading(bubble, true);
-        // get settings and call translate
-        chrome.storage.sync.get(
-            {
-                engine: "auto",
-                source_lang: "auto",
-                target_lang: "auto",
-                openai_api_url: "",
-                openai_api_key: "",
-                openai_model: "gpt-4o-mini",
-                openai_thinking_model: "gpt-5-thinking",
-                show_thoughts: false,
-                font_family: "",
-                bubble_width_percent: 52,
-                bubble_height_percent: 58,
-            },
-            (items) => {
-                translateText(selection, items, bubble);
-            },
-        );
+        pinBtn.classList.toggle("active", isPinned);
     }
 
     function setBubbleLoading(bubble, loading) {
-        const s = bubble.querySelector("#jyt-stream");
-        s.innerText = loading ? "加载中..." : "";
+        bubble.querySelector("#jyt-stream").innerText = loading
+            ? "加载中..."
+            : "";
         bubble.querySelector("#jyt-thought-content").innerText = "";
     }
 
     function positionButton(btn, x, y) {
-        // Position button near mouse cursor (bottom-right)
-        const offsetX = 12;
-        const offsetY = 12;
-        btn.style.left = x + offsetX + window.scrollX + "px";
-        btn.style.top = y + offsetY + window.scrollY + "px";
+        btn.style.left = x + 12 + window.scrollX + "px";
+        btn.style.top = y + 12 + window.scrollY + "px";
         btn.style.display = "block";
     }
 
@@ -191,16 +161,92 @@
         if (btn) btn.style.display = "none";
     }
 
-    function detectLang(text) {
-        // 简单基于字符集检测中文
-        const zh = /[\u4e00-\u9fff]/;
-        return zh.test(text) ? "zh" : "en";
+    function loadRuntimeSettings() {
+        chrome.storage.sync.get(DEFAULT_SETTINGS, (items) => {
+            runtimeSettings = { ...DEFAULT_SETTINGS, ...items };
+        });
+    }
+
+    function parseShortcut(shortcut) {
+        const raw = String(shortcut || "").trim();
+        if (!raw) return null;
+
+        const parts = raw
+            .split("+")
+            .map((part) => part.trim())
+            .filter(Boolean);
+
+        const cfg = {
+            ctrl: false,
+            alt: false,
+            shift: false,
+            meta: false,
+            key: "",
+        };
+        for (const part of parts) {
+            const lower = part.toLowerCase();
+            if (lower === "ctrl" || lower === "control") {
+                cfg.ctrl = true;
+                continue;
+            }
+            if (lower === "alt") {
+                cfg.alt = true;
+                continue;
+            }
+            if (lower === "shift") {
+                cfg.shift = true;
+                continue;
+            }
+            if (
+                lower === "meta" ||
+                lower === "cmd" ||
+                lower === "command" ||
+                lower === "win"
+            ) {
+                cfg.meta = true;
+                continue;
+            }
+            cfg.key = lower;
+        }
+
+        return cfg.key ? cfg : null;
+    }
+
+    function isShortcutPressed(e, shortcut) {
+        const cfg = parseShortcut(shortcut);
+        if (!cfg) return false;
+
+        const key = String(e.key || "").toLowerCase();
+        return (
+            e.ctrlKey === cfg.ctrl &&
+            e.altKey === cfg.alt &&
+            e.shiftKey === cfg.shift &&
+            e.metaKey === cfg.meta &&
+            key === cfg.key
+        );
+    }
+
+    function getSelectionAnchorPoint(sel) {
+        try {
+            if (!sel || sel.rangeCount === 0) {
+                return { x: window.innerWidth / 2, y: 80 };
+            }
+            const rect = sel.getRangeAt(0).getBoundingClientRect();
+            if (rect && (rect.width || rect.height)) {
+                return { x: rect.right, y: rect.bottom };
+            }
+        } catch (err) {
+            // ignore
+        }
+        return { x: window.innerWidth / 2, y: 80 };
+    }
+
+    function detectLangHeuristic(text) {
+        return /[\u4e00-\u9fff]/.test(text) ? "zh" : "en";
     }
 
     function normalizeBasicLang(lang) {
-        if (!lang || typeof lang !== "string") {
-            return "";
-        }
+        if (!lang || typeof lang !== "string") return "";
         const lower = lang.toLowerCase();
         if (lower.startsWith("zh")) return "zh";
         if (lower.startsWith("en")) return "en";
@@ -213,74 +259,28 @@
         return lower.split("-")[0] || "";
     }
 
-    function initI18nextLanguageDetector() {
-        if (i18nDetectorInitPromise) {
-            return i18nDetectorInitPromise;
-        }
-
-        i18nDetectorInitPromise = (async () => {
-            if (
-                typeof self.i18next === "undefined" ||
-                typeof self.i18nextBrowserLanguageDetector === "undefined"
-            ) {
-                return false;
-            }
-
-            if (!self.i18next.isInitialized) {
-                self.i18next.use(self.i18nextBrowserLanguageDetector);
-                await self.i18next.init({
-                    fallbackLng: "en",
-                    interpolation: { escapeValue: false },
-                    detection: {
-                        order: [
-                            "querystring",
-                            "cookie",
-                            "localStorage",
-                            "sessionStorage",
-                            "navigator",
-                            "htmlTag",
-                        ],
-                        caches: [],
-                    },
-                });
-            }
-            return true;
-        })();
-
-        return i18nDetectorInitPromise;
-    }
-
-    async function detectPreferredLangByI18next() {
-        try {
-            const ok = await initI18nextLanguageDetector();
-            if (!ok) {
-                return null;
-            }
-            const lang = normalizeBasicLang(self.i18next.language);
-            return lang || null;
-        } catch (err) {
-            console.warn("i18next language detector init failed", err);
-            return null;
-        }
+    function detectBrowserLangByNavigator() {
+        const navLang =
+            (navigator && (navigator.language || navigator.userLanguage)) || "";
+        return normalizeBasicLang(navLang) || null;
     }
 
     async function detectTextLangByChromeI18n(text) {
-        if (!chrome?.i18n?.detectLanguage) {
-            return null;
-        }
-
+        if (!chrome?.i18n?.detectLanguage) return null;
         try {
             const result = await new Promise((resolve) => {
                 chrome.i18n.detectLanguage(text, (res) => resolve(res || null));
             });
-
-            if (!result || !Array.isArray(result.languages)) {
+            if (
+                !result ||
+                !Array.isArray(result.languages) ||
+                !result.languages[0]
+            ) {
                 return null;
             }
-
-            const top = result.languages[0];
-            const lang = normalizeBasicLang(top?.language || "");
-            return lang || null;
+            return (
+                normalizeBasicLang(result.languages[0].language || "") || null
+            );
         } catch (err) {
             console.warn("chrome.i18n.detectLanguage failed", err);
             return null;
@@ -303,43 +303,51 @@
         );
     }
 
-    function normalizeLanguageTag(lang) {
-        if (!lang || typeof lang !== "string") {
-            return "";
-        }
-        return normalizeBasicLang(lang);
-    }
-
     async function detectLangByLanguageDetector(text, streamEl) {
-        if (!isBrowserAILanguageDetectorSupported()) {
-            return null;
-        }
+        if (!isBrowserAILanguageDetectorSupported()) return null;
 
         try {
-            const availability = await self.LanguageDetector.availability();
-            if (availability === "unavailable") {
-                return null;
+            if (languageDetectorInstance) {
+                const results = await languageDetectorInstance.detect(text);
+                return (
+                    normalizeBasicLang(results?.[0]?.detectedLanguage || "") ||
+                    null
+                );
             }
 
-            const detector = await self.LanguageDetector.create({
-                monitor(m) {
+            const availability = await self.LanguageDetector.availability();
+            if (availability === "available") languageDetectorModelReady = true;
+            if (availability === "unavailable") return null;
+
+            const createOptions = {};
+            if (
+                !languageDetectorModelReady &&
+                (availability === "downloadable" ||
+                    availability === "downloading")
+            ) {
+                createOptions.monitor = (m) => {
                     m.addEventListener("downloadprogress", (e) => {
                         const percent = Math.round((e.loaded || 0) * 100);
-                        streamEl.innerText =
-                            "正在下载 LanguageDetector 模型: " + percent + "%";
+                        if (percent > 0 && percent < 100) {
+                            streamEl.innerText =
+                                "正在下载 LanguageDetector 模型: " +
+                                percent +
+                                "%";
+                        }
                     });
-                },
-            });
-
-            if (detector.ready) {
-                await detector.ready;
+                };
             }
 
+            const detector = await self.LanguageDetector.create(createOptions);
+            if (detector.ready) await detector.ready;
+
+            languageDetectorModelReady = true;
+            languageDetectorInstance = detector;
+
             const results = await detector.detect(text);
-            const detected = normalizeLanguageTag(
-                results && results[0] ? results[0].detectedLanguage : "",
+            return (
+                normalizeBasicLang(results?.[0]?.detectedLanguage || "") || null
             );
-            return detected || null;
         } catch (err) {
             console.warn("LanguageDetector failed", err);
             return null;
@@ -354,35 +362,38 @@
         }
 
         const key = `${from}->${to}`;
-        if (translatorCache.has(key)) {
-            return translatorCache.get(key);
-        }
+        if (translatorCache.has(key)) return translatorCache.get(key);
 
         const availability = await self.Translator.availability({
             sourceLanguage: from,
             targetLanguage: to,
         });
 
+        if (availability === "available") translationModelReady = true;
         if (availability === "unavailable") {
             throw new Error(`Translation API 不支持语言对: ${from} -> ${to}`);
         }
 
-        const translator = await self.Translator.create({
-            sourceLanguage: from,
-            targetLanguage: to,
-            monitor(m) {
+        const createOptions = { sourceLanguage: from, targetLanguage: to };
+        if (
+            !translationModelReady &&
+            (availability === "downloadable" || availability === "downloading")
+        ) {
+            createOptions.monitor = (m) => {
                 m.addEventListener("downloadprogress", (e) => {
                     const percent = Math.round((e.loaded || 0) * 100);
-                    streamEl.innerText =
-                        "正在下载 Translation 模型: " + percent + "%";
+                    if (percent > 0 && percent < 100) {
+                        streamEl.innerText =
+                            "正在下载 Translation 模型: " + percent + "%";
+                    }
                 });
-            },
-        });
-
-        if (translator.ready) {
-            await translator.ready;
+            };
         }
 
+        const translator = await self.Translator.create(createOptions);
+        if (translator.ready) await translator.ready;
+
+        translationModelReady = true;
         translatorCache.set(key, translator);
         return translator;
     }
@@ -401,23 +412,16 @@
             return;
         }
 
-        const translated = await translator.translate(text);
-        streamEl.innerText = translated;
+        streamEl.innerText = await translator.translate(text);
     }
 
     function ensureTranslatePort() {
-        if (translatePort) {
-            return translatePort;
-        }
+        if (translatePort) return translatePort;
 
         translatePort = chrome.runtime.connect({ name: "jyt-translate" });
         translatePort.onMessage.addListener((message) => {
-            if (!activeRequest || !message) {
-                return;
-            }
-            if (message.requestId !== activeRequest.requestId) {
-                return;
-            }
+            if (!activeRequest || !message) return;
+            if (message.requestId !== activeRequest.requestId) return;
 
             const { streamEl, thoughtEl, thoughtDetails, isThinking } =
                 activeRequest;
@@ -438,15 +442,46 @@
             if (message.type === "TRANSLATE_THOUGHT") {
                 thoughtEl.textContent =
                     (thoughtEl.textContent || "") + (message.content || "");
-                if (isThinking && thoughtDetails) {
+                if (isThinking && thoughtDetails)
                     thoughtDetails.style.display = "block";
-                }
                 return;
             }
 
             if (message.type === "TRANSLATE_ERROR") {
-                streamEl.innerText =
-                    "翻译失败: " + (message.error || "未知错误");
+                const currentRequest = activeRequest;
+                const errorText = message.error || "未知错误";
+
+                if (
+                    currentRequest.allowBrowserFallback &&
+                    !currentRequest.browserFallbackTried
+                ) {
+                    currentRequest.browserFallbackTried = true;
+                    streamEl.innerText = "OpenAI 不可用，正在回退浏览器 AI...";
+
+                    translateWithBrowserAPI(
+                        currentRequest.text,
+                        currentRequest.from,
+                        currentRequest.to,
+                        streamEl,
+                    )
+                        .then(() => {
+                            if (activeRequest === currentRequest) {
+                                activeRequest = null;
+                            }
+                        })
+                        .catch((fallbackErr) => {
+                            if (activeRequest !== currentRequest) return;
+                            const browserErr =
+                                fallbackErr && fallbackErr.message
+                                    ? fallbackErr.message
+                                    : String(fallbackErr || "未知错误");
+                            streamEl.innerText = `翻译失败: OpenAI 与浏览器 AI 均不可用（OpenAI: ${errorText}；浏览器: ${browserErr}）`;
+                            activeRequest = null;
+                        });
+                    return;
+                }
+
+                streamEl.innerText = "翻译失败: " + errorText;
                 activeRequest = null;
                 return;
             }
@@ -469,7 +504,6 @@
             port.postMessage(payload);
             return true;
         } catch (err) {
-            // BFCache 恢复后旧端口可能已失效，重建一次并重试。
             translatePort = null;
             try {
                 port = ensureTranslatePort();
@@ -492,17 +526,13 @@
         const tend = buffer.indexOf("</think>");
 
         if (tstart !== -1 && tend !== -1 && tend > tstart) {
-            const thought = buffer
-                .substring(tstart + "<think>".length, tend)
-                .trim();
+            const thought = buffer.substring(tstart + 7, tend).trim();
             thoughtEl.innerText = thought;
-            if (isThinking && thoughtDetails) {
+            if (isThinking && thoughtDetails)
                 thoughtDetails.style.display = "block";
-            }
 
-            const before = buffer.substring(0, tstart);
-            const after = buffer.substring(tend + "</think>".length);
-            const clean = before + after;
+            const clean =
+                buffer.substring(0, tstart) + buffer.substring(tend + 8);
             streamEl.innerText = clean;
             activeRequest.buffer = clean;
             return;
@@ -515,12 +545,9 @@
             streamEl.innerText = cleanBuffer;
 
             if (tend === -1) {
-                thoughtEl.innerText = buffer.substring(
-                    tstart + "<think>".length,
-                );
-                if (isThinking && thoughtDetails) {
+                thoughtEl.innerText = buffer.substring(tstart + 7);
+                if (isThinking && thoughtDetails)
                     thoughtDetails.style.display = "block";
-                }
             }
             return;
         }
@@ -536,7 +563,9 @@
         streamEl,
         thoughtEl,
         thoughtDetails,
+        options,
     ) {
+        const extraOptions = options || {};
         const requestId = `${Date.now()}-${Math.random()}`;
         activeRequest = {
             requestId,
@@ -545,6 +574,11 @@
             thoughtDetails,
             isThinking: !!settings.show_thoughts,
             buffer: "",
+            text,
+            from: preferredFrom,
+            to: preferredTo,
+            allowBrowserFallback: !!extraOptions.allowBrowserFallback,
+            browserFallbackTried: false,
         };
 
         const sent = sendTranslateStart({
@@ -555,6 +589,7 @@
             preferredTo,
             settings,
         });
+
         if (!sent) {
             streamEl.innerText = "翻译失败: 通信通道已关闭，请重试";
             activeRequest = null;
@@ -565,65 +600,58 @@
         const engine = settings.engine || "auto";
         const sourceSetting = settings.source_lang || "auto";
         const targetSetting = settings.target_lang || "auto";
+
         let from = sourceSetting === "auto" ? "" : sourceSetting;
         const streamEl = bubble.querySelector("#jyt-stream");
         const thoughtEl = bubble.querySelector("#jyt-thought-content");
         const thoughtDetails = bubble.querySelector("#jyt-thought");
 
-        // Apply font family if set
         if (settings.font_family) {
             bubble.style.setProperty("--jyt-font", settings.font_family);
         }
         applyBubbleSizeConfig(bubble, settings);
 
-        // Always hide thought initially, show only when content arrives in streaming
         thoughtDetails.style.display = "none";
         thoughtDetails.removeAttribute("open");
-
         streamEl.innerText = "";
         thoughtEl.innerText = "";
         activeRequest = null;
 
-        if (!from) {
-            from = await detectLangByLanguageDetector(text, streamEl);
-        }
-        if (!from) {
-            from = await detectTextLangByChromeI18n(text);
-        }
-        if (!from) {
-            from = detectLang(text);
-        }
-
-        let preferredLang = await detectPreferredLangByI18next();
-        if (!preferredLang) {
-            preferredLang = "zh";
-        }
+        if (!from) from = await detectLangByLanguageDetector(text, streamEl);
+        if (!from) from = await detectTextLangByChromeI18n(text);
+        if (!from) from = detectLangHeuristic(text);
 
         let to = targetSetting === "auto" ? "" : targetSetting;
-        if (!to) {
-            if (from === preferredLang) {
-                to = from === "zh" ? "en" : "zh";
-            } else {
-                to = preferredLang;
-            }
-        }
+        if (!to) to = detectBrowserLangByNavigator();
+        if (!to) to = "zh";
+        if (to === from) to = from === "zh" ? "en" : "zh";
 
-        if (to === from) {
-            to = from === "zh" ? "en" : "zh";
-        }
-
-        const shouldUseBrowser = engine === "browser" || engine === "auto";
-        if (shouldUseBrowser) {
+        if (engine === "browser") {
             try {
                 await translateWithBrowserAPI(text, from, to, streamEl);
                 return;
             } catch (err) {
-                if (engine === "browser") {
-                    streamEl.innerText = "翻译失败: " + err.message;
+                streamEl.innerText = "翻译失败: " + err.message;
+                return;
+            }
+        }
+
+        if (engine === "auto") {
+            const openAIConfigured =
+                !!settings.openai_api_url && !!settings.openai_api_key;
+            if (!openAIConfigured) {
+                try {
+                    streamEl.innerText =
+                        "未配置 OpenAI，正在使用浏览器 AI 翻译...";
+                    await translateWithBrowserAPI(text, from, to, streamEl);
+                    return;
+                } catch (err) {
+                    streamEl.innerText =
+                        "翻译失败: 未配置 OpenAI，且浏览器 AI 不可用（" +
+                        (err && err.message ? err.message : String(err)) +
+                        "）";
                     return;
                 }
-                // auto 模式下浏览器内置 API 不可用时回退到 OpenAI。
-                streamEl.innerText = "浏览器内置翻译不可用，正在回退 OpenAI...";
             }
         }
 
@@ -635,21 +663,51 @@
             streamEl,
             thoughtEl,
             thoughtDetails,
+            { allowBrowserFallback: engine === "auto" },
         );
     }
 
-    // selection handling
+    function onTranslateClick(e) {
+        const selection = lastSelection.trim();
+        if (!selection) return;
+        triggerTranslate(selection, e.clientX, e.clientY);
+    }
+
+    function triggerTranslate(selection, x, y) {
+        const text = (selection || "").trim();
+        if (!text) return;
+
+        const bubble = createBubble();
+        bubble.style.display = "block";
+        isPinned = false;
+        updatePinState(bubble);
+        positionBubble(bubble, x, y);
+        setBubbleLoading(bubble, true);
+        translateText(text, runtimeSettings, bubble);
+    }
+
     const btn = createButton();
     createBubble();
+    loadRuntimeSettings();
+
+    chrome.storage.onChanged.addListener((changes, area) => {
+        if (area !== "sync") return;
+        for (const key of Object.keys(changes)) {
+            runtimeSettings[key] = changes[key].newValue;
+        }
+    });
 
     document.addEventListener("mouseup", (e) => {
-        // Capture mouse position immediately
+        if (runtimeSettings.enabled !== "on") {
+            hideButton();
+            return;
+        }
+
         const mouseX = e.clientX;
         const mouseY = e.clientY;
 
-        // If clicking on the button, do not trigger selection logic which might hide it
-        const btn = document.getElementById(BUTTON_ID);
-        if (btn && (e.target === btn || btn.contains(e.target))) return;
+        const btnEl = document.getElementById(BUTTON_ID);
+        if (btnEl && (e.target === btnEl || btnEl.contains(e.target))) return;
 
         setTimeout(() => {
             const sel = window.getSelection();
@@ -657,10 +715,10 @@
                 hideButton();
                 return;
             }
+
             const text = sel.toString();
             if (text && text.trim().length > 0) {
                 lastSelection = text;
-                // Pass mouse coordinates instead of rect
                 positionButton(btn, mouseX, mouseY);
             } else {
                 hideButton();
@@ -668,51 +726,37 @@
         }, 10);
     });
 
-    // hide UI on click outside
-    /* 
-    // Removed scroll listener as per user request: scrolling should not close the window
-    document.addEventListener(
-        "scroll",
-        (e) => {
-            const bubble = document.getElementById(BUBBLE_ID);
-            // If scrolling inside the bubble, do not hide
-            if (bubble && bubble.contains(e.target)) return;
+    document.addEventListener("keydown", (e) => {
+        if (!isShortcutPressed(e, runtimeSettings.translate_shortcut)) return;
 
-            hideButton();
+        const sel = window.getSelection();
+        const text = sel ? sel.toString().trim() : "";
+        if (!text) return;
 
-            if (!isPinned) {
-                if (bubble) bubble.style.display = "none";
-            }
-        },
-        true
-    );
-    */
+        e.preventDefault();
+        lastSelection = text;
+        const point = getSelectionAnchorPoint(sel);
+        triggerTranslate(text, point.x, point.y);
+    });
 
     document.addEventListener("click", (e) => {
-        const btn = document.getElementById(BUTTON_ID);
+        const btnEl = document.getElementById(BUTTON_ID);
         const bubble = document.getElementById(BUBBLE_ID);
 
-        // If click is on the button or bubble, ignore
-        if (btn && (e.target === btn || btn.contains(e.target))) return;
+        if (btnEl && (e.target === btnEl || btnEl.contains(e.target))) return;
         if (bubble && bubble.contains(e.target)) return;
 
-        // Clicked outside
-        hideButton(); // This hides the button
-
-        // Only hide bubble if NOT pinned
-        if (bubble && !isPinned) {
-            bubble.style.display = "none";
-        }
+        hideButton();
+        if (bubble && !isPinned) bubble.style.display = "none";
     });
 
     window.addEventListener("pagehide", () => {
-        if (translatePort) {
-            try {
-                translatePort.disconnect();
-            } catch (err) {
-                // ignore
-            }
-            translatePort = null;
+        if (!translatePort) return;
+        try {
+            translatePort.disconnect();
+        } catch (err) {
+            // ignore
         }
+        translatePort = null;
     });
 })();

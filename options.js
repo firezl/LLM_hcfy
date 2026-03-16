@@ -3,6 +3,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const ids = [
         "enable_select",
         "engine_select",
+        "translate_shortcut",
         "source_lang",
         "target_lang",
         "openai_api_url",
@@ -16,6 +17,7 @@ document.addEventListener("DOMContentLoaded", () => {
     ];
     const els = {};
     ids.forEach((id) => (els[id] = document.getElementById(id)));
+    const openaiSection = document.getElementById("openai_section");
 
     function clampPercent(value, fallback) {
         const n = Number(value);
@@ -25,11 +27,64 @@ document.addEventListener("DOMContentLoaded", () => {
         return Math.max(5, Math.min(95, Math.round(n)));
     }
 
+    function normalizeShortcut(value) {
+        const raw = (value || "").trim();
+        return raw;
+    }
+
+    function normalizeKeyName(key) {
+        const raw = String(key || "").trim();
+        if (!raw) return "";
+
+        const alias = {
+            " ": "Space",
+            Escape: "Esc",
+            ArrowUp: "Up",
+            ArrowDown: "Down",
+            ArrowLeft: "Left",
+            ArrowRight: "Right",
+            "+": "Plus",
+        };
+
+        if (alias[raw]) {
+            return alias[raw];
+        }
+
+        if (raw.length === 1) {
+            return raw.toUpperCase();
+        }
+
+        return raw;
+    }
+
+    function formatShortcutFromEvent(e) {
+        const keyName = normalizeKeyName(e.key);
+        const modifierOnlyKeys = new Set(["Control", "Shift", "Alt", "Meta"]);
+        if (!keyName || modifierOnlyKeys.has(e.key)) {
+            return "";
+        }
+
+        const parts = [];
+        if (e.ctrlKey) parts.push("Ctrl");
+        if (e.altKey) parts.push("Alt");
+        if (e.shiftKey) parts.push("Shift");
+        if (e.metaKey) parts.push("Meta");
+        parts.push(keyName);
+        return parts.join("+");
+    }
+
+    function updateEngineDependentUI() {
+        if (!openaiSection) return;
+        const hideOpenAI = els.engine_select.value === "browser";
+        openaiSection.classList.toggle("jyt-hidden", hideOpenAI);
+    }
+
     function load() {
         chrome.storage.sync.get(
             {
                 enabled: "on",
                 engine: "auto",
+                translate_shortcut: "",
                 source_lang: "auto",
                 target_lang: "auto",
                 openai_api_url: "",
@@ -44,6 +99,9 @@ document.addEventListener("DOMContentLoaded", () => {
             (items) => {
                 els.enable_select.value = items.enabled;
                 els.engine_select.value = items.engine;
+                els.translate_shortcut.value = normalizeShortcut(
+                    items.translate_shortcut,
+                );
                 els.source_lang.value = items.source_lang || "auto";
                 els.target_lang.value = items.target_lang || "auto";
                 els.openai_api_url.value = items.openai_api_url;
@@ -62,6 +120,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     items.bubble_height_percent,
                     30,
                 );
+                updateEngineDependentUI();
             },
         );
     }
@@ -70,6 +129,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const data = {
             enabled: els.enable_select.value,
             engine: els.engine_select.value,
+            translate_shortcut: normalizeShortcut(els.translate_shortcut.value),
             source_lang: els.source_lang.value,
             target_lang: els.target_lang.value,
             openai_api_url: els.openai_api_url.value,
@@ -80,11 +140,11 @@ document.addEventListener("DOMContentLoaded", () => {
             font_family: els.font_family.value,
             bubble_width_percent: clampPercent(
                 els.bubble_width_percent.value,
-                52,
+                20,
             ),
             bubble_height_percent: clampPercent(
                 els.bubble_height_percent.value,
-                58,
+                40,
             ),
         };
         chrome.storage.sync.set(data, () => {
@@ -98,6 +158,29 @@ document.addEventListener("DOMContentLoaded", () => {
             alert("已恢复默认");
         });
     });
+
+    els.translate_shortcut.addEventListener("keydown", (e) => {
+        const allowClear = e.key === "Backspace" || e.key === "Delete";
+        if (allowClear) {
+            e.preventDefault();
+            els.translate_shortcut.value = "";
+            return;
+        }
+
+        e.preventDefault();
+        const shortcut = formatShortcutFromEvent(e);
+        if (shortcut) {
+            els.translate_shortcut.value = shortcut;
+        }
+    });
+
+    els.translate_shortcut.addEventListener("blur", () => {
+        els.translate_shortcut.value = normalizeShortcut(
+            els.translate_shortcut.value,
+        );
+    });
+
+    els.engine_select.addEventListener("change", updateEngineDependentUI);
 
     load();
 });

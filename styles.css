@@ -346,3 +346,7 @@ button#reset:hover {
     color: #888;
     margin-top: 2px;
 }
+
+.jyt-hidden {
+    display: none;
+}
