@@ -20,7 +20,9 @@
     font-weight: 500;
     cursor: pointer;
     box-shadow: 0 4px 12px rgba(24, 119, 242, 0.3);
-    transition: transform 0.2s, opacity 0.2s;
+    transition:
+        transform 0.2s,
+        opacity 0.2s;
     opacity: 0;
     animation: jyt-fade-in 0.2s forwards;
 }

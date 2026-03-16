@@ -7,8 +7,8 @@
 
     let lastSelection = "";
     let isPinned = false;
-    let lastMouseX = 0;
-    let lastMouseY = 0;
+    let translatePort = null;
+    let activeRequest = null;
 
     function createButton() {
         let btn = document.getElementById(BUTTON_ID);
@@ -140,7 +140,7 @@
             },
             (items) => {
                 translateText(selection, items, bubble);
-            }
+            },
         );
     }
 
@@ -176,11 +176,114 @@
         return zh.test(text) ? "zh" : "en";
     }
 
-    async function translateText(text, settings, bubble) {
-        const engine = settings.engine || "auto";
+    function ensureTranslatePort() {
+        if (translatePort) {
+            return translatePort;
+        }
+
+        translatePort = chrome.runtime.connect({ name: "jyt-translate" });
+        translatePort.onMessage.addListener((message) => {
+            if (!activeRequest || !message) {
+                return;
+            }
+            if (message.requestId !== activeRequest.requestId) {
+                return;
+            }
+
+            const { streamEl, thoughtEl, thoughtDetails, isThinking } =
+                activeRequest;
+
+            if (message.type === "TRANSLATE_CHUNK") {
+                activeRequest.buffer += message.content || "";
+                renderContentAndThought(
+                    activeRequest.buffer,
+                    streamEl,
+                    thoughtEl,
+                    thoughtDetails,
+                    isThinking,
+                );
+                streamEl.scrollTop = streamEl.scrollHeight;
+                return;
+            }
+
+            if (message.type === "TRANSLATE_THOUGHT") {
+                thoughtEl.textContent =
+                    (thoughtEl.textContent || "") + (message.content || "");
+                if (isThinking && thoughtDetails) {
+                    thoughtDetails.style.display = "block";
+                }
+                return;
+            }
+
+            if (message.type === "TRANSLATE_ERROR") {
+                streamEl.innerText =
+                    "翻译失败: " + (message.error || "未知错误");
+                activeRequest = null;
+                return;
+            }
+
+            if (message.type === "TRANSLATE_DONE") {
+                activeRequest = null;
+            }
+        });
+
+        translatePort.onDisconnect.addListener(() => {
+            translatePort = null;
+        });
+
+        return translatePort;
+    }
+
+    function renderContentAndThought(
+        buffer,
+        streamEl,
+        thoughtEl,
+        thoughtDetails,
+        isThinking,
+    ) {
+        const tstart = buffer.indexOf("<think>");
+        const tend = buffer.indexOf("</think>");
+
+        if (tstart !== -1 && tend !== -1 && tend > tstart) {
+            const thought = buffer
+                .substring(tstart + "<think>".length, tend)
+                .trim();
+            thoughtEl.innerText = thought;
+            if (isThinking && thoughtDetails) {
+                thoughtDetails.style.display = "block";
+            }
+
+            const before = buffer.substring(0, tstart);
+            const after = buffer.substring(tend + "</think>".length);
+            const clean = before + after;
+            streamEl.innerText = clean;
+            activeRequest.buffer = clean;
+            return;
+        }
+
+        if (tstart !== -1) {
+            const cleanBuffer = buffer
+                .replace(/<think>[\s\S]*?<\/think>/g, "")
+                .replace(/<think>[\s\S]*/g, "");
+            streamEl.innerText = cleanBuffer;
+
+            if (tend === -1) {
+                thoughtEl.innerText = buffer.substring(
+                    tstart + "<think>".length,
+                );
+                if (isThinking && thoughtDetails) {
+                    thoughtDetails.style.display = "block";
+                }
+            }
+            return;
+        }
+
+        streamEl.innerText = buffer;
+    }
+
+    function translateText(text, settings, bubble) {
         let from = detectLang(text);
         let to = from === "zh" ? "en" : "zh";
-        // If engine supports detect, could call API to detect. For now use local detect.
         const streamEl = bubble.querySelector("#jyt-stream");
         const thoughtEl = bubble.querySelector("#jyt-thought-content");
         const thoughtDetails = bubble.querySelector("#jyt-thought");
@@ -197,171 +300,25 @@
         streamEl.innerText = "";
         thoughtEl.innerText = "";
 
-        try {
-            // Always use OpenAI-like API (LLM)
-            await openaiTranslateStream(
-                text,
-                from,
-                to,
-                settings,
-                streamEl,
-                thoughtEl,
-                thoughtDetails
-            );
-        } catch (err) {
-            streamEl.innerText = "翻译失败: " + err.message;
-        }
-    }
-
-    // --- Placeholder adapters ---
-    // Legacy adapters (Google, Bing, Baidu) removed as per request. Only LLM is supported.
-
-    async function openaiTranslateStream(
-        text,
-        from,
-        to,
-        settings,
-        streamEl,
-        thoughtEl,
-        thoughtDetails
-    ) {
-        const apiUrl = settings.openai_api_url;
-        const key = settings.openai_api_key;
-        if (!apiUrl || !key)
-            throw new Error("请在设置中配置 OpenAI API 地址与 Key");
-
-        const isThinking = settings.show_thoughts;
-        const model = isThinking
-            ? settings.openai_thinking_model || "Jan-v1"
-            : settings.openai_model || "hunyuan-mt";
-
-        // Build prompt
-        let prompt = `请把这段文字翻译为${
-            to === "zh" ? "中文" : "英文"
-        }，不要有多余的输出。输入:\n${text}`;
-        if (isThinking) {
-            prompt = `请把这段文字翻译为${
-                to === "zh" ? "中文" : "英文"
-            }，不要有多余的输出。输入:\n${text}`;
-        }
-
-        const body = {
-            model: model,
-            messages: [{ role: "user", content: prompt }],
-            temperature: 0.2,
-            stream: true,
+        const requestId = `${Date.now()}-${Math.random()}`;
+        activeRequest = {
+            requestId,
+            streamEl,
+            thoughtEl,
+            thoughtDetails,
+            isThinking: !!settings.show_thoughts,
+            buffer: "",
         };
 
-        const res = await fetch(apiUrl, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${key}`,
-            },
-            body: JSON.stringify(body),
+        const port = ensureTranslatePort();
+        port.postMessage({
+            type: "TRANSLATE_START",
+            requestId,
+            text,
+            from,
+            to,
+            settings,
         });
-
-        if (!res.ok) {
-            const textErr = await res.text();
-            throw new Error("OpenAI 请求失败: " + textErr);
-        }
-
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder("utf-8");
-        let done = false;
-        let buffer = "";
-
-        while (!done) {
-            const { value, done: d } = await reader.read();
-            done = d;
-            if (value) {
-                const chunk = decoder.decode(value, { stream: true });
-                const lines = chunk.split("\n");
-                for (const line of lines) {
-                    const trimmed = line.trim();
-                    if (!trimmed || trimmed === "data: [DONE]") continue;
-                    if (trimmed.startsWith("data: ")) {
-                        try {
-                            const jsonStr = trimmed.substring(6);
-                            const json = JSON.parse(jsonStr);
-                            const delta = json.choices?.[0]?.delta;
-                            if (delta) {
-                                // Handle content
-                                if (delta.content) {
-                                    buffer += delta.content;
-                                    // Check for thought markers in buffer
-                                    const tstart = buffer.indexOf("<think>");
-                                    const tend = buffer.indexOf("</think>");
-
-                                    if (
-                                        tstart !== -1 &&
-                                        tend !== -1 &&
-                                        tend > tstart
-                                    ) {
-                                        // Extract thought
-                                        const thought = buffer
-                                            .substring(
-                                                tstart + "<think>".length,
-                                                tend
-                                            )
-                                            .trim();
-                                        thoughtEl.innerText = thought;
-                                        if (isThinking && thoughtDetails)
-                                            thoughtDetails.style.display =
-                                                "block";
-
-                                        // Remove thought from buffer/display
-                                        const before = buffer.substring(
-                                            0,
-                                            tstart
-                                        );
-                                        const after = buffer.substring(
-                                            tend + "</think>".length
-                                        );
-                                        buffer = before + after;
-                                        streamEl.innerText = buffer;
-                                    } else if (tstart !== -1) {
-                                        // Partial thought
-                                        const cleanBuffer = buffer
-                                            .replace(
-                                                /<think>[\s\S]*?<\/think>/g,
-                                                ""
-                                            )
-                                            .replace(/<think>[\s\S]*/g, "");
-                                        streamEl.innerText = cleanBuffer;
-
-                                        // Update thoughtEl with partial thought if we are inside one
-                                        if (tstart !== -1 && tend === -1) {
-                                            thoughtEl.innerText =
-                                                buffer.substring(
-                                                    tstart + "<think>".length
-                                                );
-                                            if (isThinking && thoughtDetails)
-                                                thoughtDetails.style.display =
-                                                    "block";
-                                        }
-                                    } else {
-                                        streamEl.innerText = buffer;
-                                    }
-                                }
-                                // Handle native reasoning_content if available (e.g. DeepSeek, GLM-4)
-                                if (delta.reasoning_content) {
-                                    thoughtEl.textContent =
-                                        (thoughtEl.textContent || "") +
-                                        delta.reasoning_content;
-                                    if (isThinking && thoughtDetails)
-                                        thoughtDetails.style.display = "block";
-                                }
-                            }
-                        } catch (e) {
-                            console.error("Error parsing stream chunk", e);
-                        }
-                    }
-                }
-                // auto scroll
-                streamEl.scrollTop = streamEl.scrollHeight;
-            }
-        }
     }
 
     // selection handling

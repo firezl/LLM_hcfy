@@ -36,7 +36,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     ? "true"
                     : "false";
                 els.font_family.value = items.font_family || "";
-            }
+            },
         );
     }
 
