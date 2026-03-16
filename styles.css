@@ -35,12 +35,13 @@
 .jyt-bubble {
     position: absolute;
     z-index: 2147483647;
-    min-width: 280px;
-    max-width: 480px;
+    min-width: 180px;
+    width: fit-content;
+    max-width: min(var(--jyt-max-width, 52vw), calc(100vw - 20px));
     background: var(--jyt-bg);
     border-radius: var(--jyt-radius);
     box-shadow: var(--jyt-shadow);
-    padding: 16px;
+    padding: 10px;
     font-family: var(
         --jyt-font,
         "Segoe UI",
@@ -80,8 +81,8 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 12px;
-    padding-bottom: 8px;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
     border-bottom: 1px solid var(--jyt-border);
     cursor: move; /* Add move cursor */
     user-select: none; /* Prevent text selection while dragging */
@@ -107,7 +108,7 @@
 
 .jyt-controls {
     display: flex;
-    gap: 8px;
+    gap: 4px;
     align-items: center;
 }
 
@@ -116,7 +117,7 @@
     background: transparent;
     border: 0;
     cursor: pointer;
-    padding: 4px;
+    padding: 2px;
     border-radius: 4px;
     display: flex;
     align-items: center;
@@ -142,13 +143,13 @@
 
 .jyt-pin svg,
 .jyt-close svg {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     fill: currentColor;
 }
 
 .jyt-content {
-    max-height: 400px;
+    max-height: min(var(--jyt-max-height, 58vh), calc(100vh - 28px));
     overflow-y: auto;
     scrollbar-width: thin;
 }
@@ -168,10 +169,11 @@
     white-space: pre-wrap;
     word-break: break-word;
     color: #222;
+    line-height: 1.5;
 }
 
 .jyt-thought {
-    margin-top: 12px;
+    margin-top: 8px;
     font-size: 13px;
     background: #f7f9fc;
     border: 1px solid #eef2f6;

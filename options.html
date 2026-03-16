@@ -76,6 +76,32 @@
                     type="text"
                     placeholder="例如: 'Microsoft YaHei', 'Segoe UI'"
                 />
+
+                <label>翻译窗口最大宽度（占视口百分比）</label>
+                <input
+                    id="bubble_width_percent"
+                    type="number"
+                    min="30"
+                    max="95"
+                    step="1"
+                    placeholder="52"
+                />
+                <div class="jyt-hint">
+                    5-95，内容少时会更窄，达到该比例上限后不再变宽
+                </div>
+
+                <label>翻译窗口最大高度（占视口百分比）</label>
+                <input
+                    id="bubble_height_percent"
+                    type="number"
+                    min="30"
+                    max="95"
+                    step="1"
+                    placeholder="58"
+                />
+                <div class="jyt-hint">
+                    5-95，内容少时会更矮，达到该比例上限后不再变高
+                </div>
             </div>
 
             <div class="jyt-btn-group">

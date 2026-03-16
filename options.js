@@ -9,9 +9,19 @@ document.addEventListener("DOMContentLoaded", () => {
         "openai_thinking_model",
         "show_thoughts",
         "font_family",
+        "bubble_width_percent",
+        "bubble_height_percent",
     ];
     const els = {};
     ids.forEach((id) => (els[id] = document.getElementById(id)));
+
+    function clampPercent(value, fallback) {
+        const n = Number(value);
+        if (!Number.isFinite(n)) {
+            return fallback;
+        }
+        return Math.max(5, Math.min(95, Math.round(n)));
+    }
 
     function load() {
         chrome.storage.sync.get(
@@ -24,6 +34,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 openai_thinking_model: "gpt-5-thinking",
                 show_thoughts: false,
                 font_family: "",
+                bubble_width_percent: 52,
+                bubble_height_percent: 58,
             },
             (items) => {
                 els.enable_select.value = items.enabled;
@@ -36,6 +48,14 @@ document.addEventListener("DOMContentLoaded", () => {
                     ? "true"
                     : "false";
                 els.font_family.value = items.font_family || "";
+                els.bubble_width_percent.value = clampPercent(
+                    items.bubble_width_percent,
+                    20,
+                );
+                els.bubble_height_percent.value = clampPercent(
+                    items.bubble_height_percent,
+                    30,
+                );
             },
         );
     }
@@ -50,6 +70,14 @@ document.addEventListener("DOMContentLoaded", () => {
             openai_thinking_model: els.openai_thinking_model.value,
             show_thoughts: els.show_thoughts.value === "true",
             font_family: els.font_family.value,
+            bubble_width_percent: clampPercent(
+                els.bubble_width_percent.value,
+                52,
+            ),
+            bubble_height_percent: clampPercent(
+                els.bubble_height_percent.value,
+                58,
+            ),
         };
         chrome.storage.sync.set(data, () => {
             alert("已保存");

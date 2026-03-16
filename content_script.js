@@ -10,6 +10,21 @@
     let translatePort = null;
     let activeRequest = null;
 
+    function clampPercent(value, fallback) {
+        const n = Number(value);
+        if (!Number.isFinite(n)) {
+            return fallback;
+        }
+        return Math.max(5, Math.min(95, n));
+    }
+
+    function applyBubbleSizeConfig(bubble, settings) {
+        const widthPercent = clampPercent(settings.bubble_width_percent, 20);
+        const heightPercent = clampPercent(settings.bubble_height_percent, 58);
+        bubble.style.setProperty("--jyt-max-width", `${widthPercent}vw`);
+        bubble.style.setProperty("--jyt-max-height", `${heightPercent}vh`);
+    }
+
     function createButton() {
         let btn = document.getElementById(BUTTON_ID);
         if (btn) return btn;
@@ -137,6 +152,8 @@
                 openai_thinking_model: "gpt-5-thinking",
                 show_thoughts: false,
                 font_family: "",
+                bubble_width_percent: 52,
+                bubble_height_percent: 58,
             },
             (items) => {
                 translateText(selection, items, bubble);
@@ -234,6 +251,24 @@
         return translatePort;
     }
 
+    function sendTranslateStart(payload) {
+        let port = ensureTranslatePort();
+        try {
+            port.postMessage(payload);
+            return true;
+        } catch (err) {
+            // BFCache 恢复后旧端口可能已失效，重建一次并重试。
+            translatePort = null;
+            try {
+                port = ensureTranslatePort();
+                port.postMessage(payload);
+                return true;
+            } catch (retryErr) {
+                return false;
+            }
+        }
+    }
+
     function renderContentAndThought(
         buffer,
         streamEl,
@@ -292,6 +327,7 @@
         if (settings.font_family) {
             bubble.style.setProperty("--jyt-font", settings.font_family);
         }
+        applyBubbleSizeConfig(bubble, settings);
 
         // Always hide thought initially, show only when content arrives in streaming
         thoughtDetails.style.display = "none";
@@ -310,8 +346,7 @@
             buffer: "",
         };
 
-        const port = ensureTranslatePort();
-        port.postMessage({
+        const sent = sendTranslateStart({
             type: "TRANSLATE_START",
             requestId,
             text,
@@ -319,6 +354,10 @@
             to,
             settings,
         });
+        if (!sent) {
+            streamEl.innerText = "翻译失败: 通信通道已关闭，请重试";
+            activeRequest = null;
+        }
     }
 
     // selection handling
@@ -385,6 +424,17 @@
         // Only hide bubble if NOT pinned
         if (bubble && !isPinned) {
             bubble.style.display = "none";
+        }
+    });
+
+    window.addEventListener("pagehide", () => {
+        if (translatePort) {
+            try {
+                translatePort.disconnect();
+            } catch (err) {
+                // ignore
+            }
+            translatePort = null;
         }
     });
 })();

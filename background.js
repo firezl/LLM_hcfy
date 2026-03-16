@@ -5,13 +5,26 @@ function buildPrompt(text, to) {
     return `请把这段文字翻译为${to === "zh" ? "中文" : "英文"}，不要有多余的输出。输入:\n${text}`;
 }
 
-async function streamOpenAITranslate(request, port) {
+function safePostMessage(port, state, payload) {
+    if (!state.connected) {
+        return false;
+    }
+    try {
+        port.postMessage(payload);
+        return true;
+    } catch (err) {
+        state.connected = false;
+        return false;
+    }
+}
+
+async function streamOpenAITranslate(request, port, state) {
     const { requestId, text, settings, to } = request;
     const apiUrl = settings.openai_api_url;
     const key = settings.openai_api_key;
 
     if (!apiUrl || !key) {
-        port.postMessage({
+        safePostMessage(port, state, {
             type: "TRANSLATE_ERROR",
             requestId,
             error: "请在设置中配置 OpenAI API 地址与 Key",
@@ -31,6 +44,9 @@ async function streamOpenAITranslate(request, port) {
         stream: true,
     };
 
+    const controller = new AbortController();
+    state.controllers.set(requestId, controller);
+
     try {
         const res = await fetch(apiUrl, {
             method: "POST",
@@ -39,11 +55,12 @@ async function streamOpenAITranslate(request, port) {
                 Authorization: `Bearer ${key}`,
             },
             body: JSON.stringify(body),
+            signal: controller.signal,
         });
 
         if (!res.ok) {
             const textErr = await res.text();
-            port.postMessage({
+            safePostMessage(port, state, {
                 type: "TRANSLATE_ERROR",
                 requestId,
                 error: "OpenAI 请求失败: " + textErr,
@@ -52,7 +69,7 @@ async function streamOpenAITranslate(request, port) {
         }
 
         if (!res.body) {
-            port.postMessage({
+            safePostMessage(port, state, {
                 type: "TRANSLATE_ERROR",
                 requestId,
                 error: "响应不包含可读流",
@@ -95,19 +112,27 @@ async function streamOpenAITranslate(request, port) {
                     }
 
                     if (delta.content) {
-                        port.postMessage({
-                            type: "TRANSLATE_CHUNK",
-                            requestId,
-                            content: delta.content,
-                        });
+                        if (
+                            !safePostMessage(port, state, {
+                                type: "TRANSLATE_CHUNK",
+                                requestId,
+                                content: delta.content,
+                            })
+                        ) {
+                            return;
+                        }
                     }
 
                     if (delta.reasoning_content) {
-                        port.postMessage({
-                            type: "TRANSLATE_THOUGHT",
-                            requestId,
-                            content: delta.reasoning_content,
-                        });
+                        if (
+                            !safePostMessage(port, state, {
+                                type: "TRANSLATE_THOUGHT",
+                                requestId,
+                                content: delta.reasoning_content,
+                            })
+                        ) {
+                            return;
+                        }
                     }
                 } catch (err) {
                     console.error("Error parsing stream data", err);
@@ -115,13 +140,19 @@ async function streamOpenAITranslate(request, port) {
             }
         }
 
-        port.postMessage({ type: "TRANSLATE_DONE", requestId });
+        safePostMessage(port, state, { type: "TRANSLATE_DONE", requestId });
     } catch (err) {
-        port.postMessage({
-            type: "TRANSLATE_ERROR",
-            requestId,
-            error: err && err.message ? err.message : String(err),
-        });
+        // BFCache 或页面关闭导致断连时会触发中止，不需要再向断开的端口发错误消息。
+        const aborted = err && err.name === "AbortError";
+        if (!aborted && state.connected) {
+            safePostMessage(port, state, {
+                type: "TRANSLATE_ERROR",
+                requestId,
+                error: err && err.message ? err.message : String(err),
+            });
+        }
+    } finally {
+        state.controllers.delete(requestId);
     }
 }
 
@@ -130,10 +161,23 @@ chrome.runtime.onConnect.addListener((port) => {
         return;
     }
 
+    const state = {
+        connected: true,
+        controllers: new Map(),
+    };
+
+    port.onDisconnect.addListener(() => {
+        state.connected = false;
+        for (const controller of state.controllers.values()) {
+            controller.abort();
+        }
+        state.controllers.clear();
+    });
+
     port.onMessage.addListener((message) => {
         if (!message || message.type !== "TRANSLATE_START") {
             return;
         }
-        streamOpenAITranslate(message, port);
+        streamOpenAITranslate(message, port, state);
     });
 });
