@@ -1,5 +1,38 @@
 // background.js
-// Runs translation requests in the extension service worker process.
+// Service worker translation runtime: orchestrates translation work and streams back progress/results.
+
+const PORT_NAME = "jyt-translate";
+const MESSAGE_TYPE_START = "TRANSLATE_START";
+
+function detectLangByHeuristic(text) {
+    const zh = /[\u4e00-\u9fff]/;
+    return zh.test(text) ? "zh" : "en";
+}
+
+function resolveLanguagePair(request) {
+    const sourceSetting = request?.settings?.source_lang || "auto";
+    const targetSetting = request?.settings?.target_lang || "auto";
+
+    const from =
+        sourceSetting !== "auto"
+            ? sourceSetting
+            : request.from ||
+              request.preferredFrom ||
+              detectLangByHeuristic(request.text || "");
+
+    let to =
+        targetSetting !== "auto"
+            ? targetSetting
+            : request.to ||
+              request.preferredTo ||
+              (from === "zh" ? "en" : "zh");
+
+    if (to === from) {
+        to = from === "zh" ? "en" : "zh";
+    }
+
+    return { from, to };
+}
 
 function buildPrompt(text, to) {
     return `请把这段文字翻译为${to === "zh" ? "中文" : "英文"}，不要有多余的输出。输入:\n${text}`;
@@ -18,17 +51,47 @@ function safePostMessage(port, state, payload) {
     }
 }
 
+function postTranslateError(port, state, requestId, error) {
+    safePostMessage(port, state, {
+        type: "TRANSLATE_ERROR",
+        requestId,
+        error,
+    });
+}
+
+function parseOpenAIStreamLine(line) {
+    const trimmed = line.trim();
+    if (!trimmed || !trimmed.startsWith("data:")) {
+        return null;
+    }
+
+    const payload = trimmed.substring(5).trim();
+    if (!payload || payload === "[DONE]") {
+        return null;
+    }
+
+    try {
+        const json = JSON.parse(payload);
+        return json.choices?.[0]?.delta || null;
+    } catch (err) {
+        console.error("Error parsing stream data", err);
+        return null;
+    }
+}
+
 async function streamOpenAITranslate(request, port, state) {
-    const { requestId, text, settings, to } = request;
+    const { requestId, text, settings } = request;
+    const { to } = resolveLanguagePair(request);
     const apiUrl = settings.openai_api_url;
     const key = settings.openai_api_key;
 
     if (!apiUrl || !key) {
-        safePostMessage(port, state, {
-            type: "TRANSLATE_ERROR",
+        postTranslateError(
+            port,
+            state,
             requestId,
-            error: "请在设置中配置 OpenAI API 地址与 Key",
-        });
+            "请在设置中配置 OpenAI API 地址与 Key",
+        );
         return;
     }
 
@@ -60,20 +123,17 @@ async function streamOpenAITranslate(request, port, state) {
 
         if (!res.ok) {
             const textErr = await res.text();
-            safePostMessage(port, state, {
-                type: "TRANSLATE_ERROR",
+            postTranslateError(
+                port,
+                state,
                 requestId,
-                error: "OpenAI 请求失败: " + textErr,
-            });
+                "OpenAI 请求失败: " + textErr,
+            );
             return;
         }
 
         if (!res.body) {
-            safePostMessage(port, state, {
-                type: "TRANSLATE_ERROR",
-                requestId,
-                error: "响应不包含可读流",
-            });
+            postTranslateError(port, state, requestId, "响应不包含可读流");
             return;
         }
 
@@ -94,70 +154,69 @@ async function streamOpenAITranslate(request, port, state) {
             carry = lines.pop() || "";
 
             for (const line of lines) {
-                const trimmed = line.trim();
-                if (!trimmed || !trimmed.startsWith("data:")) {
+                const delta = parseOpenAIStreamLine(line);
+                if (!delta) {
                     continue;
                 }
 
-                const payload = trimmed.substring(5).trim();
-                if (!payload || payload === "[DONE]") {
-                    continue;
+                if (delta.content) {
+                    const ok = safePostMessage(port, state, {
+                        type: "TRANSLATE_CHUNK",
+                        requestId,
+                        content: delta.content,
+                    });
+                    if (!ok) {
+                        return;
+                    }
                 }
 
-                try {
-                    const json = JSON.parse(payload);
-                    const delta = json.choices?.[0]?.delta;
-                    if (!delta) {
-                        continue;
+                if (delta.reasoning_content) {
+                    const ok = safePostMessage(port, state, {
+                        type: "TRANSLATE_THOUGHT",
+                        requestId,
+                        content: delta.reasoning_content,
+                    });
+                    if (!ok) {
+                        return;
                     }
-
-                    if (delta.content) {
-                        if (
-                            !safePostMessage(port, state, {
-                                type: "TRANSLATE_CHUNK",
-                                requestId,
-                                content: delta.content,
-                            })
-                        ) {
-                            return;
-                        }
-                    }
-
-                    if (delta.reasoning_content) {
-                        if (
-                            !safePostMessage(port, state, {
-                                type: "TRANSLATE_THOUGHT",
-                                requestId,
-                                content: delta.reasoning_content,
-                            })
-                        ) {
-                            return;
-                        }
-                    }
-                } catch (err) {
-                    console.error("Error parsing stream data", err);
                 }
             }
         }
 
         safePostMessage(port, state, { type: "TRANSLATE_DONE", requestId });
     } catch (err) {
-        // BFCache 或页面关闭导致断连时会触发中止，不需要再向断开的端口发错误消息。
         const aborted = err && err.name === "AbortError";
         if (!aborted && state.connected) {
-            safePostMessage(port, state, {
-                type: "TRANSLATE_ERROR",
+            postTranslateError(
+                port,
+                state,
                 requestId,
-                error: err && err.message ? err.message : String(err),
-            });
+                err && err.message ? err.message : String(err),
+            );
         }
     } finally {
         state.controllers.delete(requestId);
     }
 }
 
+async function handleTranslateStart(message, port, state) {
+    const engine = message?.settings?.engine || "auto";
+
+    if (engine === "browser") {
+        postTranslateError(
+            port,
+            state,
+            message.requestId,
+            "浏览器 Translation API 不支持在扩展 service worker 中运行，请使用 auto 或 openai",
+        );
+        return;
+    }
+
+    await streamOpenAITranslate(message, port, state);
+}
+
 chrome.runtime.onConnect.addListener((port) => {
-    if (port.name !== "jyt-translate") {
+    if (port.name !== PORT_NAME) {
         return;
     }
 
@@ -175,9 +234,9 @@ chrome.runtime.onConnect.addListener((port) => {
     });
 
     port.onMessage.addListener((message) => {
-        if (!message || message.type !== "TRANSLATE_START") {
+        if (!message || message.type !== MESSAGE_TYPE_START) {
             return;
         }
-        streamOpenAITranslate(message, port, state);
+        handleTranslateStart(message, port, state);
     });
 });

@@ -3,6 +3,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const ids = [
         "enable_select",
         "engine_select",
+        "source_lang",
+        "target_lang",
         "openai_api_url",
         "openai_api_key",
         "openai_model",
@@ -28,6 +30,8 @@ document.addEventListener("DOMContentLoaded", () => {
             {
                 enabled: "on",
                 engine: "auto",
+                source_lang: "auto",
+                target_lang: "auto",
                 openai_api_url: "",
                 openai_api_key: "",
                 openai_model: "gpt-4o-mini",
@@ -40,6 +44,8 @@ document.addEventListener("DOMContentLoaded", () => {
             (items) => {
                 els.enable_select.value = items.enabled;
                 els.engine_select.value = items.engine;
+                els.source_lang.value = items.source_lang || "auto";
+                els.target_lang.value = items.target_lang || "auto";
                 els.openai_api_url.value = items.openai_api_url;
                 els.openai_api_key.value = items.openai_api_key;
                 els.openai_model.value = items.openai_model;
@@ -64,6 +70,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const data = {
             enabled: els.enable_select.value,
             engine: els.engine_select.value,
+            source_lang: els.source_lang.value,
+            target_lang: els.target_lang.value,
             openai_api_url: els.openai_api_url.value,
             openai_api_key: els.openai_api_key.value,
             openai_model: els.openai_model.value,

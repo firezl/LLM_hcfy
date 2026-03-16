@@ -10,6 +10,7 @@
     let translatePort = null;
     let activeRequest = null;
     const translatorCache = new Map();
+    let i18nDetectorInitPromise = null;
 
     function clampPercent(value, fallback) {
         const n = Number(value);
@@ -147,6 +148,8 @@
         chrome.storage.sync.get(
             {
                 engine: "auto",
+                source_lang: "auto",
+                target_lang: "auto",
                 openai_api_url: "",
                 openai_api_key: "",
                 openai_model: "gpt-4o-mini",
@@ -194,6 +197,96 @@
         return zh.test(text) ? "zh" : "en";
     }
 
+    function normalizeBasicLang(lang) {
+        if (!lang || typeof lang !== "string") {
+            return "";
+        }
+        const lower = lang.toLowerCase();
+        if (lower.startsWith("zh")) return "zh";
+        if (lower.startsWith("en")) return "en";
+        if (lower.startsWith("ja")) return "ja";
+        if (lower.startsWith("ko")) return "ko";
+        if (lower.startsWith("fr")) return "fr";
+        if (lower.startsWith("de")) return "de";
+        if (lower.startsWith("es")) return "es";
+        if (lower.startsWith("ru")) return "ru";
+        return lower.split("-")[0] || "";
+    }
+
+    function initI18nextLanguageDetector() {
+        if (i18nDetectorInitPromise) {
+            return i18nDetectorInitPromise;
+        }
+
+        i18nDetectorInitPromise = (async () => {
+            if (
+                typeof self.i18next === "undefined" ||
+                typeof self.i18nextBrowserLanguageDetector === "undefined"
+            ) {
+                return false;
+            }
+
+            if (!self.i18next.isInitialized) {
+                self.i18next.use(self.i18nextBrowserLanguageDetector);
+                await self.i18next.init({
+                    fallbackLng: "en",
+                    interpolation: { escapeValue: false },
+                    detection: {
+                        order: [
+                            "querystring",
+                            "cookie",
+                            "localStorage",
+                            "sessionStorage",
+                            "navigator",
+                            "htmlTag",
+                        ],
+                        caches: [],
+                    },
+                });
+            }
+            return true;
+        })();
+
+        return i18nDetectorInitPromise;
+    }
+
+    async function detectPreferredLangByI18next() {
+        try {
+            const ok = await initI18nextLanguageDetector();
+            if (!ok) {
+                return null;
+            }
+            const lang = normalizeBasicLang(self.i18next.language);
+            return lang || null;
+        } catch (err) {
+            console.warn("i18next language detector init failed", err);
+            return null;
+        }
+    }
+
+    async function detectTextLangByChromeI18n(text) {
+        if (!chrome?.i18n?.detectLanguage) {
+            return null;
+        }
+
+        try {
+            const result = await new Promise((resolve) => {
+                chrome.i18n.detectLanguage(text, (res) => resolve(res || null));
+            });
+
+            if (!result || !Array.isArray(result.languages)) {
+                return null;
+            }
+
+            const top = result.languages[0];
+            const lang = normalizeBasicLang(top?.language || "");
+            return lang || null;
+        } catch (err) {
+            console.warn("chrome.i18n.detectLanguage failed", err);
+            return null;
+        }
+    }
+
     function isBrowserAITranslatorSupported() {
         return (
             typeof self.Translator !== "undefined" &&
@@ -214,15 +307,7 @@
         if (!lang || typeof lang !== "string") {
             return "";
         }
-        const lower = lang.toLowerCase();
-        if (lower.startsWith("zh")) {
-            return "zh";
-        }
-        if (lower.startsWith("en")) {
-            return "en";
-        }
-        const base = lower.split("-")[0];
-        return base || "";
+        return normalizeBasicLang(lang);
     }
 
     async function detectLangByLanguageDetector(text, streamEl) {
@@ -443,10 +528,10 @@
         streamEl.innerText = buffer;
     }
 
-    function startOpenAITranslate(
+    function startBackgroundTranslate(
         text,
-        from,
-        to,
+        preferredFrom,
+        preferredTo,
         settings,
         streamEl,
         thoughtEl,
@@ -466,8 +551,8 @@
             type: "TRANSLATE_START",
             requestId,
             text,
-            from,
-            to,
+            preferredFrom,
+            preferredTo,
             settings,
         });
         if (!sent) {
@@ -478,7 +563,9 @@
 
     async function translateText(text, settings, bubble) {
         const engine = settings.engine || "auto";
-        let from = detectLang(text);
+        const sourceSetting = settings.source_lang || "auto";
+        const targetSetting = settings.target_lang || "auto";
+        let from = sourceSetting === "auto" ? "" : sourceSetting;
         const streamEl = bubble.querySelector("#jyt-stream");
         const thoughtEl = bubble.querySelector("#jyt-thought-content");
         const thoughtDetails = bubble.querySelector("#jyt-thought");
@@ -497,19 +584,38 @@
         thoughtEl.innerText = "";
         activeRequest = null;
 
+        if (!from) {
+            from = await detectLangByLanguageDetector(text, streamEl);
+        }
+        if (!from) {
+            from = await detectTextLangByChromeI18n(text);
+        }
+        if (!from) {
+            from = detectLang(text);
+        }
+
+        let preferredLang = await detectPreferredLangByI18next();
+        if (!preferredLang) {
+            preferredLang = "zh";
+        }
+
+        let to = targetSetting === "auto" ? "" : targetSetting;
+        if (!to) {
+            if (from === preferredLang) {
+                to = from === "zh" ? "en" : "zh";
+            } else {
+                to = preferredLang;
+            }
+        }
+
+        if (to === from) {
+            to = from === "zh" ? "en" : "zh";
+        }
+
         const shouldUseBrowser = engine === "browser" || engine === "auto";
         if (shouldUseBrowser) {
-            const detectedByAPI = await detectLangByLanguageDetector(
-                text,
-                streamEl,
-            );
-            if (detectedByAPI) {
-                from = detectedByAPI;
-            }
-            const toByAPI = from === "zh" ? "en" : "zh";
-
             try {
-                await translateWithBrowserAPI(text, from, toByAPI, streamEl);
+                await translateWithBrowserAPI(text, from, to, streamEl);
                 return;
             } catch (err) {
                 if (engine === "browser") {
@@ -521,8 +627,7 @@
             }
         }
 
-        const to = from === "zh" ? "en" : "zh";
-        startOpenAITranslate(
+        startBackgroundTranslate(
             text,
             from,
             to,
