@@ -30,7 +30,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 engine: "auto",
                 openai_api_url: "",
                 openai_api_key: "",
-                openai_model: "gpt-4-mini",
+                openai_model: "gpt-4o-mini",
                 openai_thinking_model: "gpt-5-thinking",
                 show_thoughts: false,
                 font_family: "",

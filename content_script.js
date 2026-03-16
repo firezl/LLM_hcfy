@@ -9,6 +9,7 @@
     let isPinned = false;
     let translatePort = null;
     let activeRequest = null;
+    const translatorCache = new Map();
 
     function clampPercent(value, fallback) {
         const n = Number(value);
@@ -193,6 +194,132 @@
         return zh.test(text) ? "zh" : "en";
     }
 
+    function isBrowserAITranslatorSupported() {
+        return (
+            typeof self.Translator !== "undefined" &&
+            typeof self.Translator.availability === "function" &&
+            typeof self.Translator.create === "function"
+        );
+    }
+
+    function isBrowserAILanguageDetectorSupported() {
+        return (
+            typeof self.LanguageDetector !== "undefined" &&
+            typeof self.LanguageDetector.availability === "function" &&
+            typeof self.LanguageDetector.create === "function"
+        );
+    }
+
+    function normalizeLanguageTag(lang) {
+        if (!lang || typeof lang !== "string") {
+            return "";
+        }
+        const lower = lang.toLowerCase();
+        if (lower.startsWith("zh")) {
+            return "zh";
+        }
+        if (lower.startsWith("en")) {
+            return "en";
+        }
+        const base = lower.split("-")[0];
+        return base || "";
+    }
+
+    async function detectLangByLanguageDetector(text, streamEl) {
+        if (!isBrowserAILanguageDetectorSupported()) {
+            return null;
+        }
+
+        try {
+            const availability = await self.LanguageDetector.availability();
+            if (availability === "unavailable") {
+                return null;
+            }
+
+            const detector = await self.LanguageDetector.create({
+                monitor(m) {
+                    m.addEventListener("downloadprogress", (e) => {
+                        const percent = Math.round((e.loaded || 0) * 100);
+                        streamEl.innerText =
+                            "正在下载 LanguageDetector 模型: " + percent + "%";
+                    });
+                },
+            });
+
+            if (detector.ready) {
+                await detector.ready;
+            }
+
+            const results = await detector.detect(text);
+            const detected = normalizeLanguageTag(
+                results && results[0] ? results[0].detectedLanguage : "",
+            );
+            return detected || null;
+        } catch (err) {
+            console.warn("LanguageDetector failed", err);
+            return null;
+        }
+    }
+
+    async function getBrowserTranslator(from, to, streamEl) {
+        if (!isBrowserAITranslatorSupported()) {
+            throw new Error(
+                "当前浏览器不支持 Translation API（需 Chrome 138+ 实验功能）",
+            );
+        }
+
+        const key = `${from}->${to}`;
+        if (translatorCache.has(key)) {
+            return translatorCache.get(key);
+        }
+
+        const availability = await self.Translator.availability({
+            sourceLanguage: from,
+            targetLanguage: to,
+        });
+
+        if (availability === "unavailable") {
+            throw new Error(`Translation API 不支持语言对: ${from} -> ${to}`);
+        }
+
+        const translator = await self.Translator.create({
+            sourceLanguage: from,
+            targetLanguage: to,
+            monitor(m) {
+                m.addEventListener("downloadprogress", (e) => {
+                    const percent = Math.round((e.loaded || 0) * 100);
+                    streamEl.innerText =
+                        "正在下载 Translation 模型: " + percent + "%";
+                });
+            },
+        });
+
+        if (translator.ready) {
+            await translator.ready;
+        }
+
+        translatorCache.set(key, translator);
+        return translator;
+    }
+
+    async function translateWithBrowserAPI(text, from, to, streamEl) {
+        const translator = await getBrowserTranslator(from, to, streamEl);
+
+        if (typeof translator.translateStreaming === "function") {
+            let output = "";
+            const stream = translator.translateStreaming(text);
+            for await (const chunk of stream) {
+                output += chunk;
+                streamEl.innerText = output;
+                streamEl.scrollTop = streamEl.scrollHeight;
+            }
+            return;
+        }
+
+        const translated = await translator.translate(text);
+        streamEl.innerText = translated;
+    }
+
     function ensureTranslatePort() {
         if (translatePort) {
             return translatePort;
@@ -316,26 +443,15 @@
         streamEl.innerText = buffer;
     }
 
-    function translateText(text, settings, bubble) {
-        let from = detectLang(text);
-        let to = from === "zh" ? "en" : "zh";
-        const streamEl = bubble.querySelector("#jyt-stream");
-        const thoughtEl = bubble.querySelector("#jyt-thought-content");
-        const thoughtDetails = bubble.querySelector("#jyt-thought");
-
-        // Apply font family if set
-        if (settings.font_family) {
-            bubble.style.setProperty("--jyt-font", settings.font_family);
-        }
-        applyBubbleSizeConfig(bubble, settings);
-
-        // Always hide thought initially, show only when content arrives in streaming
-        thoughtDetails.style.display = "none";
-        thoughtDetails.removeAttribute("open");
-
-        streamEl.innerText = "";
-        thoughtEl.innerText = "";
-
+    function startOpenAITranslate(
+        text,
+        from,
+        to,
+        settings,
+        streamEl,
+        thoughtEl,
+        thoughtDetails,
+    ) {
         const requestId = `${Date.now()}-${Math.random()}`;
         activeRequest = {
             requestId,
@@ -358,6 +474,63 @@
             streamEl.innerText = "翻译失败: 通信通道已关闭，请重试";
             activeRequest = null;
         }
+    }
+
+    async function translateText(text, settings, bubble) {
+        const engine = settings.engine || "auto";
+        let from = detectLang(text);
+        const streamEl = bubble.querySelector("#jyt-stream");
+        const thoughtEl = bubble.querySelector("#jyt-thought-content");
+        const thoughtDetails = bubble.querySelector("#jyt-thought");
+
+        // Apply font family if set
+        if (settings.font_family) {
+            bubble.style.setProperty("--jyt-font", settings.font_family);
+        }
+        applyBubbleSizeConfig(bubble, settings);
+
+        // Always hide thought initially, show only when content arrives in streaming
+        thoughtDetails.style.display = "none";
+        thoughtDetails.removeAttribute("open");
+
+        streamEl.innerText = "";
+        thoughtEl.innerText = "";
+        activeRequest = null;
+
+        const shouldUseBrowser = engine === "browser" || engine === "auto";
+        if (shouldUseBrowser) {
+            const detectedByAPI = await detectLangByLanguageDetector(
+                text,
+                streamEl,
+            );
+            if (detectedByAPI) {
+                from = detectedByAPI;
+            }
+            const toByAPI = from === "zh" ? "en" : "zh";
+
+            try {
+                await translateWithBrowserAPI(text, from, toByAPI, streamEl);
+                return;
+            } catch (err) {
+                if (engine === "browser") {
+                    streamEl.innerText = "翻译失败: " + err.message;
+                    return;
+                }
+                // auto 模式下浏览器内置 API 不可用时回退到 OpenAI。
+                streamEl.innerText = "浏览器内置翻译不可用，正在回退 OpenAI...";
+            }
+        }
+
+        const to = from === "zh" ? "en" : "zh";
+        startOpenAITranslate(
+            text,
+            from,
+            to,
+            settings,
+            streamEl,
+            thoughtEl,
+            thoughtDetails,
+        );
     }
 
     // selection handling

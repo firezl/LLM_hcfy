@@ -19,9 +19,18 @@
 
                 <label>首选翻译引擎</label>
                 <select id="engine_select">
-                    <option value="auto">自动（优先 OpenAI）</option>
+                    <option value="auto">
+                        自动（优先浏览器 Translation API）
+                    </option>
+                    <option value="browser">
+                        浏览器 Translation API（实验）
+                    </option>
                     <option value="openai">OpenAI（流式）</option>
                 </select>
+                <div class="jyt-hint">
+                    浏览器 Translation API 与 LanguageDetector 为实验功能，仅
+                    Chrome 新版本支持，首次可能下载模型。
+                </div>
             </div>
 
             <div class="jyt-section">
