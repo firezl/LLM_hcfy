@@ -11,6 +11,7 @@ document.addEventListener("DOMContentLoaded", () => {
         "openai_model",
         "openai_thinking_model",
         "show_thoughts",
+        "theme_mode",
         "font_family",
         "bubble_width_percent",
         "bubble_height_percent",
@@ -79,6 +80,18 @@ document.addEventListener("DOMContentLoaded", () => {
         openaiSection.classList.toggle("jyt-hidden", hideOpenAI);
     }
 
+    function applyTheme(theme) {
+        const root = document.documentElement;
+        if (theme === "auto") {
+            const prefersDark = window.matchMedia(
+                "(prefers-color-scheme: dark)",
+            ).matches;
+            root.setAttribute("data-theme", prefersDark ? "dark" : "light");
+        } else {
+            root.setAttribute("data-theme", theme);
+        }
+    }
+
     function load() {
         chrome.storage.sync.get(
             {
@@ -92,6 +105,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 openai_model: "gpt-4o-mini",
                 openai_thinking_model: "gpt-5-thinking",
                 show_thoughts: false,
+                theme_mode: "auto",
                 font_family: "",
                 bubble_width_percent: 52,
                 bubble_height_percent: 58,
@@ -111,6 +125,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 els.show_thoughts.value = items.show_thoughts
                     ? "true"
                     : "false";
+                els.theme_mode.value = items.theme_mode || "auto";
                 els.font_family.value = items.font_family || "";
                 els.bubble_width_percent.value = clampPercent(
                     items.bubble_width_percent,
@@ -121,6 +136,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     30,
                 );
                 updateEngineDependentUI();
+                applyTheme(items.theme_mode || "auto");
             },
         );
     }
@@ -137,6 +153,7 @@ document.addEventListener("DOMContentLoaded", () => {
             openai_model: els.openai_model.value,
             openai_thinking_model: els.openai_thinking_model.value,
             show_thoughts: els.show_thoughts.value === "true",
+            theme_mode: els.theme_mode.value,
             font_family: els.font_family.value,
             bubble_width_percent: clampPercent(
                 els.bubble_width_percent.value,
@@ -148,6 +165,7 @@ document.addEventListener("DOMContentLoaded", () => {
             ),
         };
         chrome.storage.sync.set(data, () => {
+            applyTheme(data.theme_mode);
             alert("已保存");
         });
     });
@@ -181,6 +199,19 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     els.engine_select.addEventListener("change", updateEngineDependentUI);
+
+    els.theme_mode.addEventListener("change", () => {
+        applyTheme(els.theme_mode.value);
+    });
+
+    // Listen for system theme changes
+    window
+        .matchMedia("(prefers-color-scheme: dark)")
+        .addEventListener("change", (e) => {
+            if (els.theme_mode.value === "auto") {
+                applyTheme("auto");
+            }
+        });
 
     load();
 });

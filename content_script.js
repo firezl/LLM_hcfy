@@ -15,6 +15,7 @@
         openai_model: "gpt-4o-mini",
         openai_thinking_model: "gpt-5-thinking",
         show_thoughts: false,
+        theme_mode: "auto",
         font_family: "",
         bubble_width_percent: 52,
         bubble_height_percent: 58,
@@ -42,6 +43,20 @@
         const heightPercent = clampPercent(settings.bubble_height_percent, 58);
         bubble.style.setProperty("--jyt-max-width", `${widthPercent}vw`);
         bubble.style.setProperty("--jyt-max-height", `${heightPercent}vh`);
+    }
+
+    function applyTheme(theme) {
+        const bubble = document.getElementById(BUBBLE_ID);
+        if (!bubble) return;
+
+        if (theme === "auto") {
+            const prefersDark = window.matchMedia(
+                "(prefers-color-scheme: dark)",
+            ).matches;
+            bubble.setAttribute("data-theme", prefersDark ? "dark" : "light");
+        } else {
+            bubble.setAttribute("data-theme", theme);
+        }
     }
 
     function createButton() {
@@ -164,6 +179,7 @@
     function loadRuntimeSettings() {
         chrome.storage.sync.get(DEFAULT_SETTINGS, (items) => {
             runtimeSettings = { ...DEFAULT_SETTINGS, ...items };
+            applyTheme(runtimeSettings.theme_mode || "auto");
         });
     }
 
@@ -683,6 +699,7 @@
         updatePinState(bubble);
         positionBubble(bubble, x, y);
         setBubbleLoading(bubble, true);
+        applyTheme(runtimeSettings.theme_mode || "auto");
         translateText(text, runtimeSettings, bubble);
     }
 
@@ -690,10 +707,22 @@
     createBubble();
     loadRuntimeSettings();
 
+    // Listen for system theme changes
+    window
+        .matchMedia("(prefers-color-scheme: dark)")
+        .addEventListener("change", (e) => {
+            if (runtimeSettings.theme_mode === "auto") {
+                applyTheme("auto");
+            }
+        });
+
     chrome.storage.onChanged.addListener((changes, area) => {
         if (area !== "sync") return;
         for (const key of Object.keys(changes)) {
             runtimeSettings[key] = changes[key].newValue;
+            if (key === "theme_mode") {
+                applyTheme(changes[key].newValue);
+            }
         }
     });
 
