@@ -7,6 +7,45 @@
     --jyt-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08);
     --jyt-radius: 12px;
     --jyt-font-size: 14px;
+    --jyt-secondary-bg: #f7f9fc;
+    --jyt-hover-bg: rgba(0, 0, 0, 0.05);
+    --jyt-input-bg: #ffffff;
+    --jyt-input-border: #ddd;
+}
+
+/* Dark mode colors for options page */
+:root[data-theme="dark"] {
+    --jyt-primary: #4a9eff;
+    --jyt-bg: #1e1e1e;
+    --jyt-text: #e0e0e0;
+    --jyt-border: #3a3a3a;
+    --jyt-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3);
+    --jyt-secondary-bg: #2a2a2a;
+    --jyt-hover-bg: rgba(255, 255, 255, 0.1);
+    --jyt-input-bg: #2a2a2a;
+    --jyt-input-border: #3a3a3a;
+}
+
+/* Dark mode colors for translation bubble */
+.jyt-bubble[data-theme="dark"] {
+    --jyt-primary: #4a9eff;
+    --jyt-bg: #1e1e1e;
+    --jyt-text: #e0e0e0;
+    --jyt-border: #3a3a3a;
+    --jyt-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3);
+    --jyt-secondary-bg: #2a2a2a;
+    --jyt-hover-bg: rgba(255, 255, 255, 0.1);
+}
+
+/* Light mode for translation bubble (explicit) */
+.jyt-bubble[data-theme="light"] {
+    --jyt-primary: #1877f2;
+    --jyt-bg: #ffffff;
+    --jyt-text: #333333;
+    --jyt-border: #e0e0e0;
+    --jyt-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08);
+    --jyt-secondary-bg: #f7f9fc;
+    --jyt-hover-bg: rgba(0, 0, 0, 0.05);
 }
 
 #jyt-translate-btn.jyt-btn {
@@ -91,7 +130,7 @@
 .jyt-title {
     font-weight: 600;
     font-size: 14px;
-    color: #555;
+    color: var(--jyt-text);
     display: flex;
     align-items: center;
     gap: 6px;
@@ -127,8 +166,8 @@
 }
 
 .jyt-pin:hover {
-    background: rgba(0, 0, 0, 0.05);
-    color: #666;
+    background: var(--jyt-hover-bg);
+    color: var(--jyt-text);
 }
 
 .jyt-pin.active {
@@ -137,8 +176,8 @@
 }
 
 .jyt-close:hover {
-    background-color: #f0f0f0;
-    color: #333;
+    background-color: var(--jyt-hover-bg);
+    color: var(--jyt-text);
 }
 
 .jyt-pin svg,
@@ -168,15 +207,15 @@
 .jyt-stream {
     white-space: pre-wrap;
     word-break: break-word;
-    color: #222;
+    color: var(--jyt-text);
     line-height: 1.5;
 }
 
 .jyt-thought {
     margin-top: 8px;
     font-size: 13px;
-    background: #f7f9fc;
-    border: 1px solid #eef2f6;
+    background: var(--jyt-secondary-bg);
+    border: 1px solid var(--jyt-border);
     border-radius: 8px;
     overflow: hidden;
 }
@@ -184,7 +223,7 @@
 .jyt-thought summary {
     padding: 8px 12px;
     cursor: pointer;
-    color: #666;
+    color: var(--jyt-text);
     font-weight: 500;
     user-select: none;
     outline: none;
@@ -204,15 +243,15 @@
 }
 
 .jyt-thought summary:hover {
-    background: #f0f4f8;
+    background: var(--jyt-hover-bg);
     color: var(--jyt-primary);
 }
 
 #jyt-thought-content {
     padding: 0 12px 12px;
-    color: #555;
+    color: var(--jyt-text);
     font-style: italic;
-    border-top: 1px solid #eef2f6;
+    border-top: 1px solid var(--jyt-border);
     margin-top: 4px;
     padding-top: 8px;
     white-space: pre-wrap;
@@ -222,7 +261,7 @@
 #jyt-options-body {
     width: 350px;
     min-height: 400px;
-    background: #fff;
+    background: var(--jyt-bg);
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -245,7 +284,7 @@ body {
 */
 
 .jyt-form {
-    background: #fff;
+    background: var(--jyt-bg);
     padding: 16px;
     border-radius: 0;
     box-shadow: none;
@@ -259,15 +298,15 @@ body {
     margin-top: 0;
     margin-bottom: 12px;
     font-size: 16px;
-    color: #333;
-    border-bottom: 1px solid #f0f0f0;
+    color: var(--jyt-text);
+    border-bottom: 1px solid var(--jyt-border);
     padding-bottom: 8px;
 }
 
 .jyt-section {
     margin-bottom: 12px;
     padding-bottom: 8px;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid var(--jyt-border);
 }
 .jyt-section:last-child {
     border-bottom: none;
@@ -276,7 +315,7 @@ body {
 .jyt-section-title {
     font-size: 14px;
     font-weight: 600;
-    color: #444;
+    color: var(--jyt-text);
     margin-bottom: 8px;
 }
 
@@ -284,20 +323,23 @@ body {
     display: block;
     margin: 8px 0 2px;
     font-size: 12px;
-    color: #555;
+    color: var(--jyt-text);
     font-weight: 500;
 }
 
 .jyt-form input[type="text"],
 .jyt-form select,
-.jyt-form input[type="password"] {
+.jyt-form input[type="password"],
+.jyt-form input[type="number"] {
     width: 100%;
     padding: 6px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--jyt-input-border);
     border-radius: 4px;
     font-size: 12px;
     transition: border-color 0.2s;
     box-sizing: border-box;
+    background: var(--jyt-input-bg);
+    color: var(--jyt-text);
 }
 
 .jyt-form input:focus,
@@ -334,11 +376,11 @@ button#save:hover {
 }
 
 button#reset {
-    background: #f0f0f0;
-    color: #666;
+    background: var(--jyt-secondary-bg);
+    color: var(--jyt-text);
 }
 button#reset:hover {
-    background: #e0e0e0;
+    background: var(--jyt-hover-bg);
 }
 
 .jyt-hint {
