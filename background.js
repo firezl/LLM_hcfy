@@ -3,6 +3,57 @@
 
 const PORT_NAME = "jyt-translate";
 const MESSAGE_TYPE_START = "TRANSLATE_START";
+const PDF_VIEWER_PATH = "vendor/pdfjs/web/viewer.html";
+
+function isInternalPdfViewerUrl(url) {
+    if (!url || typeof url !== "string") {
+        return false;
+    }
+    return url.startsWith(chrome.runtime.getURL(PDF_VIEWER_PATH));
+}
+
+function isLikelyPdfUrl(url) {
+    if (!url || typeof url !== "string") {
+        return false;
+    }
+
+    if (isInternalPdfViewerUrl(url)) {
+        return false;
+    }
+
+    let parsed;
+    try {
+        parsed = new URL(url);
+    } catch (err) {
+        return false;
+    }
+
+    if (!["http:", "https:", "file:"].includes(parsed.protocol)) {
+        return false;
+    }
+
+    if (/\.pdf$/i.test(parsed.pathname)) {
+        return true;
+    }
+
+    let decodedSearch = parsed.search || "";
+    try {
+        decodedSearch = decodeURIComponent(decodedSearch);
+    } catch (err) {
+        // keep raw search when decoding fails
+    }
+    if (/\.pdf(?:$|[&#?])/i.test(decodedSearch)) {
+        return true;
+    }
+
+    return false;
+}
+
+function toInternalPdfViewerUrl(pdfUrl) {
+    return chrome.runtime.getURL(
+        `${PDF_VIEWER_PATH}?file=${encodeURIComponent(pdfUrl)}`,
+    );
+}
 
 function detectLangByHeuristic(text) {
     const zh = /[\u4e00-\u9fff]/;
@@ -239,4 +290,14 @@ chrome.runtime.onConnect.addListener((port) => {
         }
         handleTranslateStart(message, port, state);
     });
+});
+
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+    const nextUrl = changeInfo.url || tab?.url;
+    if (!nextUrl || !isLikelyPdfUrl(nextUrl)) {
+        return;
+    }
+
+    const targetUrl = toInternalPdfViewerUrl(nextUrl);
+    chrome.tabs.update(tabId, { url: targetUrl });
 });
