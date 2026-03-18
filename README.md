@@ -76,6 +76,15 @@
 2.  扩展会自动重定向到内置 `PDF.js viewer`（路径：`vendor/pdfjs/web/viewer.html`）。
 3.  在 PDF 页面中选中文本后，按原网页一致的方式点击“翻译”按钮即可。
 
+### Firefox 本地 PDF（推荐入口）
+
+1.  点击扩展图标，进入设置弹窗。
+2.  点击 **“打开本地 PDF（Firefox 兼容）”**。
+3.  将自动进入内置 `PDF.js viewer` 并尝试弹出文件选择器，选择本地 PDF 即可。
+
+> 说明：Firefox 出于安全限制，`moz-extension://` 页面不能直接加载 `file://` 本地 PDF，
+> 因此本扩展不会自动重定向本地 `file://` PDF 到内置 viewer；网络 PDF（`http/https`）不受此限制。
+
 ## 🛠️ 常见问题
 
 - **Q: 为什么 OpenAI 翻译没反应？**

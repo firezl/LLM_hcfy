@@ -1,3 +1,5 @@
+$ErrorActionPreference = "Stop"
+
 $manifest = Get-Content "manifest.json" -Raw | ConvertFrom-Json
 $version = $manifest.version
 $zipName = "LLM-Translator-v$version.zip"
@@ -12,48 +14,61 @@ $includes = @(
     "options.js",
     "styles.css",
     "icons",
+    "vendor",
     "README.md"
 )
 
-# Create a temporary folder for packing
 $chromeTempDir = "temp_pack_chrome"
 $firefoxTempDir = "temp_pack_firefox"
-foreach ($dir in @($chromeTempDir, $firefoxTempDir)) {
-    if (Test-Path $dir) { Remove-Item $dir -Recurse -Force }
+
+function Reset-Dir($dir) {
+    if (Test-Path $dir) {
+        Remove-Item $dir -Recurse -Force
+    }
     New-Item -ItemType Directory -Path $dir | Out-Null
 }
 
 function Copy-IncludesTo($destDir) {
     foreach ($item in $includes) {
-        if (Test-Path $item) {
-            Copy-Item -Path $item -Destination $destDir -Recurse
+        if (-not (Test-Path $item)) {
+            Write-Warning "跳过不存在的路径: $item"
+            continue
         }
+        Copy-Item -Path $item -Destination $destDir -Recurse -Force
     }
 }
+
+function Build-Archive($sourceDir, $archivePath) {
+    if (Test-Path $archivePath) {
+        Remove-Item $archivePath -Force
+    }
+    Compress-Archive -Path "$sourceDir\*" -DestinationPath $archivePath -CompressionLevel Optimal
+}
+
+Reset-Dir $chromeTempDir
+Reset-Dir $firefoxTempDir
 
 Copy-IncludesTo $chromeTempDir
 Copy-IncludesTo $firefoxTempDir
 
-# Create Chrome/Edge Zip (keeps original manifest with service_worker)
-if (Test-Path $zipName) { Remove-Item $zipName -Force }
-Compress-Archive -Path "$chromeTempDir\*" -DestinationPath $zipName
+# Chrome/Edge 包
+Build-Archive $chromeTempDir $zipName
 
-# Build Firefox-specific manifest (Firefox currently requires background.scripts)
-$firefoxManifest = Get-Content "manifest.json" -Raw | ConvertFrom-Json
+# Firefox XPI（兼容未启用 MV3 service_worker 的环境，改写为 background.scripts）
+$firefoxManifestPath = Join-Path $firefoxTempDir "manifest.json"
+$firefoxManifest = Get-Content $firefoxManifestPath -Raw | ConvertFrom-Json
 $firefoxManifest.background = [ordered]@{
     scripts = @("background.js")
 }
-$firefoxManifest | ConvertTo-Json -Depth 100 | Set-Content -Path "$firefoxTempDir\manifest.json" -Encoding UTF8
+$firefoxManifest | ConvertTo-Json -Depth 100 | Set-Content -Path $firefoxManifestPath -Encoding UTF8
 
-# Create XPI for Firefox
-if (Test-Path $xpiName) { Remove-Item $xpiName -Force }
-Compress-Archive -Path "$firefoxTempDir\*" -DestinationPath $xpiName
+Build-Archive $firefoxTempDir $xpiName
 
-# Cleanup
 Remove-Item $chromeTempDir -Recurse -Force
 Remove-Item $firefoxTempDir -Recurse -Force
 
 Write-Host "✅ 打包完成:"
 Write-Host "  - 通用包 (Chrome/Edge): $zipName"
 Write-Host "  - Firefox 包: $xpiName"
-Write-Host "您可以将这些文件上传到 GitHub Releases。"
+Write-Host "已包含内置 PDF.js 资源目录: vendor/"
+Write-Host "Firefox 包已自动使用 background.scripts 兼容旧配置。"

@@ -1,0 +1,394 @@
+/* styles.css */
+:root {
+    --jyt-primary: #1877f2;
+    --jyt-bg: #ffffff;
+    --jyt-text: #333333;
+    --jyt-border: #e0e0e0;
+    --jyt-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08);
+    --jyt-radius: 12px;
+    --jyt-font-size: 14px;
+    --jyt-secondary-bg: #f7f9fc;
+    --jyt-hover-bg: rgba(0, 0, 0, 0.05);
+    --jyt-input-bg: #ffffff;
+    --jyt-input-border: #ddd;
+}
+
+/* Dark mode colors for options page */
+:root[data-theme="dark"] {
+    --jyt-primary: #4a9eff;
+    --jyt-bg: #1e1e1e;
+    --jyt-text: #e0e0e0;
+    --jyt-border: #3a3a3a;
+    --jyt-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3);
+    --jyt-secondary-bg: #2a2a2a;
+    --jyt-hover-bg: rgba(255, 255, 255, 0.1);
+    --jyt-input-bg: #2a2a2a;
+    --jyt-input-border: #3a3a3a;
+}
+
+/* Dark mode colors for translation bubble */
+.jyt-bubble[data-theme="dark"] {
+    --jyt-primary: #4a9eff;
+    --jyt-bg: #1e1e1e;
+    --jyt-text: #e0e0e0;
+    --jyt-border: #3a3a3a;
+    --jyt-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3);
+    --jyt-secondary-bg: #2a2a2a;
+    --jyt-hover-bg: rgba(255, 255, 255, 0.1);
+}
+
+/* Light mode for translation bubble (explicit) */
+.jyt-bubble[data-theme="light"] {
+    --jyt-primary: #1877f2;
+    --jyt-bg: #ffffff;
+    --jyt-text: #333333;
+    --jyt-border: #e0e0e0;
+    --jyt-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08);
+    --jyt-secondary-bg: #f7f9fc;
+    --jyt-hover-bg: rgba(0, 0, 0, 0.05);
+}
+
+#jyt-translate-btn.jyt-btn {
+    position: absolute;
+    z-index: 2147483647;
+    background: var(--jyt-primary);
+    color: #fff;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(24, 119, 242, 0.3);
+    transition:
+        transform 0.2s,
+        opacity 0.2s;
+    opacity: 0;
+    animation: jyt-fade-in 0.2s forwards;
+}
+
+#jyt-translate-btn.jyt-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(24, 119, 242, 0.4);
+}
+
+.jyt-bubble {
+    position: absolute;
+    z-index: 2147483647;
+    min-width: 180px;
+    width: fit-content;
+    max-width: min(var(--jyt-max-width, 52vw), calc(100vw - 20px));
+    background: var(--jyt-bg);
+    border-radius: var(--jyt-radius);
+    box-shadow: var(--jyt-shadow);
+    padding: 10px;
+    font-family: var(
+        --jyt-font,
+        "Segoe UI",
+        Roboto,
+        "Helvetica Neue",
+        Arial,
+        sans-serif
+    );
+    color: var(--jyt-text);
+    font-size: var(--jyt-font-size);
+    line-height: 1.6;
+    display: none;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    animation: jyt-pop-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes jyt-fade-in {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+@keyframes jyt-pop-in {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(5px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.jyt-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--jyt-border);
+    cursor: move; /* Add move cursor */
+    user-select: none; /* Prevent text selection while dragging */
+}
+
+.jyt-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--jyt-text);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.jyt-title::before {
+    content: "";
+    display: block;
+    width: 4px;
+    height: 14px;
+    background: var(--jyt-primary);
+    border-radius: 2px;
+}
+
+.jyt-controls {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.jyt-pin,
+.jyt-close {
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    padding: 2px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #999;
+    transition: all 0.2s;
+}
+
+.jyt-pin:hover {
+    background: var(--jyt-hover-bg);
+    color: var(--jyt-text);
+}
+
+.jyt-pin.active {
+    color: var(--jyt-primary);
+    background: rgba(24, 119, 242, 0.1);
+}
+
+.jyt-close:hover {
+    background-color: var(--jyt-hover-bg);
+    color: var(--jyt-text);
+}
+
+.jyt-pin svg,
+.jyt-close svg {
+    width: 14px;
+    height: 14px;
+    fill: currentColor;
+}
+
+.jyt-content {
+    max-height: min(var(--jyt-max-height, 58vh), calc(100vh - 28px));
+    overflow-y: auto;
+    scrollbar-width: thin;
+}
+
+.jyt-content::-webkit-scrollbar {
+    width: 6px;
+}
+.jyt-content::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 3px;
+}
+.jyt-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.jyt-stream {
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--jyt-text);
+    line-height: 1.5;
+}
+
+.jyt-thought {
+    margin-top: 8px;
+    font-size: 13px;
+    background: var(--jyt-secondary-bg);
+    border: 1px solid var(--jyt-border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.jyt-thought summary {
+    padding: 8px 12px;
+    cursor: pointer;
+    color: var(--jyt-text);
+    font-weight: 500;
+    user-select: none;
+    outline: none;
+    list-style: none; /* Hide default triangle */
+    display: flex;
+    align-items: center;
+}
+
+.jyt-thought summary::after {
+    content: "›";
+    margin-left: auto;
+    font-size: 16px;
+    transition: transform 0.2s;
+}
+.jyt-thought[open] summary::after {
+    transform: rotate(90deg);
+}
+
+.jyt-thought summary:hover {
+    background: var(--jyt-hover-bg);
+    color: var(--jyt-primary);
+}
+
+#jyt-thought-content {
+    padding: 0 12px 12px;
+    color: var(--jyt-text);
+    font-style: italic;
+    border-top: 1px solid var(--jyt-border);
+    margin-top: 4px;
+    padding-top: 8px;
+    white-space: pre-wrap;
+}
+
+/* options page styles */
+#jyt-options-body {
+    width: 350px;
+    min-height: 400px;
+    background: var(--jyt-bg);
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    overflow-x: hidden; /* Prevent horizontal scroll */
+}
+
+/* 
+   Note: These styles were previously applied to 'body' globally, causing layout shifts on some websites.
+   If this CSS is used for an options page, please wrap the options page content in a specific class 
+   and target that class instead of 'body'.
+*/
+/* 
+body {
+    background: #f5f7fa;
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+} 
+*/
+
+.jyt-form {
+    background: var(--jyt-bg);
+    padding: 16px;
+    border-radius: 0;
+    box-shadow: none;
+    width: 100%;
+    max-width: 100%;
+    font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    box-sizing: border-box;
+}
+
+.jyt-form h2 {
+    margin-top: 0;
+    margin-bottom: 12px;
+    font-size: 16px;
+    color: var(--jyt-text);
+    border-bottom: 1px solid var(--jyt-border);
+    padding-bottom: 8px;
+}
+
+.jyt-section {
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--jyt-border);
+}
+.jyt-section:last-child {
+    border-bottom: none;
+}
+
+.jyt-section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--jyt-text);
+    margin-bottom: 8px;
+}
+
+.jyt-form label {
+    display: block;
+    margin: 8px 0 2px;
+    font-size: 12px;
+    color: var(--jyt-text);
+    font-weight: 500;
+}
+
+.jyt-form input[type="text"],
+.jyt-form select,
+.jyt-form input[type="password"],
+.jyt-form input[type="number"] {
+    width: 100%;
+    padding: 6px;
+    border: 1px solid var(--jyt-input-border);
+    border-radius: 4px;
+    font-size: 12px;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+    background: var(--jyt-input-bg);
+    color: var(--jyt-text);
+}
+
+.jyt-form input:focus,
+.jyt-form select:focus {
+    border-color: var(--jyt-primary);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(24, 119, 242, 0.1);
+}
+
+.jyt-btn-group {
+    margin-top: 16px;
+    display: flex;
+    gap: 8px;
+}
+
+button#save,
+button#reset {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+button#save {
+    background: var(--jyt-primary);
+    color: #fff;
+    flex: 1;
+}
+button#save:hover {
+    background: #1464cc;
+}
+
+button#reset {
+    background: var(--jyt-secondary-bg);
+    color: var(--jyt-text);
+}
+button#reset:hover {
+    background: var(--jyt-hover-bg);
+}
+
+.jyt-hint {
+    font-size: 11px;
+    color: #888;
+    margin-top: 2px;
+}
+
+.jyt-hidden {
+    display: none;
+}

@@ -355,8 +355,13 @@ body {
     gap: 8px;
 }
 
+.jyt-btn-group-secondary {
+    margin-top: 8px;
+}
+
 button#save,
-button#reset {
+button#reset,
+button#open_local_pdf {
     padding: 6px 12px;
     border: none;
     border-radius: 4px;
@@ -383,10 +388,32 @@ button#reset:hover {
     background: var(--jyt-hover-bg);
 }
 
+button#open_local_pdf {
+    background: var(--jyt-secondary-bg);
+    color: var(--jyt-text);
+    width: 100%;
+}
+
+button#open_local_pdf:hover {
+    background: var(--jyt-hover-bg);
+}
+
 .jyt-hint {
     font-size: 11px;
     color: #888;
     margin-top: 2px;
+}
+
+.jyt-current-pdf-status {
+    margin-top: 6px;
+    padding: 6px 8px;
+    border: 1px solid var(--jyt-border);
+    border-radius: 4px;
+    background: var(--jyt-secondary-bg);
+    color: var(--jyt-text);
+    font-size: 11px;
+    line-height: 1.4;
+    word-break: break-word;
 }
 
 .jyt-hidden {
