@@ -22,8 +22,8 @@
         webllm_custom_mirror: "",
         theme_mode: "auto",
         font_family: "",
-        bubble_width_percent: 52,
-        bubble_height_percent: 58,
+        bubble_width_percent: 20,
+        bubble_height_percent: 40,
     };
 
     let lastSelection = "";
@@ -52,7 +52,7 @@
 
     function applyBubbleSizeConfig(bubble, settings) {
         const widthPercent = clampPercent(settings.bubble_width_percent, 20);
-        const heightPercent = clampPercent(settings.bubble_height_percent, 58);
+        const heightPercent = clampPercent(settings.bubble_height_percent, 40);
         bubble.style.setProperty("--jyt-max-width", `${widthPercent}vw`);
         bubble.style.setProperty("--jyt-max-height", `${heightPercent}vh`);
     }

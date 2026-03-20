@@ -33,6 +33,8 @@
                     <option value="browser">
                         浏览器 Translation API（实验）
                     </option>
+                    <option value="google">Google 翻译</option>
+                    <option value="bing">Bing 翻译</option>
                     <option value="openai">OpenAI（流式）</option>
                     <option value="webllm">WebLLM 本地模型（实验）</option>
                 </select>
@@ -156,7 +158,8 @@
                     placeholder="例如: https://hf-mirror.com"
                 />
                 <div class="jyt-hint">
-                    中国网络环境建议选择 hf-mirror。镜像只影响模型下载地址，不影响推理逻辑。
+                    中国网络环境建议选择
+                    hf-mirror。镜像只影响模型下载地址，不影响推理逻辑。
                 </div>
 
                 <div class="jyt-btn-group jyt-btn-group-secondary">
@@ -190,7 +193,7 @@
                 <input
                     id="bubble_width_percent"
                     type="number"
-                    min="30"
+                    min="5"
                     max="95"
                     step="1"
                     placeholder="20"
@@ -203,7 +206,7 @@
                 <input
                     id="bubble_height_percent"
                     type="number"
-                    min="30"
+                    min="5"
                     max="95"
                     step="1"
                     placeholder="40"

@@ -332,7 +332,11 @@ document.addEventListener("DOMContentLoaded", () => {
     function updateEngineDependentUI() {
         if (!openaiSection) return;
         const engine = els.engine_select.value;
-        const hideOpenAI = engine === "browser" || engine === "webllm";
+        const hideOpenAI =
+            engine === "browser" ||
+            engine === "webllm" ||
+            engine === "google" ||
+            engine === "bing";
         openaiSection.classList.toggle("jyt-hidden", hideOpenAI);
 
         if (webllmSection) {
@@ -503,8 +507,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 webllm_custom_mirror: "",
                 theme_mode: "auto",
                 font_family: "",
-                bubble_width_percent: 52,
-                bubble_height_percent: 58,
+                bubble_width_percent: 20,
+                bubble_height_percent: 40,
             },
             (items) => {
                 els.enable_select.value = items.enabled;
@@ -559,7 +563,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 );
                 els.bubble_height_percent.value = clampPercent(
                     items.bubble_height_percent,
-                    30,
+                    40,
                 );
                 updateEngineDependentUI();
                 applyTheme(items.theme_mode || "auto");
