@@ -62,7 +62,7 @@ if (Test-Path $firefoxWebLLMEntry) {
 # Chrome/Edge 包
 Build-Archive $chromeTempDir $zipName
 
-# Firefox XPI（兼容未启用 MV3 service_worker 的环境，改写为 background.scripts）
+# Firefox XPI（部分环境禁用了 background.service_worker，回退为 background.scripts）
 $firefoxManifestPath = Join-Path $firefoxTempDir "manifest.json"
 $firefoxManifest = Get-Content $firefoxManifestPath -Raw | ConvertFrom-Json
 $firefoxManifest.background = [ordered]@{
@@ -96,4 +96,4 @@ Write-Host "✅ 打包完成:"
 Write-Host "  - 通用包 (Chrome/Edge): $zipName"
 Write-Host "  - Firefox 包: $xpiName"
 Write-Host "已包含内置 PDF.js 资源目录: vendor/"
-Write-Host "Firefox 包已自动使用 background.scripts 兼容旧配置。"
+Write-Host "Firefox 包已自动使用 background.scripts 兼容禁用 service_worker 的环境。"

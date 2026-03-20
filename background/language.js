@@ -36,12 +36,40 @@ export function getLanguageDisplayName(lang) {
     return names[normalized] || `${normalized}语言`;
 }
 
-export function buildPrompt(text, to) {
-    const targetLang = getLanguageDisplayName(to);
-    return `请把这段文字翻译为${targetLang}，不要有多余的输出。输入:\n${text}`;
+function normalizeTerm(term) {
+    return String(term || "").trim();
 }
 
-export function buildWebLLMPrompt(text, to) {
+function buildGlossaryConstraint(glossaryTerms) {
+    if (!Array.isArray(glossaryTerms) || glossaryTerms.length === 0) {
+        return "";
+    }
+
+    const lines = [];
+    for (const term of glossaryTerms) {
+        const source = normalizeTerm(term?.sourceTerm);
+        const target = normalizeTerm(term?.targetTerm);
+        if (!source || !target) {
+            continue;
+        }
+        lines.push(`- ${source} => ${target}`);
+    }
+
+    if (lines.length === 0) {
+        return "";
+    }
+
+    return `\n术语约束（若原文命中，请优先使用以下术语翻译）：\n${lines.join("\n")}`;
+}
+
+export function buildPrompt(text, to, options) {
     const targetLang = getLanguageDisplayName(to);
-    return `请把以下文本翻译为${targetLang}，不要有多余的输出。输入:\n${text}`;
+    const glossaryBlock = buildGlossaryConstraint(options?.glossaryTerms);
+    return `请把这段文字翻译为${targetLang}，不要有多余的输出。${glossaryBlock}\n输入:\n${text}`;
+}
+
+export function buildWebLLMPrompt(text, to, options) {
+    const targetLang = getLanguageDisplayName(to);
+    const glossaryBlock = buildGlossaryConstraint(options?.glossaryTerms);
+    return `请把以下文本翻译为${targetLang}，不要有多余的输出。${glossaryBlock}\n输入:\n${text}`;
 }

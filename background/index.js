@@ -1,5 +1,11 @@
 import {
+    MESSAGE_TYPE_TERM_CLEAR,
+    MESSAGE_TYPE_TERM_DELETE,
     MESSAGE_TYPE_START,
+    MESSAGE_TYPE_TERM_EXPORT,
+    MESSAGE_TYPE_TERM_IMPORT,
+    MESSAGE_TYPE_TERM_LIST,
+    MESSAGE_TYPE_TERM_UPSERT,
     MESSAGE_TYPE_WEBLLM_CLEAR_CACHE,
     MESSAGE_TYPE_WEBLLM_GET_MODELS,
     MESSAGE_TYPE_WEBLLM_PRELOAD,
@@ -13,8 +19,13 @@ import {
     handleWebLLMPreload,
     startWebLLMIdleMonitor,
 } from "./engines/webllm.js";
+import {
+    ensureTermStoreReady,
+    handleTermMessage as handleBackgroundTermMessage,
+} from "./term.js";
 
 startWebLLMIdleMonitor();
+void ensureTermStoreReady();
 
 chrome.runtime.onConnect.addListener((port) => {
     if (port.name !== PORT_NAME) {
@@ -66,4 +77,32 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
 
 chrome.tabs.onRemoved.addListener((tabId) => {
     handleTabRemoved(tabId);
+});
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    const type = String(message?.type || "");
+    const isTermMessage =
+        type === MESSAGE_TYPE_TERM_UPSERT ||
+        type === MESSAGE_TYPE_TERM_IMPORT ||
+        type === MESSAGE_TYPE_TERM_EXPORT ||
+        type === MESSAGE_TYPE_TERM_LIST ||
+        type === MESSAGE_TYPE_TERM_DELETE ||
+        type === MESSAGE_TYPE_TERM_CLEAR;
+
+    if (!isTermMessage) {
+        return false;
+    }
+
+    void handleBackgroundTermMessage(message)
+        .then((result) => {
+            sendResponse(result);
+        })
+        .catch((err) => {
+            sendResponse({
+                ok: false,
+                error: err && err.message ? err.message : String(err),
+            });
+        });
+
+    return true;
 });

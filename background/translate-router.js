@@ -3,9 +3,22 @@ import { streamGoogleTranslate } from "./engines/google.js";
 import { streamOpenAITranslate } from "./engines/openai.js";
 import { streamWebLLMTranslate } from "./engines/webllm.js";
 import { postTranslateError } from "./port-utils.js";
+import { getMatchedGlossaryTerms } from "./term.js";
 
 export async function handleTranslateStart(message, port, state) {
     const engine = message?.settings?.engine || "auto";
+    const glossaryTerms = await getMatchedGlossaryTerms({
+        from: message?.preferredFrom || message?.from,
+        to: message?.preferredTo || message?.to,
+        text: message?.text,
+        enabled: message?.settings?.glossary_enabled !== false,
+        maxTerms: 20,
+    });
+
+    const requestWithGlossary = {
+        ...message,
+        glossaryTerms,
+    };
 
     if (engine === "browser") {
         postTranslateError(
@@ -18,19 +31,19 @@ export async function handleTranslateStart(message, port, state) {
     }
 
     if (engine === "webllm") {
-        await streamWebLLMTranslate(message, port, state);
+        await streamWebLLMTranslate(requestWithGlossary, port, state);
         return;
     }
 
     if (engine === "google") {
-        await streamGoogleTranslate(message, port, state);
+        await streamGoogleTranslate(requestWithGlossary, port, state);
         return;
     }
 
     if (engine === "bing") {
-        await streamBingTranslate(message, port, state);
+        await streamBingTranslate(requestWithGlossary, port, state);
         return;
     }
 
-    await streamOpenAITranslate(message, port, state);
+    await streamOpenAITranslate(requestWithGlossary, port, state);
 }

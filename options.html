@@ -114,6 +114,74 @@
                 </select>
             </div>
 
+            <div class="jyt-section" id="glossary_section">
+                <div class="jyt-section-title">术语管理</div>
+                <div class="jyt-hint">
+                    支持按“源语言-目标语言-原文术语”去重。导入冲突时会覆盖本地术语。
+                </div>
+                <div class="jyt-glossary-editor">
+                    <label>源语言</label>
+                    <select id="glossary_source_lang">
+                        <option value="zh">中文</option>
+                        <option value="en">英文</option>
+                        <option value="ja">日文</option>
+                        <option value="ko">韩文</option>
+                        <option value="fr">法文</option>
+                        <option value="de">德文</option>
+                        <option value="es">西班牙文</option>
+                        <option value="ru">俄文</option>
+                    </select>
+
+                    <label>目标语言</label>
+                    <select id="glossary_target_lang">
+                        <option value="zh">中文</option>
+                        <option value="en">英文</option>
+                        <option value="ja">日文</option>
+                        <option value="ko">韩文</option>
+                        <option value="fr">法文</option>
+                        <option value="de">德文</option>
+                        <option value="es">西班牙文</option>
+                        <option value="ru">俄文</option>
+                    </select>
+
+                    <label>原文术语</label>
+                    <input id="glossary_source_term" type="text" />
+
+                    <label>目标术语</label>
+                    <input id="glossary_target_term" type="text" />
+
+                    <div class="jyt-btn-group jyt-btn-group-secondary">
+                        <button id="glossary_save" type="button">
+                            新增/更新术语
+                        </button>
+                        <button id="glossary_cancel_edit" type="button">
+                            取消编辑
+                        </button>
+                    </div>
+                </div>
+
+                <div id="glossary_list" class="jyt-glossary-list"></div>
+
+                <div class="jyt-btn-group jyt-btn-group-secondary">
+                    <button id="glossary_export" type="button">
+                        导出术语 JSON
+                    </button>
+                    <button id="glossary_import" type="button">
+                        导入术语 JSON
+                    </button>
+                    <button id="glossary_clear" type="button">
+                        清空术语库
+                    </button>
+                </div>
+                <input
+                    id="glossary_import_file"
+                    type="file"
+                    accept="application/json,.json"
+                    class="jyt-hidden"
+                />
+                <div id="glossary_status" class="jyt-current-pdf-status"></div>
+            </div>
+
             <div class="jyt-section jyt-hidden" id="webllm_section">
                 <div class="jyt-section-title">WebLLM 本地模型配置</div>
                 <div id="webllm_performance_note" class="jyt-perf-note"></div>

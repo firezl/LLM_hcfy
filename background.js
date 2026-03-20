@@ -6,6 +6,12 @@ const MESSAGE_TYPE_START = "TRANSLATE_START";
 const MESSAGE_TYPE_WEBLLM_PRELOAD = "WEBLLM_PRELOAD";
 const MESSAGE_TYPE_WEBLLM_CLEAR_CACHE = "WEBLLM_CLEAR_CACHE";
 const MESSAGE_TYPE_WEBLLM_GET_MODELS = "WEBLLM_GET_MODELS";
+const MESSAGE_TYPE_TERM_UPSERT = "TERM_UPSERT";
+const MESSAGE_TYPE_TERM_IMPORT = "TERM_IMPORT";
+const MESSAGE_TYPE_TERM_EXPORT = "TERM_EXPORT";
+const MESSAGE_TYPE_TERM_LIST = "TERM_LIST";
+const MESSAGE_TYPE_TERM_DELETE = "TERM_DELETE";
+const MESSAGE_TYPE_TERM_CLEAR = "TERM_CLEAR";
 const RECOMMENDED_WEBLLM_MODELS = [
     "Qwen3-0.6B-q4f16_1-MLC",
     "Llama-3.2-1B-Instruct-q4f16_1-MLC",
@@ -415,14 +421,200 @@ function getLanguageDisplayName(lang) {
     return names[normalized] || `${normalized}语言`;
 }
 
-function buildPrompt(text, to) {
-    const targetLang = getLanguageDisplayName(to);
-    return `请把这段文字翻译为${targetLang}，不要有多余的输出。输入:\n${text}`;
+function normalizeGlossaryLang(lang) {
+    const value = String(lang || "")
+        .trim()
+        .toLowerCase();
+    if (!value || value === "auto") return "";
+    return value.split("-")[0];
 }
 
-function buildWebLLMPrompt(text, to) {
+function normalizeGlossaryText(value) {
+    return String(value || "").trim();
+}
+
+function glossaryKeyOf(term) {
+    return `${normalizeGlossaryLang(term?.sourceLang)}::${normalizeGlossaryLang(term?.targetLang)}::${normalizeGlossaryText(term?.sourceTerm).toLowerCase()}`;
+}
+
+function sanitizeGlossaryTerm(raw, nowTs) {
+    const sourceLang = normalizeGlossaryLang(raw?.sourceLang);
+    const targetLang = normalizeGlossaryLang(raw?.targetLang);
+    const sourceTerm = normalizeGlossaryText(raw?.sourceTerm);
+    const targetTerm = normalizeGlossaryText(raw?.targetTerm);
+    if (!sourceLang || !targetLang || !sourceTerm || !targetTerm) {
+        return null;
+    }
+
+    const now = Number(nowTs) || Date.now();
+    return {
+        sourceLang,
+        targetLang,
+        sourceTerm,
+        targetTerm,
+        createdAt: Number(raw?.createdAt) || now,
+        updatedAt: Number(raw?.updatedAt) || now,
+    };
+}
+
+function getGlossaryTermsFromStorage() {
+    return new Promise((resolve) => {
+        chrome.storage.sync.get({ glossary_terms: [] }, (items) => {
+            const arr = Array.isArray(items?.glossary_terms)
+                ? items.glossary_terms
+                : [];
+            resolve(arr);
+        });
+    });
+}
+
+function setGlossaryTermsToStorage(terms) {
+    return new Promise((resolve, reject) => {
+        chrome.storage.sync.set({ glossary_terms: terms }, () => {
+            if (chrome.runtime.lastError) {
+                reject(
+                    new Error(
+                        chrome.runtime.lastError.message || "术语写入失败",
+                    ),
+                );
+                return;
+            }
+            resolve();
+        });
+    });
+}
+
+async function listGlossaryTerms() {
+    const raw = await getGlossaryTermsFromStorage();
+    const map = new Map();
+    const now = Date.now();
+    for (const item of raw) {
+        const term = sanitizeGlossaryTerm(item, now);
+        if (!term) continue;
+        map.set(glossaryKeyOf(term), term);
+    }
+    return Array.from(map.values());
+}
+
+async function upsertGlossaryTerm(termInput) {
+    const now = Date.now();
+    const normalized = sanitizeGlossaryTerm(termInput, now);
+    if (!normalized) {
+        throw new Error("术语字段不完整");
+    }
+
+    const existing = await listGlossaryTerms();
+    const key = glossaryKeyOf(normalized);
+    const map = new Map(existing.map((item) => [glossaryKeyOf(item), item]));
+    const prev = map.get(key);
+    if (prev) {
+        normalized.createdAt = prev.createdAt;
+        normalized.updatedAt = now;
+    }
+    map.set(key, normalized);
+
+    await setGlossaryTermsToStorage(Array.from(map.values()));
+    return normalized;
+}
+
+async function deleteGlossaryTerm(termInput) {
+    const existing = await listGlossaryTerms();
+    const key = glossaryKeyOf(termInput || {});
+    if (!key || key.startsWith("::")) {
+        throw new Error("术语删除参数不完整");
+    }
+
+    const next = existing.filter((item) => glossaryKeyOf(item) !== key);
+    await setGlossaryTermsToStorage(next);
+}
+
+async function clearGlossaryTerms() {
+    await setGlossaryTermsToStorage([]);
+}
+
+async function importGlossaryTerms(rawTerms) {
+    const incoming = Array.isArray(rawTerms) ? rawTerms : [];
+    const now = Date.now();
+    const current = await listGlossaryTerms();
+    const map = new Map(current.map((item) => [glossaryKeyOf(item), item]));
+
+    let created = 0;
+    let replaced = 0;
+    for (const raw of incoming) {
+        const term = sanitizeGlossaryTerm(raw, now);
+        if (!term) continue;
+        const key = glossaryKeyOf(term);
+        if (map.has(key)) {
+            replaced += 1;
+            term.createdAt = map.get(key).createdAt;
+            term.updatedAt = now;
+        } else {
+            created += 1;
+        }
+        map.set(key, term);
+    }
+
+    const next = Array.from(map.values());
+    await setGlossaryTermsToStorage(next);
+    return { created, replaced, total: next.length };
+}
+
+function buildGlossaryConstraint(glossaryTerms) {
+    if (!Array.isArray(glossaryTerms) || glossaryTerms.length === 0) {
+        return "";
+    }
+    const lines = [];
+    for (const term of glossaryTerms) {
+        const source = normalizeGlossaryText(term?.sourceTerm);
+        const target = normalizeGlossaryText(term?.targetTerm);
+        if (!source || !target) continue;
+        lines.push(`- ${source} => ${target}`);
+    }
+    if (lines.length === 0) return "";
+    return `\n术语约束（若原文命中，请优先使用以下术语翻译）：\n${lines.join("\n")}`;
+}
+
+async function getMatchedGlossaryTermsForRequest(message) {
+    if (message?.settings?.glossary_enabled === false) {
+        return [];
+    }
+
+    const text = normalizeGlossaryText(message?.text);
+    const from = normalizeGlossaryLang(message?.preferredFrom || message?.from);
+    const to = normalizeGlossaryLang(message?.preferredTo || message?.to);
+    if (!text || !from || !to) {
+        return [];
+    }
+
+    const terms = await listGlossaryTerms();
+    const matched = [];
+    const lowerText = text.toLowerCase();
+    for (const term of terms) {
+        if (term.sourceLang !== from || term.targetLang !== to) {
+            continue;
+        }
+        if (!lowerText.includes(String(term.sourceTerm || "").toLowerCase())) {
+            continue;
+        }
+        matched.push(term);
+        if (matched.length >= 20) {
+            break;
+        }
+    }
+
+    return matched;
+}
+
+function buildPrompt(text, to, options) {
     const targetLang = getLanguageDisplayName(to);
-    return `请把以下文本翻译为${targetLang}，不要有多余的输出。输入:\n${text}`;
+    const glossaryBlock = buildGlossaryConstraint(options?.glossaryTerms);
+    return `请把这段文字翻译为${targetLang}，不要有多余的输出。${glossaryBlock}\n输入:\n${text}`;
+}
+
+function buildWebLLMPrompt(text, to, options) {
+    const targetLang = getLanguageDisplayName(to);
+    const glossaryBlock = buildGlossaryConstraint(options?.glossaryTerms);
+    return `请把以下文本翻译为${targetLang}，不要有多余的输出。${glossaryBlock}\n输入:\n${text}`;
 }
 
 function safePostMessage(port, state, payload) {
@@ -679,6 +871,9 @@ async function streamBingTranslate(request, port, state) {
 async function streamOpenAITranslate(request, port, state) {
     const { requestId, text, settings } = request;
     const { to } = resolveLanguagePair(request);
+    const glossaryTerms = Array.isArray(request?.glossaryTerms)
+        ? request.glossaryTerms
+        : [];
     const apiUrl = settings.openai_api_url;
     const key = settings.openai_api_key;
 
@@ -699,7 +894,12 @@ async function streamOpenAITranslate(request, port, state) {
 
     const body = {
         model,
-        messages: [{ role: "user", content: buildPrompt(text, to) }],
+        messages: [
+            {
+                role: "user",
+                content: buildPrompt(text, to, { glossaryTerms }),
+            },
+        ],
         temperature: 0.2,
         stream: true,
     };
@@ -799,6 +999,9 @@ async function streamOpenAITranslate(request, port, state) {
 async function streamWebLLMTranslate(request, port, state) {
     const { requestId, text, settings } = request;
     const { to } = resolveLanguagePair(request);
+    const glossaryTerms = Array.isArray(request?.glossaryTerms)
+        ? request.glossaryTerms
+        : [];
     const modelId = resolveWebLLMModelId("", settings);
     const mirrorBase = resolveWebLLMMirrorBase(settings);
     const enableThinking = !!settings?.webllm_show_thoughts;
@@ -840,7 +1043,7 @@ async function streamWebLLMTranslate(request, port, state) {
             messages: [
                 {
                     role: "user",
-                    content: buildWebLLMPrompt(text, to),
+                    content: buildWebLLMPrompt(text, to, { glossaryTerms }),
                 },
             ],
         };
@@ -1002,6 +1205,11 @@ async function handleWebLLMGetModels(message, port, state) {
 
 async function handleTranslateStart(message, port, state) {
     const engine = message?.settings?.engine || "auto";
+    const glossaryTerms = await getMatchedGlossaryTermsForRequest(message);
+    const requestWithGlossary = {
+        ...message,
+        glossaryTerms,
+    };
 
     if (engine === "browser") {
         postTranslateError(
@@ -1014,22 +1222,87 @@ async function handleTranslateStart(message, port, state) {
     }
 
     if (engine === "webllm") {
-        await streamWebLLMTranslate(message, port, state);
+        await streamWebLLMTranslate(requestWithGlossary, port, state);
         return;
     }
 
     if (engine === "google") {
-        await streamGoogleTranslate(message, port, state);
+        await streamGoogleTranslate(requestWithGlossary, port, state);
         return;
     }
 
     if (engine === "bing") {
-        await streamBingTranslate(message, port, state);
+        await streamBingTranslate(requestWithGlossary, port, state);
         return;
     }
 
-    await streamOpenAITranslate(message, port, state);
+    await streamOpenAITranslate(requestWithGlossary, port, state);
 }
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    const type = String(message?.type || "");
+    const isTermMessage =
+        type === MESSAGE_TYPE_TERM_UPSERT ||
+        type === MESSAGE_TYPE_TERM_IMPORT ||
+        type === MESSAGE_TYPE_TERM_EXPORT ||
+        type === MESSAGE_TYPE_TERM_LIST ||
+        type === MESSAGE_TYPE_TERM_DELETE ||
+        type === MESSAGE_TYPE_TERM_CLEAR;
+
+    if (!isTermMessage) {
+        return false;
+    }
+
+    (async () => {
+        if (type === MESSAGE_TYPE_TERM_UPSERT) {
+            const term = await upsertGlossaryTerm(message?.term || {});
+            return { ok: true, term };
+        }
+
+        if (type === MESSAGE_TYPE_TERM_IMPORT) {
+            const summary = await importGlossaryTerms(message?.terms || []);
+            return { ok: true, ...summary };
+        }
+
+        if (type === MESSAGE_TYPE_TERM_EXPORT) {
+            const terms = await listGlossaryTerms();
+            return {
+                ok: true,
+                payload: {
+                    glossary_version: 1,
+                    glossary_terms: terms,
+                    exported_at: new Date().toISOString(),
+                },
+            };
+        }
+
+        if (type === MESSAGE_TYPE_TERM_LIST) {
+            const terms = await listGlossaryTerms();
+            return { ok: true, terms };
+        }
+
+        if (type === MESSAGE_TYPE_TERM_DELETE) {
+            await deleteGlossaryTerm(message?.term || {});
+            return { ok: true };
+        }
+
+        if (type === MESSAGE_TYPE_TERM_CLEAR) {
+            await clearGlossaryTerms();
+            return { ok: true };
+        }
+
+        return { ok: false, error: "不支持的术语消息类型" };
+    })()
+        .then((result) => sendResponse(result))
+        .catch((err) => {
+            sendResponse({
+                ok: false,
+                error: err && err.message ? err.message : String(err),
+            });
+        });
+
+    return true;
+});
 
 chrome.runtime.onConnect.addListener((port) => {
     if (port.name !== PORT_NAME) {

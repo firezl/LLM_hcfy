@@ -22,6 +22,9 @@ document.addEventListener("DOMContentLoaded", () => {
         font_family: "",
         bubble_width_percent: 20,
         bubble_height_percent: 40,
+        glossary_enabled: true,
+        glossary_terms: [],
+        glossary_version: 1,
     };
     const runtimeBaseUrl = chrome.runtime.getURL("");
     const isFirefoxRuntime = runtimeBaseUrl.startsWith("moz-extension://");
@@ -66,12 +69,251 @@ document.addEventListener("DOMContentLoaded", () => {
     const webllmClearCacheBtn = document.getElementById("webllm_clear_cache");
     const openLocalPdfBtn = document.getElementById("open_local_pdf");
     const currentPdfStatusEl = document.getElementById("current_pdf_status");
+    const glossaryExportBtn = document.getElementById("glossary_export");
+    const glossaryImportBtn = document.getElementById("glossary_import");
+    const glossaryImportFileInput = document.getElementById(
+        "glossary_import_file",
+    );
+    const glossaryStatusEl = document.getElementById("glossary_status");
+    const glossaryListEl = document.getElementById("glossary_list");
+    const glossarySaveBtn = document.getElementById("glossary_save");
+    const glossaryCancelEditBtn = document.getElementById(
+        "glossary_cancel_edit",
+    );
+    const glossaryClearBtn = document.getElementById("glossary_clear");
+    const glossarySourceLangEl = document.getElementById(
+        "glossary_source_lang",
+    );
+    const glossaryTargetLangEl = document.getElementById(
+        "glossary_target_lang",
+    );
+    const glossarySourceTermEl = document.getElementById(
+        "glossary_source_term",
+    );
+    const glossaryTargetTermEl = document.getElementById(
+        "glossary_target_term",
+    );
 
     let cachedActiveTab = null;
     let cachedCurrentPdfUrl = "";
     let webllmPort = null;
     let webllmPerfProfile = null;
     const webllmModelRequestResolvers = new Map();
+    let glossaryTermsCache = [];
+    let glossaryEditingOriginal = null;
+
+    function isRunningInPopup() {
+        try {
+            const extensionApi = chrome.extension;
+            if (!extensionApi || typeof extensionApi.getViews !== "function") {
+                return false;
+            }
+            const popupViews = extensionApi.getViews({ type: "popup" }) || [];
+            return popupViews.includes(window);
+        } catch (err) {
+            return false;
+        }
+    }
+
+    function openImportInNewTab() {
+        return new Promise((resolve, reject) => {
+            try {
+                const url = chrome.runtime.getURL(
+                    "options.html#glossary-import",
+                );
+                const maybePromise = chrome.tabs.create({ url });
+                if (maybePromise && typeof maybePromise.then === "function") {
+                    maybePromise.then(() => resolve()).catch(reject);
+                    return;
+                }
+                resolve();
+            } catch (err) {
+                reject(err);
+            }
+        });
+    }
+
+    function normalizeGlossaryLang(lang) {
+        const value = String(lang || "")
+            .trim()
+            .toLowerCase();
+        if (!value || value === "auto") return "";
+        return value.split("-")[0];
+    }
+
+    function normalizeGlossaryTermText(text) {
+        return String(text || "").trim();
+    }
+
+    function glossaryTermKey(term) {
+        const sourceLang = normalizeGlossaryLang(term?.sourceLang);
+        const targetLang = normalizeGlossaryLang(term?.targetLang);
+        const sourceTerm = normalizeGlossaryTermText(
+            term?.sourceTerm,
+        ).toLowerCase();
+        return `${sourceLang}::${targetLang}::${sourceTerm}`;
+    }
+
+    function setGlossaryStatus(text, isError) {
+        if (!glossaryStatusEl) return;
+        glossaryStatusEl.textContent = text || "";
+        glossaryStatusEl.classList.toggle("jyt-status-error", !!isError);
+    }
+
+    function getGlossaryFormTerm() {
+        return {
+            sourceLang: normalizeGlossaryLang(glossarySourceLangEl?.value),
+            targetLang: normalizeGlossaryLang(glossaryTargetLangEl?.value),
+            sourceTerm: normalizeGlossaryTermText(glossarySourceTermEl?.value),
+            targetTerm: normalizeGlossaryTermText(glossaryTargetTermEl?.value),
+        };
+    }
+
+    function resetGlossaryEditor() {
+        glossaryEditingOriginal = null;
+        if (glossarySourceLangEl) glossarySourceLangEl.value = "en";
+        if (glossaryTargetLangEl) glossaryTargetLangEl.value = "zh";
+        if (glossarySourceTermEl) glossarySourceTermEl.value = "";
+        if (glossaryTargetTermEl) glossaryTargetTermEl.value = "";
+        if (glossarySaveBtn) glossarySaveBtn.textContent = "新增术语";
+    }
+
+    function populateGlossaryEditor(term) {
+        glossaryEditingOriginal = term || null;
+        if (!term) {
+            resetGlossaryEditor();
+            return;
+        }
+
+        if (glossarySourceLangEl) glossarySourceLangEl.value = term.sourceLang;
+        if (glossaryTargetLangEl) glossaryTargetLangEl.value = term.targetLang;
+        if (glossarySourceTermEl) glossarySourceTermEl.value = term.sourceTerm;
+        if (glossaryTargetTermEl) glossaryTargetTermEl.value = term.targetTerm;
+        if (glossarySaveBtn) glossarySaveBtn.textContent = "更新术语";
+    }
+
+    function renderGlossaryList(terms) {
+        if (!glossaryListEl) return;
+        const list = Array.isArray(terms) ? terms : [];
+        if (list.length === 0) {
+            glossaryListEl.innerHTML =
+                '<div class="jyt-glossary-empty">暂无术语，先添加一条吧。</div>';
+            return;
+        }
+
+        const rows = list
+            .map((term, index) => {
+                const pair = `${term.sourceLang} -> ${term.targetLang}`;
+                return `
+                    <tr>
+                        <td>${pair}</td>
+                        <td>${term.sourceTerm}</td>
+                        <td>${term.targetTerm}</td>
+                        <td>
+                            <button class="jyt-glossary-row-edit" data-index="${index}" type="button">编辑</button>
+                            <button class="jyt-glossary-row-delete" data-index="${index}" type="button">删除</button>
+                        </td>
+                    </tr>
+                `;
+            })
+            .join("");
+
+        glossaryListEl.innerHTML = `
+            <table class="jyt-glossary-table">
+                <thead>
+                    <tr>
+                        <th>语言对</th>
+                        <th>原文</th>
+                        <th>目标</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+        `;
+    }
+
+    async function refreshGlossaryList() {
+        const result = await sendTermMessage(
+            MESSAGE_TYPES.TERM_LIST || "TERM_LIST",
+        );
+        if (!result?.ok) {
+            throw new Error(result?.error || "术语列表获取失败");
+        }
+
+        const sorted = (Array.isArray(result.terms) ? result.terms : []).sort(
+            (a, b) => Number(b.updatedAt || 0) - Number(a.updatedAt || 0),
+        );
+        glossaryTermsCache = sorted;
+        renderGlossaryList(sorted);
+    }
+
+    function readFileAsText(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result || ""));
+            reader.onerror = () => reject(new Error("读取文件失败"));
+            reader.readAsText(file, "utf-8");
+        });
+    }
+
+    function sanitizeGlossaryTerms(rawTerms) {
+        const input = Array.isArray(rawTerms) ? rawTerms : [];
+        const map = new Map();
+
+        for (const item of input) {
+            const sourceTerm = normalizeGlossaryTermText(item?.sourceTerm);
+            const targetTerm = normalizeGlossaryTermText(item?.targetTerm);
+            const sourceLang = normalizeGlossaryLang(item?.sourceLang);
+            const targetLang = normalizeGlossaryLang(item?.targetLang);
+            if (!sourceTerm || !targetTerm || !sourceLang || !targetLang) {
+                continue;
+            }
+
+            const now = Date.now();
+            const normalized = {
+                sourceTerm,
+                targetTerm,
+                sourceLang,
+                targetLang,
+                createdAt: Number(item?.createdAt) || now,
+                updatedAt: Number(item?.updatedAt) || now,
+            };
+            map.set(glossaryTermKey(normalized), normalized);
+        }
+
+        return Array.from(map.values());
+    }
+
+    function sendTermMessage(type, payload) {
+        const request = {
+            type,
+            ...(payload || {}),
+        };
+
+        if (
+            typeof browser !== "undefined" &&
+            browser.runtime &&
+            typeof browser.runtime.sendMessage === "function"
+        ) {
+            return browser.runtime.sendMessage(request);
+        }
+
+        return new Promise((resolve, reject) => {
+            try {
+                chrome.runtime.sendMessage(request, (resp) => {
+                    const err = chrome.runtime.lastError;
+                    if (err) {
+                        reject(new Error(err.message || "术语消息发送失败"));
+                        return;
+                    }
+                    resolve(resp);
+                });
+            } catch (err) {
+                reject(err);
+            }
+        });
+    }
 
     function setWebLLMStatus(text, isError) {
         if (!webllmStatusEl) return;
@@ -767,6 +1009,228 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
+    glossaryExportBtn?.addEventListener("click", async () => {
+        try {
+            const result = await sendTermMessage(
+                MESSAGE_TYPES.TERM_EXPORT || "TERM_EXPORT",
+            );
+            if (!result?.ok) {
+                throw new Error(result?.error || "导出失败");
+            }
+
+            const payload = result.payload || {
+                glossary_version: 1,
+                glossary_terms: [],
+                exported_at: new Date().toISOString(),
+            };
+            const terms = Array.isArray(payload.glossary_terms)
+                ? payload.glossary_terms
+                : [];
+
+            const blob = new Blob([JSON.stringify(payload, null, 2)], {
+                type: "application/json",
+            });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+            a.href = url;
+            a.download = `jyt-glossary-${stamp}.json`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+
+            setGlossaryStatus(`导出完成，共 ${terms.length} 条术语`, false);
+            await refreshGlossaryList();
+        } catch (err) {
+            setGlossaryStatus(
+                `导出失败: ${err && err.message ? err.message : String(err)}`,
+                true,
+            );
+        }
+    });
+
+    glossaryImportBtn?.addEventListener("click", () => {
+        if (!glossaryImportFileInput) return;
+
+        if (isFirefoxRuntime && isRunningInPopup()) {
+            void openImportInNewTab()
+                .then(() => {
+                    setGlossaryStatus(
+                        "Firefox 弹窗模式下已在新标签页打开导入页面",
+                        false,
+                    );
+                })
+                .catch((err) => {
+                    setGlossaryStatus(
+                        `打开导入页面失败: ${err && err.message ? err.message : String(err)}`,
+                        true,
+                    );
+                });
+            return;
+        }
+
+        glossaryImportFileInput.value = "";
+        glossaryImportFileInput.click();
+    });
+
+    glossaryImportFileInput?.addEventListener("change", async () => {
+        const file = glossaryImportFileInput.files?.[0];
+        if (!file) return;
+        if (file.size > 5 * 1024 * 1024) {
+            setGlossaryStatus("导入失败: 文件过大，请控制在 5MB 以内", true);
+            return;
+        }
+
+        try {
+            const content = await readFileAsText(file);
+            const parsed = JSON.parse(content);
+            const importedTerms = sanitizeGlossaryTerms(
+                parsed?.glossary_terms || parsed,
+            );
+
+            const result = await sendTermMessage(
+                MESSAGE_TYPES.TERM_IMPORT || "TERM_IMPORT",
+                { terms: importedTerms },
+            );
+            if (!result?.ok) {
+                throw new Error(result?.error || "导入失败");
+            }
+
+            setGlossaryStatus(
+                `导入完成: 新增 ${result.created || 0}，覆盖 ${result.replaced || 0}，总计 ${result.total || 0}`,
+                false,
+            );
+            await refreshGlossaryList();
+            resetGlossaryEditor();
+        } catch (err) {
+            setGlossaryStatus(
+                `导入失败: ${err && err.message ? err.message : String(err)}`,
+                true,
+            );
+        }
+    });
+
+    glossarySaveBtn?.addEventListener("click", async () => {
+        const term = getGlossaryFormTerm();
+        if (
+            !term.sourceLang ||
+            !term.targetLang ||
+            !term.sourceTerm ||
+            !term.targetTerm
+        ) {
+            setGlossaryStatus("保存失败: 请完整填写术语字段", true);
+            return;
+        }
+
+        try {
+            const nextKey = glossaryTermKey(term);
+            const prevKey = glossaryEditingOriginal
+                ? glossaryTermKey(glossaryEditingOriginal)
+                : "";
+
+            if (glossaryEditingOriginal && prevKey && prevKey !== nextKey) {
+                const delRes = await sendTermMessage(
+                    MESSAGE_TYPES.TERM_DELETE || "TERM_DELETE",
+                    { term: glossaryEditingOriginal },
+                );
+                if (!delRes?.ok) {
+                    throw new Error(delRes?.error || "旧术语删除失败");
+                }
+            }
+
+            const saveRes = await sendTermMessage(
+                MESSAGE_TYPES.TERM_UPSERT || "TERM_UPSERT",
+                { term },
+            );
+            if (!saveRes?.ok) {
+                throw new Error(saveRes?.error || "术语保存失败");
+            }
+
+            setGlossaryStatus("术语已保存", false);
+            await refreshGlossaryList();
+            resetGlossaryEditor();
+        } catch (err) {
+            setGlossaryStatus(
+                `保存失败: ${err && err.message ? err.message : String(err)}`,
+                true,
+            );
+        }
+    });
+
+    glossaryCancelEditBtn?.addEventListener("click", () => {
+        resetGlossaryEditor();
+        setGlossaryStatus("", false);
+    });
+
+    glossaryClearBtn?.addEventListener("click", async () => {
+        const ok = window.confirm("确定清空术语库吗？该操作不可撤销。");
+        if (!ok) return;
+
+        try {
+            const result = await sendTermMessage(
+                MESSAGE_TYPES.TERM_CLEAR || "TERM_CLEAR",
+            );
+            if (!result?.ok) {
+                throw new Error(result?.error || "清空失败");
+            }
+            await refreshGlossaryList();
+            resetGlossaryEditor();
+            setGlossaryStatus("术语库已清空", false);
+        } catch (err) {
+            setGlossaryStatus(
+                `清空失败: ${err && err.message ? err.message : String(err)}`,
+                true,
+            );
+        }
+    });
+
+    glossaryListEl?.addEventListener("click", async (e) => {
+        const editBtn = e.target.closest(".jyt-glossary-row-edit");
+        const deleteBtn = e.target.closest(".jyt-glossary-row-delete");
+        if (!editBtn && !deleteBtn) return;
+
+        const index = Number((editBtn || deleteBtn).getAttribute("data-index"));
+        if (!Number.isInteger(index) || index < 0) return;
+        const term = glossaryTermsCache[index];
+        if (!term) return;
+
+        if (editBtn) {
+            populateGlossaryEditor(term);
+            setGlossaryStatus("已载入术语，编辑后点击更新", false);
+            return;
+        }
+
+        if (!window.confirm("确定删除该术语吗？")) {
+            return;
+        }
+
+        try {
+            const result = await sendTermMessage(
+                MESSAGE_TYPES.TERM_DELETE || "TERM_DELETE",
+                { term },
+            );
+            if (!result?.ok) {
+                throw new Error(result?.error || "删除失败");
+            }
+
+            await refreshGlossaryList();
+            if (
+                glossaryEditingOriginal &&
+                glossaryTermKey(glossaryEditingOriginal) ===
+                    glossaryTermKey(term)
+            ) {
+                resetGlossaryEditor();
+            }
+            setGlossaryStatus("术语已删除", false);
+        } catch (err) {
+            setGlossaryStatus(
+                `删除失败: ${err && err.message ? err.message : String(err)}`,
+                true,
+            );
+        }
+    });
+
     // Listen for system theme changes
     window
         .matchMedia("(prefers-color-scheme: dark)")
@@ -778,6 +1242,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
     load();
     void refreshActivePdfContext();
+    resetGlossaryEditor();
+    void refreshGlossaryList().catch((err) => {
+        setGlossaryStatus(
+            `术语列表加载失败: ${err && err.message ? err.message : String(err)}`,
+            true,
+        );
+    });
+
+    if (window.location.hash === "#glossary-import") {
+        setTimeout(() => {
+            glossaryImportBtn?.click();
+            if (
+                window.history &&
+                typeof window.history.replaceState === "function"
+            ) {
+                window.history.replaceState(null, "", "options.html");
+            }
+        }, 60);
+    }
 
     if (!isWebLLMSupportedBrowser) {
         const webllmOption = els.engine_select.querySelector(

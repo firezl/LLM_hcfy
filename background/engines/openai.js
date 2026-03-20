@@ -24,6 +24,9 @@ function parseOpenAIStreamLine(line) {
 export async function streamOpenAITranslate(request, port, state) {
     const { requestId, text, settings } = request;
     const { to } = resolveLanguagePair(request);
+    const glossaryTerms = Array.isArray(request?.glossaryTerms)
+        ? request.glossaryTerms
+        : [];
     const apiUrl = settings.openai_api_url;
     const key = settings.openai_api_key;
 
@@ -44,7 +47,12 @@ export async function streamOpenAITranslate(request, port, state) {
 
     const body = {
         model,
-        messages: [{ role: "user", content: buildPrompt(text, to) }],
+        messages: [
+            {
+                role: "user",
+                content: buildPrompt(text, to, { glossaryTerms }),
+            },
+        ],
         temperature: 0.2,
         stream: true,
     };

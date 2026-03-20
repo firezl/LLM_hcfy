@@ -227,6 +227,9 @@ async function ensureWebLLMEngine(modelId, mirrorBase, port, state, requestId) {
 export async function streamWebLLMTranslate(request, port, state) {
     const { requestId, text, settings } = request;
     const { to } = resolveLanguagePair(request);
+    const glossaryTerms = Array.isArray(request?.glossaryTerms)
+        ? request.glossaryTerms
+        : [];
     const modelId = resolveWebLLMModelId("", settings);
     const mirrorBase = resolveWebLLMMirrorBase(settings);
     const enableThinking = !!settings?.webllm_show_thoughts;
@@ -268,7 +271,7 @@ export async function streamWebLLMTranslate(request, port, state) {
             messages: [
                 {
                     role: "user",
-                    content: buildWebLLMPrompt(text, to),
+                    content: buildWebLLMPrompt(text, to, { glossaryTerms }),
                 },
             ],
         };

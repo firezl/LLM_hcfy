@@ -24,6 +24,9 @@
         font_family: "",
         bubble_width_percent: 20,
         bubble_height_percent: 40,
+        glossary_enabled: true,
+        glossary_terms: [],
+        glossary_version: 1,
     };
     const shared = globalThis.JYT_SHARED || {};
     const DEFAULT_SETTINGS =
@@ -34,12 +37,204 @@
     let isPinned = false;
     let translatePort = null;
     let activeRequest = null;
+    let lastTranslateContext = null;
     let runtimeSettings = { ...DEFAULT_SETTINGS };
 
     const translatorCache = new Map();
     let translationModelReady = false;
     let languageDetectorModelReady = false;
     let languageDetectorInstance = null;
+
+    function normalizeGlossaryLang(lang) {
+        const value = String(lang || "")
+            .trim()
+            .toLowerCase();
+        if (!value || value === "auto") return "";
+        return value.split("-")[0];
+    }
+
+    function normalizeTermText(text) {
+        return String(text || "").trim();
+    }
+
+    function getRuntimeApi() {
+        if (
+            typeof chrome !== "undefined" &&
+            chrome.runtime &&
+            typeof chrome.runtime.sendMessage === "function"
+        ) {
+            return chrome.runtime;
+        }
+        if (
+            typeof browser !== "undefined" &&
+            browser.runtime &&
+            typeof browser.runtime.sendMessage === "function"
+        ) {
+            return browser.runtime;
+        }
+        return null;
+    }
+
+    function sendTermMessage(type, payload) {
+        const runtimeApi = getRuntimeApi();
+        if (!runtimeApi) {
+            return Promise.reject(new Error("运行时消息接口不可用"));
+        }
+
+        const request = {
+            type,
+            ...(payload || {}),
+        };
+
+        if (typeof browser !== "undefined" && runtimeApi === browser.runtime) {
+            return runtimeApi.sendMessage(request);
+        }
+
+        return new Promise((resolve, reject) => {
+            try {
+                runtimeApi.sendMessage(request, (resp) => {
+                    const err = chrome?.runtime?.lastError;
+                    if (err) {
+                        reject(new Error(err.message || "术语消息发送失败"));
+                        return;
+                    }
+                    resolve(resp);
+                });
+            } catch (err) {
+                reject(err);
+            }
+        });
+    }
+
+    function getCleanTranslatedText() {
+        const bubble = document.getElementById(BUBBLE_ID);
+        if (!bubble) return "";
+        const streamEl = bubble.querySelector("#jyt-stream");
+        if (!streamEl) return "";
+        return trimEdgeBlankLines(
+            String(streamEl.innerText || "")
+                .replace(/<think>[\s\S]*?<\/think>/g, "")
+                .replace(/<think>[\s\S]*/g, ""),
+        );
+    }
+
+    function setTermTip(message, isError) {
+        const bubble = document.getElementById(BUBBLE_ID);
+        if (!bubble) return;
+        let tipEl = bubble.querySelector(".jyt-term-tip");
+        if (!tipEl) {
+            tipEl = document.createElement("div");
+            tipEl.className = "jyt-term-tip";
+            bubble.querySelector(".jyt-content")?.appendChild(tipEl);
+        }
+        tipEl.textContent = String(message || "");
+        tipEl.classList.toggle("jyt-term-tip-error", !!isError);
+    }
+
+    function clearTermEditorUI(clearTip) {
+        const bubble = document.getElementById(BUBBLE_ID);
+        if (!bubble) return;
+
+        const editor = bubble.querySelector(".jyt-term-editor");
+        if (editor) {
+            editor.remove();
+        }
+
+        if (clearTip) {
+            const tip = bubble.querySelector(".jyt-term-tip");
+            if (tip) {
+                tip.remove();
+            }
+        }
+    }
+
+    async function upsertGlossaryTerm(entry) {
+        const response = await sendTermMessage(
+            MESSAGE_TYPES.TERM_UPSERT || "TERM_UPSERT",
+            { term: entry },
+        );
+        if (!response?.ok) {
+            throw new Error(response?.error || "术语保存失败");
+        }
+    }
+
+    function showAddTermDialog(context) {
+        const sourceTerm = normalizeTermText(context?.sourceText);
+        const targetTerm = normalizeTermText(context?.translatedText);
+        const sourceLang = normalizeGlossaryLang(context?.sourceLang);
+        const targetLang = normalizeGlossaryLang(context?.targetLang);
+
+        const bubble = document.getElementById(BUBBLE_ID);
+        if (!bubble) return;
+        const contentEl = bubble.querySelector(".jyt-content");
+        if (!contentEl) return;
+
+        clearTermEditorUI(false);
+
+        if (!sourceTerm || !targetTerm || !sourceLang || !targetLang) {
+            setTermTip("术语添加失败：请先完成一次有效翻译。", true);
+            return;
+        }
+
+        const editor = document.createElement("div");
+        editor.className = "jyt-term-editor";
+        editor.innerHTML = `
+            <div class="jyt-term-editor-title">添加术语（${sourceLang} -> ${targetLang}）</div>
+            <label>原文术语</label>
+            <textarea class="jyt-term-source"></textarea>
+            <label>目标术语</label>
+            <textarea class="jyt-term-target"></textarea>
+            <div class="jyt-term-actions">
+                <button class="jyt-term-confirm" type="button">确认保存</button>
+                <button class="jyt-term-cancel" type="button">取消</button>
+            </div>
+        `;
+        contentEl.appendChild(editor);
+
+        const sourceInputEl = editor.querySelector(".jyt-term-source");
+        const targetInputEl = editor.querySelector(".jyt-term-target");
+        const confirmBtn = editor.querySelector(".jyt-term-confirm");
+        const cancelBtn = editor.querySelector(".jyt-term-cancel");
+
+        sourceInputEl.value = sourceTerm;
+        targetInputEl.value = targetTerm;
+        sourceInputEl.focus();
+
+        cancelBtn.addEventListener("click", () => {
+            editor.remove();
+        });
+
+        confirmBtn.addEventListener("click", () => {
+            const normalizedSource = normalizeTermText(sourceInputEl.value);
+            const normalizedTarget = normalizeTermText(targetInputEl.value);
+            if (!normalizedSource || !normalizedTarget) {
+                setTermTip("术语添加失败：原文和译文都不能为空。", true);
+                return;
+            }
+
+            const now = Date.now();
+            const termEntry = {
+                sourceTerm: normalizedSource,
+                targetTerm: normalizedTarget,
+                sourceLang,
+                targetLang,
+                createdAt: now,
+                updatedAt: now,
+            };
+
+            upsertGlossaryTerm(termEntry)
+                .then(() => {
+                    setTermTip("术语已保存", false);
+                    editor.remove();
+                })
+                .catch((err) => {
+                    setTermTip(
+                        `术语保存失败: ${err && err.message ? err.message : String(err)}`,
+                        true,
+                    );
+                });
+        });
+    }
 
     function trimEdgeBlankLines(text) {
         const raw = String(text || "");
@@ -100,6 +295,7 @@
       <div class="jyt-header">
         <span class="jyt-title">翻译</span>
         <div class="jyt-controls">
+                    <button class="jyt-add-term" title="添加术语">术</button>
           <button class="jyt-pin" title="固定窗口">
             <svg viewBox="0 0 24 24"><path d="M16,12V4H17V2H7V4H8V12L6,14V16H11.2V22H12.8V16H18V14L16,12Z" /></svg>
           </button>
@@ -149,6 +345,7 @@
         });
 
         bubble.querySelector(".jyt-close").addEventListener("click", () => {
+            clearTermEditorUI(true);
             bubble.style.display = "none";
             isPinned = false;
             updatePinState(bubble);
@@ -158,6 +355,32 @@
             isPinned = !isPinned;
             updatePinState(bubble);
             e.stopPropagation();
+        });
+
+        bubble.querySelector(".jyt-add-term").addEventListener("click", (e) => {
+            e.stopPropagation();
+            const contextSourceLang =
+                activeRequest?.from ||
+                lastTranslateContext?.from ||
+                runtimeSettings.source_lang ||
+                "auto";
+            const contextTargetLang =
+                activeRequest?.to ||
+                lastTranslateContext?.to ||
+                runtimeSettings.target_lang ||
+                "auto";
+
+            const context = {
+                sourceText:
+                    activeRequest?.text ||
+                    lastTranslateContext?.text ||
+                    lastSelection ||
+                    "",
+                translatedText: getCleanTranslatedText(),
+                sourceLang: contextSourceLang,
+                targetLang: contextTargetLang,
+            };
+            showAddTermDialog(context);
         });
 
         const thoughtDetails = bubble.querySelector("#jyt-thought");
@@ -556,6 +779,11 @@
             }
 
             if (message.type === "TRANSLATE_DONE") {
+                lastTranslateContext = {
+                    text: activeRequest?.text || lastSelection || "",
+                    from: activeRequest?.from || "",
+                    to: activeRequest?.to || "",
+                };
                 activeRequest = null;
             }
         });
@@ -675,6 +903,12 @@
             browserFallbackTried: false,
         };
 
+        lastTranslateContext = {
+            text,
+            from: preferredFrom,
+            to: preferredTo,
+        };
+
         const sent = sendTranslateStart({
             type: MESSAGE_TYPES.TRANSLATE_START || "TRANSLATE_START",
             requestId,
@@ -723,6 +957,7 @@
 
         if (engine === "browser") {
             try {
+                lastTranslateContext = { text, from, to };
                 await translateWithBrowserAPI(text, from, to, streamEl);
                 return;
             } catch (err) {
@@ -790,6 +1025,7 @@
         if (!text) return;
 
         const bubble = createBubble();
+        clearTermEditorUI(true);
         bubble.style.display = "block";
         isPinned = false;
         updatePinState(bubble);
@@ -872,7 +1108,10 @@
         if (bubble && bubble.contains(e.target)) return;
 
         hideButton();
-        if (bubble && !isPinned) bubble.style.display = "none";
+        if (bubble && !isPinned) {
+            clearTermEditorUI(true);
+            bubble.style.display = "none";
+        }
     });
 
     window.addEventListener("pagehide", () => {

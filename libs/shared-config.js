@@ -19,6 +19,9 @@
         font_family: "",
         bubble_width_percent: 20,
         bubble_height_percent: 40,
+        glossary_enabled: true,
+        glossary_terms: [],
+        glossary_version: 1,
     };
 
     const MESSAGE_TYPES = {
@@ -26,6 +29,12 @@
         WEBLLM_PRELOAD: "WEBLLM_PRELOAD",
         WEBLLM_CLEAR_CACHE: "WEBLLM_CLEAR_CACHE",
         WEBLLM_GET_MODELS: "WEBLLM_GET_MODELS",
+        TERM_UPSERT: "TERM_UPSERT",
+        TERM_IMPORT: "TERM_IMPORT",
+        TERM_EXPORT: "TERM_EXPORT",
+        TERM_LIST: "TERM_LIST",
+        TERM_DELETE: "TERM_DELETE",
+        TERM_CLEAR: "TERM_CLEAR",
     };
 
     const RECOMMENDED_WEBLLM_MODELS = [
