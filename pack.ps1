@@ -53,16 +53,27 @@ Reset-Dir $firefoxTempDir
 Copy-IncludesTo $chromeTempDir
 Copy-IncludesTo $firefoxTempDir
 
-# Firefox 提交会对 JS 做解析，单文件超过 5MB 会被拒；WebLLM 在 Firefox 也不可用，直接排除其运行时代码。
+# Firefox 提交会对 JS 做解析，单文件超过 5MB 会被拒；
+# 用轻量 stub 覆盖 WebLLM 入口，避免 background 静态 import 解析失败。
 $firefoxWebLLMEntry = Join-Path $firefoxTempDir "vendor\webllm\index.js"
 if (Test-Path $firefoxWebLLMEntry) {
-    Remove-Item $firefoxWebLLMEntry -Force
+    @'
+export const prebuiltAppConfig = { model_list: [] };
+
+export async function CreateMLCEngine() {
+    throw new Error("WebLLM is disabled in Firefox package");
+}
+
+export async function deleteModelAllInfoInCache() {
+    return;
+}
+'@ | Set-Content -Path $firefoxWebLLMEntry -Encoding UTF8
 }
 
 # Chrome/Edge 包
 Build-Archive $chromeTempDir $zipName
 
-# Firefox XPI（部分环境禁用了 background.service_worker，回退为 background.scripts）
+# Firefox XPI（Firefox 兼容：background.scripts）
 $firefoxManifestPath = Join-Path $firefoxTempDir "manifest.json"
 $firefoxManifest = Get-Content $firefoxManifestPath -Raw | ConvertFrom-Json
 $firefoxManifest.background = [ordered]@{
@@ -96,4 +107,4 @@ Write-Host "✅ 打包完成:"
 Write-Host "  - 通用包 (Chrome/Edge): $zipName"
 Write-Host "  - Firefox 包: $xpiName"
 Write-Host "已包含内置 PDF.js 资源目录: vendor/"
-Write-Host "Firefox 包已自动使用 background.scripts 兼容禁用 service_worker 的环境。"
+Write-Host "Firefox 包已使用 background.scripts（background.js）。"

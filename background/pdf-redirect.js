@@ -1,6 +1,7 @@
 import { PDF_VIEWER_PATH } from "./constants.js";
+import { extensionApi } from "./extension-api.js";
 
-const runtimeBaseUrl = chrome.runtime.getURL("");
+const runtimeBaseUrl = extensionApi.runtime.getURL("");
 const isFirefoxExtensionRuntime = runtimeBaseUrl.startsWith("moz-extension://");
 const redirectingTabs = new Map();
 
@@ -8,7 +9,7 @@ function isInternalPdfViewerUrl(url) {
     if (!url || typeof url !== "string") {
         return false;
     }
-    return url.startsWith(chrome.runtime.getURL(PDF_VIEWER_PATH));
+    return url.startsWith(extensionApi.runtime.getURL(PDF_VIEWER_PATH));
 }
 
 function isLikelyDirectPdfUrl(url) {
@@ -96,7 +97,7 @@ function resolvePdfSourceUrl(url) {
 }
 
 function toInternalPdfViewerUrl(pdfUrl) {
-    return chrome.runtime.getURL(
+    return extensionApi.runtime.getURL(
         `${PDF_VIEWER_PATH}?file=${encodeURIComponent(pdfUrl)}`,
     );
 }
@@ -118,7 +119,9 @@ async function safeUpdateTabUrl(tabId, targetUrl) {
     }
 
     try {
-        const maybePromise = chrome.tabs.update(tabId, { url: targetUrl });
+        const maybePromise = extensionApi.tabs.update(tabId, {
+            url: targetUrl,
+        });
         if (maybePromise && typeof maybePromise.then === "function") {
             await maybePromise;
         }

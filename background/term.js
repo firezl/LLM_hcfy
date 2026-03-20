@@ -1,3 +1,5 @@
+import { extensionApi } from "./extension-api.js";
+
 const TERM_DB_NAME = "jyt-terms-db";
 const TERM_DB_VERSION = 1;
 const TERM_STORE = "terms";
@@ -153,19 +155,14 @@ function stripInternalKey(term) {
 }
 
 async function getMigrationFlag() {
-    return new Promise((resolve) => {
-        chrome.storage.local.get({ [TERM_MIGRATION_FLAG]: false }, (items) => {
-            resolve(!!items?.[TERM_MIGRATION_FLAG]);
-        });
+    const items = await extensionApi.storage.local.get({
+        [TERM_MIGRATION_FLAG]: false,
     });
+    return !!items?.[TERM_MIGRATION_FLAG];
 }
 
 async function setMigrationFlag() {
-    return new Promise((resolve) => {
-        chrome.storage.local.set({ [TERM_MIGRATION_FLAG]: true }, () => {
-            resolve();
-        });
-    });
+    await extensionApi.storage.local.set({ [TERM_MIGRATION_FLAG]: true });
 }
 
 export async function ensureTermStoreReady() {
@@ -176,31 +173,26 @@ export async function ensureTermStoreReady() {
         return;
     }
 
-    const imported = await new Promise((resolve) => {
-        chrome.storage.sync.get({ glossary_terms: [] }, async (items) => {
-            const rawTerms = Array.isArray(items?.glossary_terms)
-                ? items.glossary_terms
-                : [];
-            if (rawTerms.length === 0) {
-                resolve(0);
-                return;
-            }
+    const items = await extensionApi.storage.sync.get({ glossary_terms: [] });
+    const rawTerms = Array.isArray(items?.glossary_terms)
+        ? items.glossary_terms
+        : [];
+    let imported = 0;
+    if (rawTerms.length > 0) {
+        const now = Date.now();
+        const map = new Map();
+        for (const item of rawTerms) {
+            const normalized = normalizeTermEntry(item, now);
+            if (!normalized) continue;
+            map.set(normalized.key, normalized);
+        }
 
-            const now = Date.now();
-            const map = new Map();
-            for (const item of rawTerms) {
-                const normalized = normalizeTermEntry(item, now);
-                if (!normalized) continue;
-                map.set(normalized.key, normalized);
-            }
-
-            const terms = Array.from(map.values());
-            if (terms.length > 0) {
-                await putTermsToDb(terms);
-            }
-            resolve(terms.length);
-        });
-    });
+        const terms = Array.from(map.values());
+        if (terms.length > 0) {
+            await putTermsToDb(terms);
+        }
+        imported = terms.length;
+    }
 
     await setMigrationFlag();
     return imported;

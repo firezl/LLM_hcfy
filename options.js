@@ -1201,10 +1201,6 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        if (!window.confirm("确定删除该术语吗？")) {
-            return;
-        }
-
         try {
             const result = await sendTermMessage(
                 MESSAGE_TYPES.TERM_DELETE || "TERM_DELETE",

@@ -23,11 +23,12 @@ import {
     ensureTermStoreReady,
     handleTermMessage as handleBackgroundTermMessage,
 } from "./term.js";
+import { extensionApi } from "./extension-api.js";
 
 startWebLLMIdleMonitor();
 void ensureTermStoreReady();
 
-chrome.runtime.onConnect.addListener((port) => {
+extensionApi.runtime.onConnect.addListener((port) => {
     if (port.name !== PORT_NAME) {
         return;
     }
@@ -71,15 +72,15 @@ chrome.runtime.onConnect.addListener((port) => {
     });
 });
 
-chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+extensionApi.tabs.onUpdated.addListener((tabId, changeInfo) => {
     handleTabUpdated(tabId, changeInfo);
 });
 
-chrome.tabs.onRemoved.addListener((tabId) => {
+extensionApi.tabs.onRemoved.addListener((tabId) => {
     handleTabRemoved(tabId);
 });
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+extensionApi.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const type = String(message?.type || "");
     const isTermMessage =
         type === MESSAGE_TYPE_TERM_UPSERT ||

@@ -5,11 +5,12 @@ import {
     WEBLLM_IDLE_CHECK_INTERVAL_MS,
     WEBLLM_IDLE_TIMEOUT_MS,
 } from "../constants.js";
+import { extensionApi } from "../extension-api.js";
 import { buildWebLLMPrompt, resolveLanguagePair } from "../language.js";
 import { postTranslateError, safePostMessage } from "../port-utils.js";
 import * as webllmModule from "../../vendor/webllm/index.js";
 
-const runtimeBaseUrl = chrome.runtime.getURL("");
+const runtimeBaseUrl = extensionApi.runtime.getURL("");
 const isFirefoxExtensionRuntime = runtimeBaseUrl.startsWith("moz-extension://");
 
 let webllmEngine = null;
