@@ -361,7 +361,9 @@ body {
 
 button#save,
 button#reset,
-button#open_local_pdf {
+button#open_local_pdf,
+button#webllm_download,
+button#webllm_clear_cache {
     padding: 6px 12px;
     border: none;
     border-radius: 4px;
@@ -394,6 +396,24 @@ button#open_local_pdf {
     width: 100%;
 }
 
+button#webllm_download,
+button#webllm_clear_cache {
+    flex: 1;
+    background: var(--jyt-secondary-bg);
+    color: var(--jyt-text);
+}
+
+button#webllm_download:hover,
+button#webllm_clear_cache:hover {
+    background: var(--jyt-hover-bg);
+}
+
+button#webllm_download:disabled,
+button#webllm_clear_cache:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 button#open_local_pdf:hover {
     background: var(--jyt-hover-bg);
 }
@@ -418,4 +438,30 @@ button#open_local_pdf:hover {
 
 .jyt-hidden {
     display: none;
+}
+
+.jyt-perf-note {
+    margin-top: 6px;
+    margin-bottom: 8px;
+    padding: 6px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+.jyt-perf-ok {
+    border: 1px solid #9ed5b0;
+    background: #effcf3;
+    color: #1f6b34;
+}
+
+.jyt-perf-warning {
+    border: 1px solid #f2c37a;
+    background: #fff8e9;
+    color: #9a5f00;
+}
+
+.jyt-status-error {
+    border-color: #e39a9a;
+    color: #b33a3a;
 }

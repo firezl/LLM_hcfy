@@ -15,6 +15,11 @@
         openai_model: "gpt-4o-mini",
         openai_thinking_model: "gpt-5-thinking",
         show_thoughts: false,
+        webllm_model: "Qwen3-0.6B-q4f16_1-MLC",
+        webllm_custom_model: "",
+        webllm_show_thoughts: false,
+        webllm_model_mirror: "official",
+        webllm_custom_mirror: "",
         theme_mode: "auto",
         font_family: "",
         bubble_width_percent: 52,
@@ -31,6 +36,13 @@
     let translationModelReady = false;
     let languageDetectorModelReady = false;
     let languageDetectorInstance = null;
+
+    function trimEdgeBlankLines(text) {
+        const raw = String(text || "");
+        return raw
+            .replace(/^(?:[ \t\u3000]*\r?\n)+/, "")
+            .replace(/(?:\r?\n[ \t\u3000]*)+$/, "");
+    }
 
     function clampPercent(value, fallback) {
         const n = Number(value);
@@ -143,6 +155,17 @@
             updatePinState(bubble);
             e.stopPropagation();
         });
+
+        const thoughtDetails = bubble.querySelector("#jyt-thought");
+        const thoughtSummary = thoughtDetails?.querySelector("summary");
+        const updateThoughtSummary = () => {
+            if (!thoughtSummary || !thoughtDetails) return;
+            thoughtSummary.textContent = thoughtDetails.open
+                ? "思考（收起）"
+                : "思考（展开）";
+        };
+        thoughtDetails?.addEventListener("toggle", updateThoughtSummary);
+        updateThoughtSummary();
 
         return bubble;
     }
@@ -422,19 +445,36 @@
             const stream = translator.translateStreaming(text);
             for await (const chunk of stream) {
                 output += chunk;
-                streamEl.innerText = output;
+                streamEl.innerText = trimEdgeBlankLines(output);
                 streamEl.scrollTop = streamEl.scrollHeight;
             }
             return;
         }
 
-        streamEl.innerText = await translator.translate(text);
+        streamEl.innerText = trimEdgeBlankLines(
+            await translator.translate(text),
+        );
     }
 
     function ensureTranslatePort() {
         if (translatePort) return translatePort;
 
-        translatePort = chrome.runtime.connect({ name: "jyt-translate" });
+        const runtimeApi =
+            typeof chrome !== "undefined" &&
+            chrome.runtime &&
+            typeof chrome.runtime.connect === "function"
+                ? chrome.runtime
+                : typeof browser !== "undefined" &&
+                    browser.runtime &&
+                    typeof browser.runtime.connect === "function"
+                  ? browser.runtime
+                  : null;
+
+        if (!runtimeApi) {
+            return null;
+        }
+
+        translatePort = runtimeApi.connect({ name: "jyt-translate" });
         translatePort.onMessage.addListener((message) => {
             if (!activeRequest || !message) return;
             if (message.requestId !== activeRequest.requestId) return;
@@ -452,6 +492,15 @@
                     isThinking,
                 );
                 streamEl.scrollTop = streamEl.scrollHeight;
+                return;
+            }
+
+            if (message.type === "WEBLLM_MODEL_PROGRESS") {
+                const percent = Number.isFinite(message.progress)
+                    ? Math.max(0, Math.min(100, Math.round(message.progress)))
+                    : null;
+                const suffix = percent === null ? "" : ` (${percent}%)`;
+                streamEl.innerText = `${message.text || "模型加载中"}${suffix}`;
                 return;
             }
 
@@ -516,6 +565,10 @@
 
     function sendTranslateStart(payload) {
         let port = ensureTranslatePort();
+        if (!port) {
+            return false;
+        }
+
         try {
             port.postMessage(payload);
             return true;
@@ -523,6 +576,9 @@
             translatePort = null;
             try {
                 port = ensureTranslatePort();
+                if (!port) {
+                    return false;
+                }
                 port.postMessage(payload);
                 return true;
             } catch (retryErr) {
@@ -538,6 +594,19 @@
         thoughtDetails,
         isThinking,
     ) {
+        if (!isThinking) {
+            if (thoughtDetails) {
+                thoughtDetails.style.display = "none";
+                thoughtDetails.removeAttribute("open");
+            }
+            thoughtEl.textContent = "";
+            const clean = buffer
+                .replace(/<think>[\s\S]*?<\/think>/g, "")
+                .replace(/<think>[\s\S]*/g, "");
+            streamEl.innerText = trimEdgeBlankLines(clean);
+            return;
+        }
+
         const tstart = buffer.indexOf("<think>");
         const tend = buffer.indexOf("</think>");
 
@@ -549,7 +618,7 @@
 
             const clean =
                 buffer.substring(0, tstart) + buffer.substring(tend + 8);
-            streamEl.innerText = clean;
+            streamEl.innerText = trimEdgeBlankLines(clean);
             activeRequest.buffer = clean;
             return;
         }
@@ -558,7 +627,7 @@
             const cleanBuffer = buffer
                 .replace(/<think>[\s\S]*?<\/think>/g, "")
                 .replace(/<think>[\s\S]*/g, "");
-            streamEl.innerText = cleanBuffer;
+            streamEl.innerText = trimEdgeBlankLines(cleanBuffer);
 
             if (tend === -1) {
                 thoughtEl.innerText = buffer.substring(tstart + 7);
@@ -568,7 +637,7 @@
             return;
         }
 
-        streamEl.innerText = buffer;
+        streamEl.innerText = trimEdgeBlankLines(buffer);
     }
 
     function startBackgroundTranslate(
@@ -583,12 +652,17 @@
     ) {
         const extraOptions = options || {};
         const requestId = `${Date.now()}-${Math.random()}`;
+        const isThinking =
+            typeof extraOptions.isThinking === "boolean"
+                ? extraOptions.isThinking
+                : !!settings.show_thoughts;
+
         activeRequest = {
             requestId,
             streamEl,
             thoughtEl,
             thoughtDetails,
-            isThinking: !!settings.show_thoughts,
+            isThinking,
             buffer: "",
             text,
             from: preferredFrom,
@@ -607,7 +681,8 @@
         });
 
         if (!sent) {
-            streamEl.innerText = "翻译失败: 通信通道已关闭，请重试";
+            streamEl.innerText =
+                "翻译失败: 无法连接扩展后台（请刷新页面或重载扩展）";
             activeRequest = null;
         }
     }
@@ -650,6 +725,23 @@
                 streamEl.innerText = "翻译失败: " + err.message;
                 return;
             }
+        }
+
+        if (engine === "webllm") {
+            startBackgroundTranslate(
+                text,
+                from,
+                to,
+                settings,
+                streamEl,
+                thoughtEl,
+                thoughtDetails,
+                {
+                    allowBrowserFallback: false,
+                    isThinking: !!settings.webllm_show_thoughts,
+                },
+            );
+            return;
         }
 
         if (engine === "auto") {

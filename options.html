@@ -34,6 +34,7 @@
                         浏览器 Translation API（实验）
                     </option>
                     <option value="openai">OpenAI（流式）</option>
+                    <option value="webllm">WebLLM 本地模型（实验）</option>
                 </select>
                 <div class="jyt-hint">
                     浏览器 Translation API 与 LanguageDetector 为实验功能，仅
@@ -109,6 +110,64 @@
                     <option value="false">否</option>
                     <option value="true">是</option>
                 </select>
+            </div>
+
+            <div class="jyt-section jyt-hidden" id="webllm_section">
+                <div class="jyt-section-title">WebLLM 本地模型配置</div>
+                <div id="webllm_performance_note" class="jyt-perf-note"></div>
+
+                <label>推荐模型</label>
+                <select id="webllm_model_select">
+                    <option value="Qwen3-0.6B-q4f16_1-MLC">
+                        Qwen3 0.6B (推荐)
+                    </option>
+                    <option value="SmolLM2-360M-Instruct-q4f16_1-MLC">
+                        SmolLM2 360M (更轻量)
+                    </option>
+                    <option value="Llama-3.2-1B-Instruct-q4f16_1-MLC">
+                        Llama 3.2 1B (效果更好)
+                    </option>
+                    <option value="custom">自定义模型 ID</option>
+                </select>
+
+                <label>自定义模型 ID</label>
+                <input
+                    id="webllm_custom_model"
+                    type="text"
+                    placeholder="例如: Qwen3-0.6B-q4f16_1-MLC"
+                />
+                <label>是否启用思考过程</label>
+                <select id="webllm_show_thoughts">
+                    <option value="false">否（仅输出译文）</option>
+                    <option value="true">是（展示可折叠思考）</option>
+                </select>
+
+                <label>模型下载镜像</label>
+                <select id="webllm_model_mirror">
+                    <option value="official">官方 HuggingFace</option>
+                    <option value="hf-mirror">hf-mirror（中国推荐）</option>
+                    <option value="custom">自定义镜像</option>
+                </select>
+
+                <label>自定义镜像地址</label>
+                <input
+                    id="webllm_custom_mirror"
+                    type="text"
+                    placeholder="例如: https://hf-mirror.com"
+                />
+                <div class="jyt-hint">
+                    中国网络环境建议选择 hf-mirror。镜像只影响模型下载地址，不影响推理逻辑。
+                </div>
+
+                <div class="jyt-btn-group jyt-btn-group-secondary">
+                    <button id="webllm_download" type="button">
+                        下载/预加载模型
+                    </button>
+                    <button id="webllm_clear_cache" type="button">
+                        清理模型缓存
+                    </button>
+                </div>
+                <div id="webllm_status" class="jyt-current-pdf-status"></div>
             </div>
 
             <div class="jyt-section">
