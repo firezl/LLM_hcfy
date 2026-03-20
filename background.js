@@ -1,8 +1,6 @@
 // background.js
 // Service worker translation runtime: orchestrates translation work and streams back progress/results.
 
-import * as webllm from "./vendor/webllm/index.js";
-
 const PORT_NAME = "jyt-translate";
 const MESSAGE_TYPE_START = "TRANSLATE_START";
 const MESSAGE_TYPE_WEBLLM_PRELOAD = "WEBLLM_PRELOAD";
@@ -41,6 +39,21 @@ let webllmEngineLoadingPromise = null;
 let webllmEngineLoadingModelId = "";
 let webllmLastUsedAt = 0;
 const webllmAppConfigCache = new Map();
+let webllmModulePromise = null;
+
+async function getWebLLMModule() {
+    if (!isWebLLMRuntimeSupported()) {
+        throw new Error(
+            "当前环境不支持 WebLLM（仅支持 Chrome/Edge 且需要 WebGPU）",
+        );
+    }
+
+    if (!webllmModulePromise) {
+        webllmModulePromise = import("./vendor/webllm/index.js");
+    }
+
+    return webllmModulePromise;
+}
 
 function isWebLLMRuntimeSupported() {
     if (isFirefoxExtensionRuntime) {
@@ -95,12 +108,13 @@ function remapModelRepoToMirror(modelRepoUrl, mirrorBase) {
     return raw.replace(HUGGINGFACE_BASE, normalizedMirror);
 }
 
-function buildMirrorAwareAppConfig(mirrorBase) {
+async function buildMirrorAwareAppConfig(mirrorBase) {
     const normalizedMirror = normalizeMirrorBase(mirrorBase);
     if (webllmAppConfigCache.has(normalizedMirror)) {
         return webllmAppConfigCache.get(normalizedMirror);
     }
 
+    const webllm = await getWebLLMModule();
     const source = webllm.prebuiltAppConfig || {};
     const modelList = Array.isArray(source.model_list) ? source.model_list : [];
     const mappedModelList = modelList.map((item) => ({
@@ -148,6 +162,7 @@ async function unloadWebLLMModel(clearCache) {
 
     if (clearCache && loadedModelId) {
         try {
+            const webllm = await getWebLLMModule();
             await webllm.deleteModelAllInfoInCache(loadedModelId);
         } catch (err) {
             console.warn("Failed to clear webllm model cache", err);
@@ -204,8 +219,9 @@ async function ensureWebLLMEngine(modelId, mirrorBase, port, state, requestId) {
                 await unloadWebLLMModel(false);
             }
 
+            const webllm = await getWebLLMModule();
             const engine = await webllm.CreateMLCEngine(modelId, {
-                appConfig: buildMirrorAwareAppConfig(mirrorBase),
+                appConfig: await buildMirrorAwareAppConfig(mirrorBase),
                 initProgressCallback: (report) => {
                     postWebLLMProgress(port, state, requestId, report || {});
                 },
@@ -918,6 +934,7 @@ async function handleWebLLMClearCache(message, port, state) {
         if (webllmEngine && webllmEngineModelId === targetModelId) {
             await unloadWebLLMModel(true);
         } else if (targetModelId) {
+            const webllm = await getWebLLMModule();
             await webllm.deleteModelAllInfoInCache(targetModelId);
         }
 
@@ -935,10 +952,16 @@ async function handleWebLLMClearCache(message, port, state) {
     }
 }
 
-function getWebLLMModelListPayload() {
-    const modelList = Array.isArray(webllm?.prebuiltAppConfig?.model_list)
-        ? webllm.prebuiltAppConfig.model_list
-        : [];
+async function getWebLLMModelListPayload() {
+    let modelList = [];
+    try {
+        const webllm = await getWebLLMModule();
+        modelList = Array.isArray(webllm?.prebuiltAppConfig?.model_list)
+            ? webllm.prebuiltAppConfig.model_list
+            : [];
+    } catch (err) {
+        modelList = [];
+    }
 
     const allIds = Array.from(
         new Set(
@@ -959,10 +982,10 @@ function getWebLLMModelListPayload() {
     };
 }
 
-function handleWebLLMGetModels(message, port, state) {
+async function handleWebLLMGetModels(message, port, state) {
     const requestId = message?.requestId || `webllm-models-${Date.now()}`;
     try {
-        const payload = getWebLLMModelListPayload();
+        const payload = await getWebLLMModelListPayload();
         safePostMessage(port, state, {
             type: "WEBLLM_MODELS_RESPONSE",
             requestId,
@@ -1047,7 +1070,7 @@ chrome.runtime.onConnect.addListener((port) => {
         }
 
         if (message.type === MESSAGE_TYPE_WEBLLM_GET_MODELS) {
-            handleWebLLMGetModels(message, port, state);
+            void handleWebLLMGetModels(message, port, state);
         }
     });
 });
