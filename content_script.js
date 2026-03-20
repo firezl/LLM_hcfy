@@ -4,7 +4,7 @@
 (function () {
     const BUTTON_ID = "jyt-translate-btn";
     const BUBBLE_ID = "jyt-translate-bubble";
-    const DEFAULT_SETTINGS = {
+    const FALLBACK_DEFAULT_SETTINGS = {
         enabled: "on",
         engine: "auto",
         translate_shortcut: "",
@@ -25,6 +25,10 @@
         bubble_width_percent: 20,
         bubble_height_percent: 40,
     };
+    const shared = globalThis.JYT_SHARED || {};
+    const DEFAULT_SETTINGS =
+        shared.DEFAULT_SETTINGS || FALLBACK_DEFAULT_SETTINGS;
+    const MESSAGE_TYPES = shared.MESSAGE_TYPES || {};
 
     let lastSelection = "";
     let isPinned = false;
@@ -672,7 +676,7 @@
         };
 
         const sent = sendTranslateStart({
-            type: "TRANSLATE_START",
+            type: MESSAGE_TYPES.TRANSLATE_START || "TRANSLATE_START",
             requestId,
             text,
             preferredFrom,

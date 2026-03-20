@@ -1,12 +1,34 @@
 // options.js
 document.addEventListener("DOMContentLoaded", () => {
+    const shared = globalThis.JYT_SHARED || {};
+    const MESSAGE_TYPES = shared.MESSAGE_TYPES || {};
+    const DEFAULT_SETTINGS = shared.DEFAULT_SETTINGS || {
+        enabled: "on",
+        engine: "auto",
+        translate_shortcut: "",
+        source_lang: "auto",
+        target_lang: "auto",
+        openai_api_url: "",
+        openai_api_key: "",
+        openai_model: "gpt-4o-mini",
+        openai_thinking_model: "gpt-5-thinking",
+        show_thoughts: false,
+        webllm_model: "Qwen3-0.6B-q4f16_1-MLC",
+        webllm_custom_model: "",
+        webllm_show_thoughts: false,
+        webllm_model_mirror: "official",
+        webllm_custom_mirror: "",
+        theme_mode: "auto",
+        font_family: "",
+        bubble_width_percent: 20,
+        bubble_height_percent: 40,
+    };
     const runtimeBaseUrl = chrome.runtime.getURL("");
     const isFirefoxRuntime = runtimeBaseUrl.startsWith("moz-extension://");
     const isWebLLMSupportedBrowser = !isFirefoxRuntime;
     const WEBLLM_WEAK_MEMORY_GB = 4;
     const WEBLLM_WEAK_CPU_CORES = 4;
-    const MESSAGE_TYPE_WEBLLM_GET_MODELS = "WEBLLM_GET_MODELS";
-    const RECOMMENDED_WEBLLM_MODELS = [
+    const RECOMMENDED_WEBLLM_MODELS = shared.RECOMMENDED_WEBLLM_MODELS || [
         "Qwen3-0.6B-q4f16_1-MLC",
         "Llama-3.2-1B-Instruct-q4f16_1-MLC",
     ];
@@ -127,7 +149,8 @@ document.addEventListener("DOMContentLoaded", () => {
             try {
                 const port = ensureWebLLMPort();
                 port.postMessage({
-                    type: MESSAGE_TYPE_WEBLLM_GET_MODELS,
+                    type:
+                        MESSAGE_TYPES.WEBLLM_GET_MODELS || "WEBLLM_GET_MODELS",
                     requestId,
                 });
             } catch (err) {
@@ -488,87 +511,57 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function load() {
-        chrome.storage.sync.get(
-            {
-                enabled: "on",
-                engine: "auto",
-                translate_shortcut: "",
-                source_lang: "auto",
-                target_lang: "auto",
-                openai_api_url: "",
-                openai_api_key: "",
-                openai_model: "gpt-4o-mini",
-                openai_thinking_model: "gpt-5-thinking",
-                show_thoughts: false,
-                webllm_model: "Qwen3-0.6B-q4f16_1-MLC",
-                webllm_custom_model: "",
-                webllm_show_thoughts: false,
-                webllm_model_mirror: "official",
-                webllm_custom_mirror: "",
-                theme_mode: "auto",
-                font_family: "",
-                bubble_width_percent: 20,
-                bubble_height_percent: 40,
-            },
-            (items) => {
-                els.enable_select.value = items.enabled;
-                els.engine_select.value = items.engine;
-                els.translate_shortcut.value = normalizeShortcut(
-                    items.translate_shortcut,
-                );
-                els.source_lang.value = items.source_lang || "auto";
-                els.target_lang.value = items.target_lang || "auto";
-                els.openai_api_url.value = items.openai_api_url;
-                els.openai_api_key.value = items.openai_api_key;
-                els.openai_model.value = items.openai_model;
-                els.openai_thinking_model.value = items.openai_thinking_model;
-                els.show_thoughts.value = items.show_thoughts
-                    ? "true"
-                    : "false";
-                const savedModel =
-                    items.webllm_model || "Qwen3-0.6B-q4f16_1-MLC";
-                els.webllm_custom_model.value = items.webllm_custom_model || "";
-                els.webllm_show_thoughts.value = items.webllm_show_thoughts
-                    ? "true"
-                    : "false";
-                els.webllm_model_mirror.value =
-                    items.webllm_model_mirror || "official";
-                els.webllm_custom_mirror.value =
-                    items.webllm_custom_mirror || "";
-                els.webllm_custom_mirror.disabled =
-                    els.webllm_model_mirror.value !== "custom";
-                populateWebLLMModelSelect(
-                    RECOMMENDED_WEBLLM_MODELS,
-                    savedModel,
-                );
-                if (isWebLLMSupportedBrowser) {
-                    void requestWebLLMModelList()
-                        .then((res) => {
-                            const modelIds = Array.isArray(res.modelIds)
-                                ? res.modelIds
-                                : [];
-                            if (modelIds.length > 0) {
-                                populateWebLLMModelSelect(modelIds, savedModel);
-                            }
-                        })
-                        .catch(() => {
-                            // keep fallback options silently
-                        });
-                }
-                els.theme_mode.value = items.theme_mode || "auto";
-                els.font_family.value = items.font_family || "";
-                els.bubble_width_percent.value = clampPercent(
-                    items.bubble_width_percent,
-                    20,
-                );
-                els.bubble_height_percent.value = clampPercent(
-                    items.bubble_height_percent,
-                    40,
-                );
-                updateEngineDependentUI();
-                applyTheme(items.theme_mode || "auto");
-            },
-        );
+        chrome.storage.sync.get(DEFAULT_SETTINGS, (items) => {
+            els.enable_select.value = items.enabled;
+            els.engine_select.value = items.engine;
+            els.translate_shortcut.value = normalizeShortcut(
+                items.translate_shortcut,
+            );
+            els.source_lang.value = items.source_lang || "auto";
+            els.target_lang.value = items.target_lang || "auto";
+            els.openai_api_url.value = items.openai_api_url;
+            els.openai_api_key.value = items.openai_api_key;
+            els.openai_model.value = items.openai_model;
+            els.openai_thinking_model.value = items.openai_thinking_model;
+            els.show_thoughts.value = items.show_thoughts ? "true" : "false";
+            const savedModel = items.webllm_model || "Qwen3-0.6B-q4f16_1-MLC";
+            els.webllm_custom_model.value = items.webllm_custom_model || "";
+            els.webllm_show_thoughts.value = items.webllm_show_thoughts
+                ? "true"
+                : "false";
+            els.webllm_model_mirror.value =
+                items.webllm_model_mirror || "official";
+            els.webllm_custom_mirror.value = items.webllm_custom_mirror || "";
+            els.webllm_custom_mirror.disabled =
+                els.webllm_model_mirror.value !== "custom";
+            populateWebLLMModelSelect(RECOMMENDED_WEBLLM_MODELS, savedModel);
+            if (isWebLLMSupportedBrowser) {
+                void requestWebLLMModelList()
+                    .then((res) => {
+                        const modelIds = Array.isArray(res.modelIds)
+                            ? res.modelIds
+                            : [];
+                        if (modelIds.length > 0) {
+                            populateWebLLMModelSelect(modelIds, savedModel);
+                        }
+                    })
+                    .catch(() => {
+                        // keep fallback options silently
+                    });
+            }
+            els.theme_mode.value = items.theme_mode || "auto";
+            els.font_family.value = items.font_family || "";
+            els.bubble_width_percent.value = clampPercent(
+                items.bubble_width_percent,
+                20,
+            );
+            els.bubble_height_percent.value = clampPercent(
+                items.bubble_height_percent,
+                40,
+            );
+            updateEngineDependentUI();
+            applyTheme(items.theme_mode || "auto");
+        });
     }
 
     document.getElementById("save").addEventListener("click", () => {
@@ -686,7 +679,7 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             const port = ensureWebLLMPort();
             port.postMessage({
-                type: "WEBLLM_PRELOAD",
+                type: MESSAGE_TYPES.WEBLLM_PRELOAD || "WEBLLM_PRELOAD",
                 requestId,
                 modelId,
                 settings: {
@@ -716,7 +709,7 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             const port = ensureWebLLMPort();
             port.postMessage({
-                type: "WEBLLM_CLEAR_CACHE",
+                type: MESSAGE_TYPES.WEBLLM_CLEAR_CACHE || "WEBLLM_CLEAR_CACHE",
                 requestId,
                 modelId,
                 settings: {

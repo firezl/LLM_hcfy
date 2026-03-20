@@ -9,7 +9,9 @@ $xpiName = "LLM-Translator-v$version.xpi"
 $includes = @(
     "manifest.json",
     "background.js",
+    "background",
     "content_script.js",
+    "libs",
     "options.html",
     "options.js",
     "styles.css",
@@ -51,6 +53,12 @@ Reset-Dir $firefoxTempDir
 Copy-IncludesTo $chromeTempDir
 Copy-IncludesTo $firefoxTempDir
 
+# Firefox 提交会对 JS 做解析，单文件超过 5MB 会被拒；WebLLM 在 Firefox 也不可用，直接排除其运行时代码。
+$firefoxWebLLMEntry = Join-Path $firefoxTempDir "vendor\webllm\index.js"
+if (Test-Path $firefoxWebLLMEntry) {
+    Remove-Item $firefoxWebLLMEntry -Force
+}
+
 # Chrome/Edge 包
 Build-Archive $chromeTempDir $zipName
 
@@ -60,6 +68,23 @@ $firefoxManifest = Get-Content $firefoxManifestPath -Raw | ConvertFrom-Json
 $firefoxManifest.background = [ordered]@{
     scripts = @("background.js")
 }
+
+if ($firefoxManifest.web_accessible_resources) {
+    $filteredWar = @()
+    foreach ($entry in $firefoxManifest.web_accessible_resources) {
+        $resources = @($entry.resources | Where-Object { $_ -ne "vendor/webllm/index.js" })
+        if ($resources.Count -gt 0) {
+            $entry.resources = $resources
+            $filteredWar += $entry
+        }
+    }
+    if ($filteredWar.Count -gt 0) {
+        $firefoxManifest.web_accessible_resources = $filteredWar
+    } else {
+        $firefoxManifest.PSObject.Properties.Remove("web_accessible_resources")
+    }
+}
+
 $firefoxManifest | ConvertTo-Json -Depth 100 | Set-Content -Path $firefoxManifestPath -Encoding UTF8
 
 Build-Archive $firefoxTempDir $xpiName
