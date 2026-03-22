@@ -1,7 +1,13 @@
 import {
+    MESSAGE_TYPE_CONFIG_EXPORT,
+    MESSAGE_TYPE_CONFIG_IMPORT,
     MESSAGE_TYPE_TERM_CLEAR,
     MESSAGE_TYPE_TERM_DELETE,
     MESSAGE_TYPE_START,
+    MESSAGE_TYPE_SYNC_BIDIRECTIONAL,
+    MESSAGE_TYPE_SYNC_DOWNLOAD,
+    MESSAGE_TYPE_SYNC_TEST,
+    MESSAGE_TYPE_SYNC_UPLOAD,
     MESSAGE_TYPE_TERM_EXPORT,
     MESSAGE_TYPE_TERM_IMPORT,
     MESSAGE_TYPE_TERM_LIST,
@@ -24,6 +30,7 @@ import {
     handleTermMessage as handleBackgroundTermMessage,
 } from "./term.js";
 import { extensionApi } from "./extension-api.js";
+import { handleSyncMessage } from "./sync-manager.js";
 
 startWebLLMIdleMonitor();
 void ensureTermStoreReady();
@@ -89,12 +96,23 @@ extensionApi.runtime.onMessage.addListener((message, sender, sendResponse) => {
         type === MESSAGE_TYPE_TERM_LIST ||
         type === MESSAGE_TYPE_TERM_DELETE ||
         type === MESSAGE_TYPE_TERM_CLEAR;
+    const isSyncMessage =
+        type === MESSAGE_TYPE_CONFIG_EXPORT ||
+        type === MESSAGE_TYPE_CONFIG_IMPORT ||
+        type === MESSAGE_TYPE_SYNC_TEST ||
+        type === MESSAGE_TYPE_SYNC_UPLOAD ||
+        type === MESSAGE_TYPE_SYNC_DOWNLOAD ||
+        type === MESSAGE_TYPE_SYNC_BIDIRECTIONAL;
 
-    if (!isTermMessage) {
+    if (!isTermMessage && !isSyncMessage) {
         return false;
     }
 
-    void handleBackgroundTermMessage(message)
+    const handler = isTermMessage
+        ? handleBackgroundTermMessage
+        : handleSyncMessage;
+
+    void handler(message)
         .then((result) => {
             sendResponse(result);
         })

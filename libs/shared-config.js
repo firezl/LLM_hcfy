@@ -22,6 +22,7 @@
         glossary_enabled: true,
         glossary_terms: [],
         glossary_version: 1,
+        config_updated_at: 0,
     };
 
     const MESSAGE_TYPES = {
@@ -35,6 +36,12 @@
         TERM_LIST: "TERM_LIST",
         TERM_DELETE: "TERM_DELETE",
         TERM_CLEAR: "TERM_CLEAR",
+        CONFIG_EXPORT: "CONFIG_EXPORT",
+        CONFIG_IMPORT: "CONFIG_IMPORT",
+        SYNC_TEST: "SYNC_TEST",
+        SYNC_UPLOAD: "SYNC_UPLOAD",
+        SYNC_DOWNLOAD: "SYNC_DOWNLOAD",
+        SYNC_BIDIRECTIONAL: "SYNC_BIDIRECTIONAL",
     };
 
     const RECOMMENDED_WEBLLM_MODELS = [

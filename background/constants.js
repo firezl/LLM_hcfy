@@ -10,6 +10,19 @@ export const MESSAGE_TYPE_TERM_EXPORT = "TERM_EXPORT";
 export const MESSAGE_TYPE_TERM_LIST = "TERM_LIST";
 export const MESSAGE_TYPE_TERM_DELETE = "TERM_DELETE";
 export const MESSAGE_TYPE_TERM_CLEAR = "TERM_CLEAR";
+export const MESSAGE_TYPE_CONFIG_EXPORT = "CONFIG_EXPORT";
+export const MESSAGE_TYPE_CONFIG_IMPORT = "CONFIG_IMPORT";
+export const MESSAGE_TYPE_SYNC_TEST = "SYNC_TEST";
+export const MESSAGE_TYPE_SYNC_UPLOAD = "SYNC_UPLOAD";
+export const MESSAGE_TYPE_SYNC_DOWNLOAD = "SYNC_DOWNLOAD";
+export const MESSAGE_TYPE_SYNC_BIDIRECTIONAL = "SYNC_BIDIRECTIONAL";
+
+export const SYNC_CONFLICT_POLICY_ASK = "ask";
+export const SYNC_CONFLICT_POLICY_REMOTE_WINS = "remote_wins";
+export const SYNC_CONFLICT_POLICY_LOCAL_WINS = "local_wins";
+export const SYNC_CONFLICT_POLICY_MERGE_NEWEST = "merge_newest";
+
+export const SYNC_ERROR_CONFLICT = "SYNC_CONFLICT";
 
 export const RECOMMENDED_WEBLLM_MODELS = [
     "Qwen3-0.6B-q4f16_1-MLC",
@@ -27,3 +40,6 @@ export const GOOGLE_TRANSLATE_ENDPOINT =
     "https://translate.googleapis.com/translate_a/single";
 export const BING_TRANSLATOR_PAGE_URL = "https://www.bing.com/translator";
 export const BING_AUTH_TTL_MS = 10 * 60 * 1000;
+
+export const SYNC_CONFIG_FILE = "config.json";
+export const SYNC_GLOSSARY_FILE = "glossary.json";

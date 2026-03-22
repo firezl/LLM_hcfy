@@ -460,6 +460,13 @@ button#reset,
 button#open_local_pdf,
 button#webllm_download,
 button#webllm_clear_cache,
+button#config_export,
+button#config_import,
+button#webdav_save_local,
+button#sync_test,
+button#sync_upload,
+button#sync_download,
+button#sync_bidirectional,
 button#glossary_export,
 button#glossary_import,
 button#glossary_clear,
@@ -501,6 +508,13 @@ button#open_local_pdf {
 
 button#webllm_download,
 button#webllm_clear_cache,
+button#config_export,
+button#config_import,
+button#webdav_save_local,
+button#sync_test,
+button#sync_upload,
+button#sync_download,
+button#sync_bidirectional,
 button#glossary_export,
 button#glossary_import,
 button#glossary_clear {
@@ -531,6 +545,13 @@ button.jyt-glossary-row-delete {
 
 button#webllm_download:hover,
 button#webllm_clear_cache:hover,
+button#config_export:hover,
+button#config_import:hover,
+button#webdav_save_local:hover,
+button#sync_test:hover,
+button#sync_upload:hover,
+button#sync_download:hover,
+button#sync_bidirectional:hover,
 button#glossary_export:hover,
 button#glossary_import:hover,
 button#glossary_clear:hover,
@@ -545,7 +566,11 @@ button#glossary_save:hover {
 }
 
 button#webllm_download:disabled,
-button#webllm_clear_cache:disabled {
+button#webllm_clear_cache:disabled,
+button#sync_test:disabled,
+button#sync_upload:disabled,
+button#sync_download:disabled,
+button#sync_bidirectional:disabled {
     opacity: 0.6;
     cursor: not-allowed;
 }

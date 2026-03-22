@@ -25,6 +25,7 @@ document.addEventListener("DOMContentLoaded", () => {
         glossary_enabled: true,
         glossary_terms: [],
         glossary_version: 1,
+        config_updated_at: 0,
     };
     const runtimeBaseUrl = chrome.runtime.getURL("");
     const isFirefoxRuntime = runtimeBaseUrl.startsWith("moz-extension://");
@@ -93,6 +94,20 @@ document.addEventListener("DOMContentLoaded", () => {
     const glossaryTargetTermEl = document.getElementById(
         "glossary_target_term",
     );
+    const configExportBtn = document.getElementById("config_export");
+    const configImportBtn = document.getElementById("config_import");
+    const configImportFileInput = document.getElementById("config_import_file");
+    const configStatusEl = document.getElementById("config_status");
+    const webdavBaseUrlEl = document.getElementById("webdav_base_url");
+    const webdavUsernameEl = document.getElementById("webdav_username");
+    const webdavPasswordEl = document.getElementById("webdav_password");
+    const webdavRemoteDirEl = document.getElementById("webdav_remote_dir");
+    const webdavSaveLocalBtn = document.getElementById("webdav_save_local");
+    const syncTestBtn = document.getElementById("sync_test");
+    const syncUploadBtn = document.getElementById("sync_upload");
+    const syncDownloadBtn = document.getElementById("sync_download");
+    const syncBidirectionalBtn = document.getElementById("sync_bidirectional");
+    const syncStatusEl = document.getElementById("sync_status");
 
     let cachedActiveTab = null;
     let cachedCurrentPdfUrl = "";
@@ -101,6 +116,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const webllmModelRequestResolvers = new Map();
     let glossaryTermsCache = [];
     let glossaryEditingOriginal = null;
+    let syncBusy = false;
 
     function isRunningInPopup() {
         try {
@@ -285,7 +301,176 @@ document.addEventListener("DOMContentLoaded", () => {
         return Array.from(map.values());
     }
 
-    function sendTermMessage(type, payload) {
+    function sanitizeConfigPayload(rawPayload) {
+        const input =
+            rawPayload && typeof rawPayload === "object" ? rawPayload : {};
+        const next = {};
+        const keys = Object.keys(DEFAULT_SETTINGS).filter(
+            (key) => key !== "glossary_terms" && key !== "glossary_version",
+        );
+
+        for (const key of keys) {
+            const fallback = DEFAULT_SETTINGS[key];
+            const value = input[key];
+
+            if (key === "show_thoughts" || key === "webllm_show_thoughts") {
+                next[key] = typeof value === "boolean" ? value : !!fallback;
+                continue;
+            }
+
+            if (
+                key === "bubble_width_percent" ||
+                key === "bubble_height_percent"
+            ) {
+                next[key] = clampPercent(value, fallback);
+                continue;
+            }
+
+            if (key === "config_updated_at") {
+                const ts = Number(value);
+                next[key] = Number.isFinite(ts) && ts > 0 ? Math.floor(ts) : 0;
+                continue;
+            }
+
+            if (typeof fallback === "string") {
+                next[key] = String(value == null ? fallback : value).trim();
+                continue;
+            }
+
+            next[key] = value == null ? fallback : value;
+        }
+
+        return next;
+    }
+
+    function setConfigStatus(text, isError) {
+        if (!configStatusEl) return;
+        configStatusEl.textContent = text || "";
+        configStatusEl.classList.toggle("jyt-status-error", !!isError);
+    }
+
+    function setSyncStatus(text, isError) {
+        if (!syncStatusEl) return;
+        syncStatusEl.textContent = text || "";
+        syncStatusEl.classList.toggle("jyt-status-error", !!isError);
+    }
+
+    function downloadJsonFile(payload, filePrefix) {
+        const blob = new Blob([JSON.stringify(payload, null, 2)], {
+            type: "application/json",
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+        a.href = url;
+        a.download = `${filePrefix}-${stamp}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+    }
+
+    function getWebDavFormData() {
+        return {
+            baseUrl: String(webdavBaseUrlEl?.value || "").trim(),
+            username: String(webdavUsernameEl?.value || "").trim(),
+            password: String(webdavPasswordEl?.value || ""),
+            remoteDir: String(webdavRemoteDirEl?.value || "/jyt-sync").trim(),
+        };
+    }
+
+    function setWebDavFormData(data) {
+        const value = data && typeof data === "object" ? data : {};
+        if (webdavBaseUrlEl) webdavBaseUrlEl.value = value.baseUrl || "";
+        if (webdavUsernameEl) webdavUsernameEl.value = value.username || "";
+        if (webdavPasswordEl) webdavPasswordEl.value = value.password || "";
+        if (webdavRemoteDirEl)
+            webdavRemoteDirEl.value = value.remoteDir || "/jyt-sync";
+    }
+
+    async function saveWebDavLocalSettings() {
+        const payload = getWebDavFormData();
+        if (
+            typeof browser !== "undefined" &&
+            browser.storage &&
+            browser.storage.local &&
+            typeof browser.storage.local.set === "function"
+        ) {
+            await browser.storage.local.set({ webdav_sync: payload });
+            return payload;
+        }
+
+        return new Promise((resolve, reject) => {
+            try {
+                chrome.storage.local.set({ webdav_sync: payload }, () => {
+                    const err = chrome.runtime.lastError;
+                    if (err) {
+                        reject(new Error(err.message || "本地保存失败"));
+                        return;
+                    }
+                    resolve(payload);
+                });
+            } catch (err) {
+                reject(err);
+            }
+        });
+    }
+
+    async function loadWebDavLocalSettings() {
+        const fallback = {
+            baseUrl: "",
+            username: "",
+            password: "",
+            remoteDir: "/jyt-sync",
+        };
+
+        if (
+            typeof browser !== "undefined" &&
+            browser.storage &&
+            browser.storage.local &&
+            typeof browser.storage.local.get === "function"
+        ) {
+            const items = await browser.storage.local.get({
+                webdav_sync: fallback,
+            });
+            const value =
+                items?.webdav_sync && typeof items.webdav_sync === "object"
+                    ? items.webdav_sync
+                    : fallback;
+            return value;
+        }
+
+        return new Promise((resolve, reject) => {
+            try {
+                chrome.storage.local.get({ webdav_sync: fallback }, (items) => {
+                    const err = chrome.runtime.lastError;
+                    if (err) {
+                        reject(new Error(err.message || "本地读取失败"));
+                        return;
+                    }
+
+                    const value =
+                        items?.webdav_sync &&
+                        typeof items.webdav_sync === "object"
+                            ? items.webdav_sync
+                            : fallback;
+                    resolve(value);
+                });
+            } catch (err) {
+                reject(err);
+            }
+        });
+    }
+
+    function setSyncButtonsEnabled(enabled) {
+        syncBusy = !enabled;
+        if (syncTestBtn) syncTestBtn.disabled = !enabled;
+        if (syncUploadBtn) syncUploadBtn.disabled = !enabled;
+        if (syncDownloadBtn) syncDownloadBtn.disabled = !enabled;
+        if (syncBidirectionalBtn) syncBidirectionalBtn.disabled = !enabled;
+    }
+
+    function sendBackgroundMessage(type, payload) {
         const request = {
             type,
             ...(payload || {}),
@@ -304,7 +489,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 chrome.runtime.sendMessage(request, (resp) => {
                     const err = chrome.runtime.lastError;
                     if (err) {
-                        reject(new Error(err.message || "术语消息发送失败"));
+                        reject(new Error(err.message || "后台消息发送失败"));
                         return;
                     }
                     resolve(resp);
@@ -313,6 +498,58 @@ document.addEventListener("DOMContentLoaded", () => {
                 reject(err);
             }
         });
+    }
+
+    function sendTermMessage(type, payload) {
+        return sendBackgroundMessage(type, payload);
+    }
+
+    async function askConflictPolicy(conflict) {
+        const cfgCount = Array.isArray(conflict?.configFields)
+            ? conflict.configFields.length
+            : 0;
+        const termCount = Number(conflict?.glossaryConflictCount || 0);
+        const answer = window.prompt(
+            `检测到同步冲突：配置字段 ${cfgCount} 项，术语 ${termCount} 项。\n请输入策略编号：\n1=远端覆盖本地\n2=本地覆盖远端\n3=按时间戳合并\n取消=中止同步`,
+            "3",
+        );
+        if (answer == null) return null;
+
+        const value = String(answer).trim();
+        if (value === "1") return "remote_wins";
+        if (value === "2") return "local_wins";
+        if (value === "3") return "merge_newest";
+        return null;
+    }
+
+    async function runBidirectionalSync(webdav) {
+        let conflictPolicy = "ask";
+
+        for (let i = 0; i < 3; i += 1) {
+            const result = await sendBackgroundMessage(
+                MESSAGE_TYPES.SYNC_BIDIRECTIONAL || "SYNC_BIDIRECTIONAL",
+                {
+                    webdav,
+                    conflictPolicy,
+                },
+            );
+
+            if (result?.ok) {
+                return result;
+            }
+
+            if (result?.errorCode !== "SYNC_CONFLICT") {
+                throw new Error(result?.error || "双向同步失败");
+            }
+
+            const selected = await askConflictPolicy(result?.conflict || {});
+            if (!selected) {
+                throw new Error("已取消同步");
+            }
+            conflictPolicy = selected;
+        }
+
+        throw new Error("同步冲突处理次数过多，请重试");
     }
 
     function setWebLLMStatus(text, isError) {
@@ -833,6 +1070,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 els.bubble_height_percent.value,
                 40,
             ),
+            config_updated_at: Date.now(),
         };
         if (data.engine === "webllm" && !isWebLLMSupportedBrowser) {
             alert("当前浏览器不支持 WebLLM，请切换到 Chrome/Edge。");
@@ -1227,6 +1465,200 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
+    configExportBtn?.addEventListener("click", async () => {
+        try {
+            const result = await sendBackgroundMessage(
+                MESSAGE_TYPES.CONFIG_EXPORT || "CONFIG_EXPORT",
+            );
+            if (!result?.ok) {
+                throw new Error(result?.error || "配置导出失败");
+            }
+
+            downloadJsonFile(result.payload || {}, "jyt-config");
+            setConfigStatus("配置导出完成", false);
+        } catch (err) {
+            setConfigStatus(
+                `配置导出失败: ${err && err.message ? err.message : String(err)}`,
+                true,
+            );
+        }
+    });
+
+    configImportBtn?.addEventListener("click", () => {
+        if (!configImportFileInput) return;
+        configImportFileInput.value = "";
+        configImportFileInput.click();
+    });
+
+    configImportFileInput?.addEventListener("change", async () => {
+        const file = configImportFileInput.files?.[0];
+        if (!file) return;
+        if (file.size > 5 * 1024 * 1024) {
+            setConfigStatus("配置导入失败: 文件过大，请控制在 5MB 以内", true);
+            return;
+        }
+
+        try {
+            const content = await readFileAsText(file);
+            const parsed = JSON.parse(content);
+            const payload = sanitizeConfigPayload(parsed?.payload || parsed);
+            payload.config_updated_at =
+                Number(parsed?.updated_at) ||
+                Number(payload.config_updated_at) ||
+                Date.now();
+
+            const result = await sendBackgroundMessage(
+                MESSAGE_TYPES.CONFIG_IMPORT || "CONFIG_IMPORT",
+                {
+                    payload: {
+                        schema: "jyt-config",
+                        schema_version: 1,
+                        updated_at: payload.config_updated_at,
+                        exported_at: new Date().toISOString(),
+                        payload,
+                    },
+                },
+            );
+            if (!result?.ok) {
+                throw new Error(result?.error || "配置导入失败");
+            }
+
+            load();
+            setConfigStatus("配置导入完成", false);
+        } catch (err) {
+            setConfigStatus(
+                `配置导入失败: ${err && err.message ? err.message : String(err)}`,
+                true,
+            );
+        }
+    });
+
+    webdavSaveLocalBtn?.addEventListener("click", async () => {
+        try {
+            await saveWebDavLocalSettings();
+            setSyncStatus("WebDAV 配置已保存到本地", false);
+        } catch (err) {
+            setSyncStatus(
+                `保存失败: ${err && err.message ? err.message : String(err)}`,
+                true,
+            );
+        }
+    });
+
+    syncTestBtn?.addEventListener("click", async () => {
+        if (syncBusy) return;
+        setSyncButtonsEnabled(false);
+        setSyncStatus("正在测试 WebDAV 连接...", false);
+        try {
+            const webdav = getWebDavFormData();
+            await saveWebDavLocalSettings();
+            const result = await sendBackgroundMessage(
+                MESSAGE_TYPES.SYNC_TEST || "SYNC_TEST",
+                { webdav },
+            );
+            if (!result?.ok) {
+                throw new Error(result?.error || "连接测试失败");
+            }
+            setSyncStatus(
+                `连接成功: config(${result.configStatus}) glossary(${result.glossaryStatus})`,
+                false,
+            );
+        } catch (err) {
+            setSyncStatus(
+                `连接测试失败: ${err && err.message ? err.message : String(err)}`,
+                true,
+            );
+        } finally {
+            setSyncButtonsEnabled(true);
+        }
+    });
+
+    syncUploadBtn?.addEventListener("click", async () => {
+        if (syncBusy) return;
+        setSyncButtonsEnabled(false);
+        setSyncStatus("正在上传配置与术语到 WebDAV...", false);
+        try {
+            const webdav = getWebDavFormData();
+            await saveWebDavLocalSettings();
+            const result = await sendBackgroundMessage(
+                MESSAGE_TYPES.SYNC_UPLOAD || "SYNC_UPLOAD",
+                { webdav },
+            );
+            if (!result?.ok) {
+                throw new Error(result?.error || "上传失败");
+            }
+            setSyncStatus(
+                `上传完成: 术语 ${result.summary?.glossaryCount || 0} 条`,
+                false,
+            );
+        } catch (err) {
+            setSyncStatus(
+                `上传失败: ${err && err.message ? err.message : String(err)}`,
+                true,
+            );
+        } finally {
+            setSyncButtonsEnabled(true);
+        }
+    });
+
+    syncDownloadBtn?.addEventListener("click", async () => {
+        if (syncBusy) return;
+        setSyncButtonsEnabled(false);
+        setSyncStatus("正在从 WebDAV 下载配置与术语...", false);
+        try {
+            const webdav = getWebDavFormData();
+            await saveWebDavLocalSettings();
+            const result = await sendBackgroundMessage(
+                MESSAGE_TYPES.SYNC_DOWNLOAD || "SYNC_DOWNLOAD",
+                { webdav },
+            );
+            if (!result?.ok) {
+                throw new Error(result?.error || "下载失败");
+            }
+
+            load();
+            await refreshGlossaryList();
+            resetGlossaryEditor();
+            setSyncStatus(
+                `下载完成: 术语 ${result.summary?.glossaryCount || 0} 条`,
+                false,
+            );
+        } catch (err) {
+            setSyncStatus(
+                `下载失败: ${err && err.message ? err.message : String(err)}`,
+                true,
+            );
+        } finally {
+            setSyncButtonsEnabled(true);
+        }
+    });
+
+    syncBidirectionalBtn?.addEventListener("click", async () => {
+        if (syncBusy) return;
+        setSyncButtonsEnabled(false);
+        setSyncStatus("正在执行双向同步...", false);
+        try {
+            const webdav = getWebDavFormData();
+            await saveWebDavLocalSettings();
+            const result = await runBidirectionalSync(webdav);
+
+            load();
+            await refreshGlossaryList();
+            resetGlossaryEditor();
+            setSyncStatus(
+                `双向同步完成: 术语 ${result.summary?.glossaryCount || 0} 条`,
+                false,
+            );
+        } catch (err) {
+            setSyncStatus(
+                `双向同步失败: ${err && err.message ? err.message : String(err)}`,
+                true,
+            );
+        } finally {
+            setSyncButtonsEnabled(true);
+        }
+    });
+
     // Listen for system theme changes
     window
         .matchMedia("(prefers-color-scheme: dark)")
@@ -1238,6 +1670,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
     load();
     void refreshActivePdfContext();
+    setConfigStatus("", false);
+    setSyncStatus("", false);
+    void loadWebDavLocalSettings()
+        .then((value) => {
+            setWebDavFormData(value);
+        })
+        .catch((err) => {
+            setSyncStatus(
+                `本地同步配置读取失败: ${err && err.message ? err.message : String(err)}`,
+                true,
+            );
+        });
     resetGlossaryEditor();
     void refreshGlossaryList().catch((err) => {
         setGlossaryStatus(

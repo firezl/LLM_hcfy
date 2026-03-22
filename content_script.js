@@ -27,6 +27,7 @@
         glossary_enabled: true,
         glossary_terms: [],
         glossary_version: 1,
+        config_updated_at: 0,
     };
     const shared = globalThis.JYT_SHARED || {};
     const DEFAULT_SETTINGS =

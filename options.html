@@ -114,6 +114,80 @@
                 </select>
             </div>
 
+            <div class="jyt-section" id="config_section">
+                <div class="jyt-section-title">配置管理</div>
+                <div class="jyt-hint">
+                    配置与术语分开管理。本区仅处理用户设置（引擎、语言、模型、主题等）。
+                </div>
+                <div class="jyt-btn-group jyt-btn-group-secondary">
+                    <button id="config_export" type="button">
+                        导出配置 JSON
+                    </button>
+                    <button id="config_import" type="button">
+                        导入配置 JSON
+                    </button>
+                </div>
+                <input
+                    id="config_import_file"
+                    type="file"
+                    accept="application/json,.json"
+                    class="jyt-hidden"
+                />
+                <div id="config_status" class="jyt-current-pdf-status"></div>
+            </div>
+
+            <div class="jyt-section" id="sync_section">
+                <div class="jyt-section-title">WebDAV 手动同步</div>
+                <div class="jyt-hint">
+                    凭证仅保存在本地。远端目录下固定使用 config.json 和
+                    glossary.json。
+                </div>
+
+                <label>WebDAV 地址</label>
+                <input
+                    id="webdav_base_url"
+                    type="text"
+                    placeholder="例如: https://dav.example.com"
+                />
+
+                <label>用户名</label>
+                <input id="webdav_username" type="text" />
+
+                <label>密码</label>
+                <input id="webdav_password" type="password" />
+
+                <label>远端目录</label>
+                <input
+                    id="webdav_remote_dir"
+                    type="text"
+                    placeholder="例如: /jyt-sync"
+                />
+
+                <div class="jyt-btn-group jyt-btn-group-secondary">
+                    <button id="webdav_save_local" type="button">
+                        保存同步配置到本地
+                    </button>
+                    <button id="sync_test" type="button">测试连接</button>
+                </div>
+
+                <div class="jyt-btn-group jyt-btn-group-secondary">
+                    <button id="sync_upload" type="button">
+                        上传到 WebDAV
+                    </button>
+                    <button id="sync_download" type="button">
+                        从 WebDAV 下载
+                    </button>
+                </div>
+
+                <div class="jyt-btn-group jyt-btn-group-secondary">
+                    <button id="sync_bidirectional" type="button">
+                        双向同步（手动冲突处理）
+                    </button>
+                </div>
+
+                <div id="sync_status" class="jyt-current-pdf-status"></div>
+            </div>
+
             <div class="jyt-section" id="glossary_section">
                 <div class="jyt-section-title">术语管理</div>
                 <div class="jyt-hint">
