@@ -118,6 +118,32 @@ document.addEventListener("DOMContentLoaded", () => {
     let glossaryEditingOriginal = null;
     let syncBusy = false;
 
+    // --- Added: UI Tab Logic & Toast ---
+    const tabs = document.querySelectorAll(".jyt-tab");
+    const contents = document.querySelectorAll(".jyt-tab-content");
+    tabs.forEach((tab) => {
+        tab.addEventListener("click", () => {
+            tabs.forEach((t) => t.classList.remove("active"));
+            contents.forEach((c) => c.classList.remove("active"));
+            tab.classList.add("active");
+            const targetId = tab.dataset.tab;
+            if (targetId)
+                document.getElementById(targetId).classList.add("active");
+        });
+    });
+
+    const toastContainer = document.getElementById("toast_container");
+    const showToast = (window.showToast = (msg, isError = false) => {
+        if (!toastContainer) return;
+        const toast = document.createElement("div");
+        toast.className = `jyt-toast jyt-toast-show ${isError ? "jyt-toast-error" : "jyt-toast-success"}`;
+        toast.textContent = msg;
+        toastContainer.appendChild(toast);
+        setTimeout(() => toast.classList.remove("jyt-toast-show"), 2500);
+        setTimeout(() => toast.remove(), 3000);
+    });
+    // -----------------------------------
+
     function isRunningInPopup() {
         try {
             const extensionApi = chrome.extension;
@@ -1073,7 +1099,7 @@ document.addEventListener("DOMContentLoaded", () => {
             config_updated_at: Date.now(),
         };
         if (data.engine === "webllm" && !isWebLLMSupportedBrowser) {
-            alert("当前浏览器不支持 WebLLM，请切换到 Chrome/Edge。");
+            showToast("当前浏览器不支持 WebLLM，请切换到 Chrome/Edge。");
             return;
         }
 
@@ -1092,14 +1118,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
         chrome.storage.sync.set(data, () => {
             applyTheme(data.theme_mode);
-            alert("已保存");
+            showToast("已保存");
         });
     });
 
     document.getElementById("reset").addEventListener("click", () => {
         chrome.storage.sync.clear(() => {
             load();
-            alert("已恢复默认");
+            showToast("已恢复默认");
         });
     });
 
@@ -1222,7 +1248,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 viewerUrl = chrome.runtime.getURL(
                     "vendor/pdfjs/web/viewer.html?file=&openFilePicker=1",
                 );
-                alert(
+                showToast(
                     "Firefox 安全策略不允许扩展直接读取 file:// 文件。将打开文件选择器，请选择当前 PDF。",
                 );
             } else {
@@ -1243,7 +1269,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             window.close();
         } catch (err) {
-            alert("打开内置 PDF 页面失败，请重试");
+            showToast("打开内置 PDF 页面失败，请重试");
         }
     });
 

@@ -355,8 +355,8 @@
 
 /* options page styles */
 #jyt-options-body {
-    width: 350px;
-    min-height: 400px;
+    width: 420px;
+    min-height: 480px;
     background: var(--jyt-bg);
     margin: 0;
     padding: 0;
@@ -682,4 +682,73 @@ button#open_local_pdf:hover {
 .jyt-status-error {
     border-color: #e39a9a;
     color: #b33a3a;
+}
+
+/* Tabs */
+.jyt-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--jyt-border);
+    margin-bottom: 16px;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+.jyt-tabs::-webkit-scrollbar {
+    display: none;
+}
+.jyt-tab {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--jyt-muted-text);
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+}
+.jyt-tab:hover {
+    color: var(--jyt-text);
+}
+.jyt-tab.active {
+    color: var(--jyt-primary);
+    border-bottom-color: var(--jyt-primary);
+}
+.jyt-tab-content {
+    display: none;
+}
+.jyt-tab-content.active {
+    display: block;
+    animation: jyt-fade-in 0.2s;
+}
+
+/* Toast */
+.jyt-toast-container {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 2147483647;
+    pointer-events: none;
+}
+.jyt-toast {
+    background: var(--jyt-text);
+    color: var(--jyt-bg);
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    box-shadow: var(--jyt-shadow);
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.3s ease-in-out;
+}
+.jyt-toast.jyt-toast-show {
+    opacity: 1;
+    transform: translateY(0);
+}
+.jyt-toast.jyt-toast-success {
+}
+.jyt-toast.jyt-toast-error {
+    background: var(--jyt-error-text);
+    color: #fff;
 }

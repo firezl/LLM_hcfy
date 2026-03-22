@@ -9,193 +9,50 @@
         <div class="jyt-form">
             <h2>LLM划词翻译 设置</h2>
 
-            <div class="jyt-section">
-                <div class="jyt-section-title">基础设置</div>
-                <label>是否启用划词翻译</label>
-                <select id="enable_select">
-                    <option value="on">开启</option>
-                    <option value="off">关闭（使用快捷键）</option>
-                </select>
-
-                <label>翻译快捷键</label>
-                <input
-                    id="translate_shortcut"
-                    type="text"
-                    placeholder="例如: Alt+T / Ctrl+Shift+Y"
-                />
-                <div class="jyt-hint">
-                    点击输入框后直接按键录制快捷键；留空表示不启用快捷键。
-                </div>
-
-                <label>首选翻译引擎</label>
-                <select id="engine_select">
-                    <option value="auto">自动（优先 OpenAI API）</option>
-                    <option value="browser">
-                        浏览器 Translation API（实验）
-                    </option>
-                    <option value="google">Google 翻译</option>
-                    <option value="bing">Bing 翻译</option>
-                    <option value="openai">OpenAI（流式）</option>
-                    <option value="webllm">WebLLM 本地模型（实验）</option>
-                </select>
-                <div class="jyt-hint">
-                    浏览器 Translation API 与 LanguageDetector 为实验功能，仅
-                    Chrome 新版本支持，首次可能下载模型。
-                </div>
-
-                <label>源语言</label>
-                <select id="source_lang">
-                    <option value="auto">自动检测</option>
-                    <option value="zh">中文</option>
-                    <option value="en">英文</option>
-                    <option value="ja">日文</option>
-                    <option value="ko">韩文</option>
-                    <option value="fr">法文</option>
-                    <option value="de">德文</option>
-                    <option value="es">西班牙文</option>
-                    <option value="ru">俄文</option>
-                </select>
-
-                <label>目标语言</label>
-                <select id="target_lang">
-                    <option value="auto">自动选择</option>
-                    <option value="zh">中文</option>
-                    <option value="en">英文</option>
-                    <option value="ja">日文</option>
-                    <option value="ko">韩文</option>
-                    <option value="fr">法文</option>
-                    <option value="de">德文</option>
-                    <option value="es">西班牙文</option>
-                    <option value="ru">俄文</option>
-                </select>
+            <div class="jyt-tabs" id="options_tabs">
+                <div class="jyt-tab active" data-tab="tab_general">通用</div>
+                <div class="jyt-tab" data-tab="tab_engine">引擎</div>
+                <div class="jyt-tab" data-tab="tab_glossary">术语</div>
+                <div class="jyt-tab" data-tab="tab_sync">同步与数据</div>
             </div>
 
-            <div class="jyt-section" id="openai_section">
-                <div class="jyt-section-title">OpenAI / 大模型配置</div>
-                <label>API 地址</label>
-                <input
-                    id="openai_api_url"
-                    type="text"
-                    placeholder="https://api.openai.com/v1/chat/completions"
-                />
-                <div class="jyt-hint">
-                    支持 OpenAI 官方或兼容接口（如 DeepSeek, Moonshot 等）
-                </div>
+            <div class="jyt-tab-content active" id="tab_general">
+                <div class="jyt-section">
+                    <div class="jyt-section-title">基础设置</div>
+                    <label>是否启用划词翻译</label>
+                    <select id="enable_select">
+                        <option value="on">开启</option>
+                        <option value="off">关闭（使用快捷键）</option>
+                    </select>
 
-                <label>API Key</label>
-                <input
-                    id="openai_api_key"
-                    type="password"
-                    placeholder="sk-..."
-                />
+                    <label>翻译快捷键</label>
+                    <input
+                        id="translate_shortcut"
+                        type="text"
+                        placeholder="例如: Alt+T / Ctrl+Shift+Y"
+                    />
+                    <div class="jyt-hint">
+                        点击输入框后直接按键录制快捷键；留空表示不启用快捷键。
+                    </div>
 
-                <label>翻译模型</label>
-                <input
-                    id="openai_model"
-                    type="text"
-                    placeholder="gpt-4o-mini"
-                />
-                <div class="jyt-hint">用于常规翻译任务的模型</div>
+                    <label>首选翻译引擎</label>
+                    <select id="engine_select">
+                        <option value="auto">自动（优先 OpenAI API）</option>
+                        <option value="browser">
+                            浏览器 Translation API（实验）
+                        </option>
+                        <option value="google">Google 翻译</option>
+                        <option value="bing">Bing 翻译</option>
+                        <option value="openai">OpenAI（流式）</option>
+                        <option value="webllm">WebLLM 本地模型（实验）</option>
+                    </select>
+                    <div class="jyt-hint">
+                        实验功能目前只支持最新的Chrome内核浏览器，并且可能会下载模型
+                    </div>
 
-                <label>思考模型 (Thinking Model)</label>
-                <input
-                    id="openai_thinking_model"
-                    type="text"
-                    placeholder="gpt-5-thinking"
-                />
-                <div class="jyt-hint">
-                    启用“显示思考”时使用的模型，通常支持思维链
-                </div>
-
-                <label>是否显示思考过程</label>
-                <select id="show_thoughts">
-                    <option value="false">否</option>
-                    <option value="true">是</option>
-                </select>
-            </div>
-
-            <div class="jyt-section" id="config_section">
-                <div class="jyt-section-title">配置管理</div>
-                <div class="jyt-hint">
-                    配置与术语分开管理。本区仅处理用户设置（引擎、语言、模型、主题等）。
-                </div>
-                <div class="jyt-btn-group jyt-btn-group-secondary">
-                    <button id="config_export" type="button">
-                        导出配置 JSON
-                    </button>
-                    <button id="config_import" type="button">
-                        导入配置 JSON
-                    </button>
-                </div>
-                <input
-                    id="config_import_file"
-                    type="file"
-                    accept="application/json,.json"
-                    class="jyt-hidden"
-                />
-                <div id="config_status" class="jyt-current-pdf-status"></div>
-            </div>
-
-            <div class="jyt-section" id="sync_section">
-                <div class="jyt-section-title">WebDAV 手动同步</div>
-                <div class="jyt-hint">
-                    凭证仅保存在本地。远端目录下固定使用 config.json 和
-                    glossary.json。
-                </div>
-
-                <label>WebDAV 地址</label>
-                <input
-                    id="webdav_base_url"
-                    type="text"
-                    placeholder="例如: https://dav.example.com"
-                />
-
-                <label>用户名</label>
-                <input id="webdav_username" type="text" />
-
-                <label>密码</label>
-                <input id="webdav_password" type="password" />
-
-                <label>远端目录</label>
-                <input
-                    id="webdav_remote_dir"
-                    type="text"
-                    placeholder="例如: /jyt-sync"
-                />
-
-                <div class="jyt-btn-group jyt-btn-group-secondary">
-                    <button id="webdav_save_local" type="button">
-                        保存同步配置到本地
-                    </button>
-                    <button id="sync_test" type="button">测试连接</button>
-                </div>
-
-                <div class="jyt-btn-group jyt-btn-group-secondary">
-                    <button id="sync_upload" type="button">
-                        上传到 WebDAV
-                    </button>
-                    <button id="sync_download" type="button">
-                        从 WebDAV 下载
-                    </button>
-                </div>
-
-                <div class="jyt-btn-group jyt-btn-group-secondary">
-                    <button id="sync_bidirectional" type="button">
-                        双向同步（手动冲突处理）
-                    </button>
-                </div>
-
-                <div id="sync_status" class="jyt-current-pdf-status"></div>
-            </div>
-
-            <div class="jyt-section" id="glossary_section">
-                <div class="jyt-section-title">术语管理</div>
-                <div class="jyt-hint">
-                    支持按“源语言-目标语言-原文术语”去重。导入冲突时会覆盖本地术语。
-                </div>
-                <div class="jyt-glossary-editor">
                     <label>源语言</label>
-                    <select id="glossary_source_lang">
+                    <select id="source_lang">
+                        <option value="auto">自动检测</option>
                         <option value="zh">中文</option>
                         <option value="en">英文</option>
                         <option value="ja">日文</option>
@@ -207,7 +64,8 @@
                     </select>
 
                     <label>目标语言</label>
-                    <select id="glossary_target_lang">
+                    <select id="target_lang">
+                        <option value="auto">自动选择</option>
                         <option value="zh">中文</option>
                         <option value="en">英文</option>
                         <option value="ja">日文</option>
@@ -217,162 +75,285 @@
                         <option value="es">西班牙文</option>
                         <option value="ru">俄文</option>
                     </select>
+                </div>
 
-                    <label>原文术语</label>
-                    <input id="glossary_source_term" type="text" />
+                <div class="jyt-section">
+                    <div class="jyt-section-title">外观设置</div>
+                    <label>主题模式</label>
+                    <select id="theme_mode">
+                        <option value="auto">自动（跟随系统）</option>
+                        <option value="light">明亮</option>
+                        <option value="dark">黑暗</option>
+                    </select>
 
-                    <label>目标术语</label>
-                    <input id="glossary_target_term" type="text" />
+                    <label>自定义字体</label>
+                    <input
+                        id="font_family"
+                        type="text"
+                        placeholder="例如: 'Microsoft YaHei', 'Segoe UI'"
+                    />
 
+                    <label>最大宽度占比 (5-95%)</label>
+                    <input
+                        id="bubble_width_percent"
+                        type="number"
+                        min="5"
+                        max="95"
+                        step="1"
+                        placeholder="20"
+                    />
+
+                    <label>最大高度占比 (5-95%)</label>
+                    <input
+                        id="bubble_height_percent"
+                        type="number"
+                        min="5"
+                        max="95"
+                        step="1"
+                        placeholder="40"
+                    />
+                </div>
+            </div>
+
+            <div class="jyt-tab-content" id="tab_engine">
+                <div class="jyt-section" id="openai_section">
+                    <div class="jyt-section-title">OpenAI / 大模型配置</div>
+                    <label>API 地址</label>
+                    <input
+                        id="openai_api_url"
+                        type="text"
+                        placeholder="https://api.openai.com/v1/chat/completions"
+                    />
+                    <label>API Key</label>
+                    <input
+                        id="openai_api_key"
+                        type="password"
+                        placeholder="sk-..."
+                    />
+                    <label>翻译模型</label>
+                    <input
+                        id="openai_model"
+                        type="text"
+                        placeholder="gpt-4o-mini"
+                    />
+                    <label>思考模型</label>
+                    <input
+                        id="openai_thinking_model"
+                        type="text"
+                        placeholder="gpt-5-thinking"
+                    />
+                    <label>显示思考过程</label>
+                    <select id="show_thoughts">
+                        <option value="false">否</option>
+                        <option value="true">是</option>
+                    </select>
+                </div>
+
+                <div class="jyt-section jyt-hidden" id="webllm_section">
+                    <div class="jyt-section-title">WebLLM 本地模型配置</div>
+                    <div
+                        id="webllm_performance_note"
+                        class="jyt-perf-note"
+                    ></div>
+                    <label>推荐模型</label>
+                    <select id="webllm_model_select">
+                        <option value="Qwen3-0.6B-q4f16_1-MLC">
+                            Qwen3 0.6B (推荐)
+                        </option>
+                        <option value="SmolLM2-360M-Instruct-q4f16_1-MLC">
+                            SmolLM2 360M (更轻量)
+                        </option>
+                        <option value="Llama-3.2-1B-Instruct-q4f16_1-MLC">
+                            Llama 3.2 1B (效果更好)
+                        </option>
+                        <option value="custom">自定义模型 ID</option>
+                    </select>
+                    <label>自定义模型 ID</label>
+                    <input
+                        id="webllm_custom_model"
+                        type="text"
+                        placeholder="例如: Qwen3-0.6B-q4f16_1-MLC"
+                    />
+                    <label>显示思考过程</label>
+                    <select id="webllm_show_thoughts">
+                        <option value="false">否</option>
+                        <option value="true">是</option>
+                    </select>
+                    <label>下载镜像</label>
+                    <select id="webllm_model_mirror">
+                        <option value="official">官方 HuggingFace</option>
+                        <option value="hf-mirror">hf-mirror（中国推荐）</option>
+                        <option value="custom">自定义镜像</option>
+                    </select>
+                    <label>自定义镜像地址</label>
+                    <input
+                        id="webllm_custom_mirror"
+                        type="text"
+                        placeholder="https://hf-mirror.com"
+                    />
                     <div class="jyt-btn-group jyt-btn-group-secondary">
-                        <button id="glossary_save" type="button">
-                            新增/更新术语
+                        <button id="webllm_download" type="button">
+                            下载/缓存模型
                         </button>
-                        <button id="glossary_cancel_edit" type="button">
-                            取消编辑
+                        <button id="webllm_clear_cache" type="button">
+                            清理缓存
                         </button>
                     </div>
-                </div>
-
-                <div id="glossary_list" class="jyt-glossary-list"></div>
-
-                <div class="jyt-btn-group jyt-btn-group-secondary">
-                    <button id="glossary_export" type="button">
-                        导出术语 JSON
-                    </button>
-                    <button id="glossary_import" type="button">
-                        导入术语 JSON
-                    </button>
-                    <button id="glossary_clear" type="button">
-                        清空术语库
-                    </button>
-                </div>
-                <input
-                    id="glossary_import_file"
-                    type="file"
-                    accept="application/json,.json"
-                    class="jyt-hidden"
-                />
-                <div id="glossary_status" class="jyt-current-pdf-status"></div>
-            </div>
-
-            <div class="jyt-section jyt-hidden" id="webllm_section">
-                <div class="jyt-section-title">WebLLM 本地模型配置</div>
-                <div id="webllm_performance_note" class="jyt-perf-note"></div>
-
-                <label>推荐模型</label>
-                <select id="webllm_model_select">
-                    <option value="Qwen3-0.6B-q4f16_1-MLC">
-                        Qwen3 0.6B (推荐)
-                    </option>
-                    <option value="SmolLM2-360M-Instruct-q4f16_1-MLC">
-                        SmolLM2 360M (更轻量)
-                    </option>
-                    <option value="Llama-3.2-1B-Instruct-q4f16_1-MLC">
-                        Llama 3.2 1B (效果更好)
-                    </option>
-                    <option value="custom">自定义模型 ID</option>
-                </select>
-
-                <label>自定义模型 ID</label>
-                <input
-                    id="webllm_custom_model"
-                    type="text"
-                    placeholder="例如: Qwen3-0.6B-q4f16_1-MLC"
-                />
-                <label>是否启用思考过程</label>
-                <select id="webllm_show_thoughts">
-                    <option value="false">否（仅输出译文）</option>
-                    <option value="true">是（展示可折叠思考）</option>
-                </select>
-
-                <label>模型下载镜像</label>
-                <select id="webllm_model_mirror">
-                    <option value="official">官方 HuggingFace</option>
-                    <option value="hf-mirror">hf-mirror（中国推荐）</option>
-                    <option value="custom">自定义镜像</option>
-                </select>
-
-                <label>自定义镜像地址</label>
-                <input
-                    id="webllm_custom_mirror"
-                    type="text"
-                    placeholder="例如: https://hf-mirror.com"
-                />
-                <div class="jyt-hint">
-                    中国网络环境建议选择
-                    hf-mirror。镜像只影响模型下载地址，不影响推理逻辑。
-                </div>
-
-                <div class="jyt-btn-group jyt-btn-group-secondary">
-                    <button id="webllm_download" type="button">
-                        下载/预加载模型
-                    </button>
-                    <button id="webllm_clear_cache" type="button">
-                        清理模型缓存
-                    </button>
-                </div>
-                <div id="webllm_status" class="jyt-current-pdf-status"></div>
-            </div>
-
-            <div class="jyt-section">
-                <div class="jyt-section-title">外观设置</div>
-                <label>主题模式</label>
-                <select id="theme_mode">
-                    <option value="auto">自动（跟随系统）</option>
-                    <option value="light">明亮</option>
-                    <option value="dark">黑暗</option>
-                </select>
-
-                <label>自定义字体</label>
-                <input
-                    id="font_family"
-                    type="text"
-                    placeholder="例如: 'Microsoft YaHei', 'Segoe UI'"
-                />
-
-                <label>翻译窗口最大宽度（占视口百分比）</label>
-                <input
-                    id="bubble_width_percent"
-                    type="number"
-                    min="5"
-                    max="95"
-                    step="1"
-                    placeholder="20"
-                />
-                <div class="jyt-hint">
-                    5-95，内容少时会更窄，达到该比例上限后不再变宽
-                </div>
-
-                <label>翻译窗口最大高度（占视口百分比）</label>
-                <input
-                    id="bubble_height_percent"
-                    type="number"
-                    min="5"
-                    max="95"
-                    step="1"
-                    placeholder="40"
-                />
-                <div class="jyt-hint">
-                    5-95，内容少时会更矮，达到该比例上限后不再变高
+                    <div
+                        id="webllm_status"
+                        class="jyt-current-pdf-status"
+                    ></div>
                 </div>
             </div>
 
-            <div class="jyt-btn-group">
-                <button id="save">保存设置</button>
+            <div class="jyt-tab-content" id="tab_glossary">
+                <div class="jyt-section" id="glossary_section">
+                    <div class="jyt-section-title">术语管理</div>
+                    <div class="jyt-glossary-editor">
+                        <div
+                            style="display: flex; gap: 8px; margin-bottom: 8px"
+                        >
+                            <div style="flex: 1">
+                                <label>源语言</label>
+                                <select id="glossary_source_lang">
+                                    <option value="zh">中文</option>
+                                    <option value="en">英文</option>
+                                    <option value="ja">日文</option>
+                                    <option value="ko">韩文</option>
+                                    <option value="fr">法文</option>
+                                    <option value="de">德文</option>
+                                    <option value="es">西班牙文</option>
+                                    <option value="ru">俄文</option>
+                                </select>
+                            </div>
+                            <div style="flex: 1">
+                                <label>目标语言</label>
+                                <select id="glossary_target_lang">
+                                    <option value="zh">中文</option>
+                                    <option value="en">英文</option>
+                                    <option value="ja">日文</option>
+                                    <option value="ko">韩文</option>
+                                    <option value="fr">法文</option>
+                                    <option value="de">德文</option>
+                                    <option value="es">西班牙文</option>
+                                    <option value="ru">俄文</option>
+                                </select>
+                            </div>
+                        </div>
+                        <label>原文</label>
+                        <input id="glossary_source_term" type="text" />
+                        <label>译文</label>
+                        <input id="glossary_target_term" type="text" />
+                        <div class="jyt-btn-group jyt-btn-group-secondary">
+                            <button id="glossary_save" type="button">
+                                保存
+                            </button>
+                            <button id="glossary_cancel_edit" type="button">
+                                取消
+                            </button>
+                        </div>
+                    </div>
+                    <div id="glossary_list" class="jyt-glossary-list"></div>
+                    <div class="jyt-btn-group jyt-btn-group-secondary">
+                        <button id="glossary_import" type="button">导入</button>
+                        <button id="glossary_export" type="button">导出</button>
+                        <button id="glossary_clear" type="button">清空</button>
+                    </div>
+                    <input
+                        id="glossary_import_file"
+                        type="file"
+                        accept=".json"
+                        class="jyt-hidden"
+                    />
+                    <div
+                        id="glossary_status"
+                        class="jyt-current-pdf-status"
+                    ></div>
+                </div>
+            </div>
+
+            <div class="jyt-tab-content" id="tab_sync">
+                <div class="jyt-section" id="sync_section">
+                    <div class="jyt-section-title">WebDAV 同步</div>
+                    <label>URL</label>
+                    <input
+                        id="webdav_base_url"
+                        type="text"
+                        placeholder="https://dav.example.com"
+                    />
+                    <label>账号</label>
+                    <input id="webdav_username" type="text" />
+                    <label>密码</label>
+                    <input id="webdav_password" type="password" />
+                    <label>目录 (如 /jyt-sync)</label>
+                    <input
+                        id="webdav_remote_dir"
+                        type="text"
+                        placeholder="/jyt-sync"
+                    />
+
+                    <div class="jyt-btn-group jyt-btn-group-secondary">
+                        <button id="webdav_save_local" type="button">
+                            保存凭证
+                        </button>
+                        <button id="sync_test" type="button">测试连接</button>
+                    </div>
+                    <div class="jyt-btn-group jyt-btn-group-secondary">
+                        <button id="sync_upload" type="button">
+                            上传到云端
+                        </button>
+                        <button id="sync_download" type="button">
+                            从云端下载
+                        </button>
+                        <button id="sync_bidirectional" type="button">
+                            双向同步
+                        </button>
+                    </div>
+                    <div id="sync_status" class="jyt-current-pdf-status"></div>
+                </div>
+
+                <div class="jyt-section" id="config_section">
+                    <div class="jyt-section-title">本地配置备份</div>
+                    <div class="jyt-btn-group jyt-btn-group-secondary">
+                        <button id="config_import" type="button">
+                            导入配置
+                        </button>
+                        <button id="config_export" type="button">
+                            导出配置
+                        </button>
+                    </div>
+                    <input
+                        id="config_import_file"
+                        type="file"
+                        accept=".json"
+                        class="jyt-hidden"
+                    />
+                    <div
+                        id="config_status"
+                        class="jyt-current-pdf-status"
+                    ></div>
+                </div>
+            </div>
+
+            <div
+                class="jyt-btn-group"
+                style="
+                    padding-top: 12px;
+                    border-top: 1px solid var(--jyt-border);
+                "
+            >
+                <button id="save">保存所有设置</button>
                 <button id="reset">恢复默认</button>
             </div>
 
             <div class="jyt-btn-group jyt-btn-group-secondary">
-                <button id="open_local_pdf" type="button">
-                    打开本地 PDF（Firefox 兼容）
-                </button>
+                <button id="open_local_pdf" type="button">打开本地 PDF</button>
             </div>
             <div id="current_pdf_status" class="jyt-current-pdf-status"></div>
-            <div class="jyt-hint">
-                点击后将打开内置 PDF.js 页面并自动尝试弹出文件选择器。
-            </div>
         </div>
+
+        <div id="toast_container" class="jyt-toast-container"></div>
+
         <script src="libs/shared-config.js"></script>
         <script src="options.js"></script>
     </body>
