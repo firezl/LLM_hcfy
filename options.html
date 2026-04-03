@@ -44,6 +44,7 @@
                         <option value="google">Google 翻译</option>
                         <option value="bing">Bing 翻译</option>
                         <option value="openai">OpenAI（流式）</option>
+                        <option value="ollama">Ollama 本地服务（流式）</option>
                         <option value="webllm">WebLLM 本地模型（实验）</option>
                     </select>
                     <div class="jyt-hint">
@@ -147,6 +148,38 @@
                         <option value="false">否</option>
                         <option value="true">是</option>
                     </select>
+                </div>
+
+                <div class="jyt-section jyt-hidden" id="ollama_section">
+                    <div class="jyt-section-title">Ollama 配置</div>
+                    <label>Ollama 地址</label>
+                    <input
+                        id="ollama_api_url"
+                        type="text"
+                        placeholder="http://localhost:11434/api/chat"
+                    />
+                    <div class="jyt-hint">
+                        默认使用本地 Ollama 服务地址，可修改为远端地址。
+                    </div>
+                    <label>模型</label>
+                    <select id="ollama_model_select">
+                        <option value="">正在加载模型列表...</option>
+                        <option value="custom">自定义模型名</option>
+                    </select>
+                    <label>自定义模型名</label>
+                    <input
+                        id="ollama_custom_model"
+                        type="text"
+                        placeholder="例如: qwen3:8b"
+                    />
+                    <label>显示思考过程</label>
+                    <select id="ollama_show_thoughts">
+                        <option value="false">否</option>
+                        <option value="true">是</option>
+                    </select>
+                    <div class="jyt-hint">
+                        自动检测模型来自 /api/tags 的 models[].name。
+                    </div>
                 </div>
 
                 <div class="jyt-section jyt-hidden" id="webllm_section">

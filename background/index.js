@@ -8,6 +8,7 @@ import {
     MESSAGE_TYPE_SYNC_DOWNLOAD,
     MESSAGE_TYPE_SYNC_TEST,
     MESSAGE_TYPE_SYNC_UPLOAD,
+    MESSAGE_TYPE_OLLAMA_GET_MODELS,
     MESSAGE_TYPE_TERM_EXPORT,
     MESSAGE_TYPE_TERM_IMPORT,
     MESSAGE_TYPE_TERM_LIST,
@@ -19,6 +20,7 @@ import {
 } from "./constants.js";
 import { handleTabRemoved, handleTabUpdated } from "./pdf-redirect.js";
 import { handleTranslateStart } from "./translate-router.js";
+import { handleOllamaGetModels } from "./engines/ollama.js";
 import {
     handleWebLLMClearCache,
     handleWebLLMGetModels,
@@ -75,6 +77,11 @@ extensionApi.runtime.onConnect.addListener((port) => {
 
         if (message.type === MESSAGE_TYPE_WEBLLM_GET_MODELS) {
             void handleWebLLMGetModels(message, port, state);
+            return;
+        }
+
+        if (message.type === MESSAGE_TYPE_OLLAMA_GET_MODELS) {
+            void handleOllamaGetModels(message, port, state);
         }
     });
 });

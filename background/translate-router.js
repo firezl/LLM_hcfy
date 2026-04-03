@@ -1,5 +1,6 @@
 import { streamBingTranslate } from "./engines/bing.js";
 import { streamGoogleTranslate } from "./engines/google.js";
+import { streamOllamaTranslate } from "./engines/ollama.js";
 import { streamOpenAITranslate } from "./engines/openai.js";
 import { streamWebLLMTranslate } from "./engines/webllm.js";
 import { postTranslateError } from "./port-utils.js";
@@ -42,6 +43,11 @@ export async function handleTranslateStart(message, port, state) {
 
     if (engine === "bing") {
         await streamBingTranslate(requestWithGlossary, port, state);
+        return;
+    }
+
+    if (engine === "ollama") {
+        await streamOllamaTranslate(requestWithGlossary, port, state);
         return;
     }
 

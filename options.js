@@ -13,6 +13,10 @@ document.addEventListener("DOMContentLoaded", () => {
         openai_model: "gpt-4o-mini",
         openai_thinking_model: "gpt-5-thinking",
         show_thoughts: false,
+        ollama_api_url: "http://localhost:11434/api/chat",
+        ollama_model: "",
+        ollama_custom_model: "",
+        ollama_show_thoughts: false,
         webllm_model: "Qwen3-0.6B-q4f16_1-MLC",
         webllm_custom_model: "",
         webllm_show_thoughts: false,
@@ -48,6 +52,10 @@ document.addEventListener("DOMContentLoaded", () => {
         "openai_model",
         "openai_thinking_model",
         "show_thoughts",
+        "ollama_api_url",
+        "ollama_model_select",
+        "ollama_custom_model",
+        "ollama_show_thoughts",
         "webllm_model_select",
         "webllm_custom_model",
         "webllm_show_thoughts",
@@ -61,6 +69,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const els = {};
     ids.forEach((id) => (els[id] = document.getElementById(id)));
     const openaiSection = document.getElementById("openai_section");
+    const ollamaSection = document.getElementById("ollama_section");
     const webllmSection = document.getElementById("webllm_section");
     const webllmPerformanceNote = document.getElementById(
         "webllm_performance_note",
@@ -114,6 +123,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let webllmPort = null;
     let webllmPerfProfile = null;
     const webllmModelRequestResolvers = new Map();
+    const ollamaModelRequestResolvers = new Map();
     let glossaryTermsCache = [];
     let glossaryEditingOriginal = null;
     let syncBusy = false;
@@ -638,6 +648,57 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    function populateOllamaModelSelect(modelIds, selectedModel) {
+        if (!els.ollama_model_select) return;
+
+        const orderedIds = Array.from(
+            new Set((modelIds || []).map((id) => String(id || "").trim())),
+        ).filter(Boolean);
+
+        els.ollama_model_select.innerHTML = "";
+        orderedIds.forEach((id) => {
+            const option = document.createElement("option");
+            option.value = id;
+            option.textContent = id;
+            els.ollama_model_select.appendChild(option);
+        });
+
+        const customOption = document.createElement("option");
+        customOption.value = "custom";
+        customOption.textContent = "自定义模型名";
+        els.ollama_model_select.appendChild(customOption);
+
+        if (selectedModel && orderedIds.includes(selectedModel)) {
+            els.ollama_model_select.value = selectedModel;
+            els.ollama_custom_model.disabled = true;
+            return;
+        }
+
+        if (selectedModel && selectedModel !== "custom") {
+            els.ollama_model_select.value = "custom";
+            if (!els.ollama_custom_model.value) {
+                els.ollama_custom_model.value = selectedModel;
+            }
+            els.ollama_custom_model.disabled = false;
+            return;
+        }
+
+        if (selectedModel === "custom") {
+            els.ollama_model_select.value = "custom";
+            els.ollama_custom_model.disabled = false;
+            return;
+        }
+
+        if (orderedIds.length > 0) {
+            els.ollama_model_select.value = orderedIds[0];
+            els.ollama_custom_model.disabled = true;
+            return;
+        }
+
+        els.ollama_model_select.value = "custom";
+        els.ollama_custom_model.disabled = false;
+    }
+
     async function requestWebLLMModelList() {
         return new Promise((resolve, reject) => {
             const requestId = `webllm-models-${Date.now()}-${Math.random()}`;
@@ -661,6 +722,35 @@ document.addEventListener("DOMContentLoaded", () => {
             } catch (err) {
                 clearTimeout(timer);
                 webllmModelRequestResolvers.delete(requestId);
+                reject(err);
+            }
+        });
+    }
+
+    async function requestOllamaModelList(apiUrl) {
+        return new Promise((resolve, reject) => {
+            const requestId = `ollama-models-${Date.now()}-${Math.random()}`;
+            const timer = setTimeout(() => {
+                ollamaModelRequestResolvers.delete(requestId);
+                reject(new Error("请求 Ollama 模型列表超时"));
+            }, 8000);
+
+            ollamaModelRequestResolvers.set(requestId, (payload) => {
+                clearTimeout(timer);
+                resolve(payload || {});
+            });
+
+            try {
+                const port = ensureWebLLMPort();
+                port.postMessage({
+                    type:
+                        MESSAGE_TYPES.OLLAMA_GET_MODELS || "OLLAMA_GET_MODELS",
+                    requestId,
+                    apiUrl: String(apiUrl || "").trim(),
+                });
+            } catch (err) {
+                clearTimeout(timer);
+                ollamaModelRequestResolvers.delete(requestId);
                 reject(err);
             }
         });
@@ -741,6 +831,28 @@ document.addEventListener("DOMContentLoaded", () => {
                 );
                 if (resolvePending) {
                     webllmModelRequestResolvers.delete(message.requestId);
+                    resolvePending(message);
+                }
+                return;
+            }
+
+            if (message.type === "OLLAMA_OP_ERROR") {
+                const resolvePending = ollamaModelRequestResolvers.get(
+                    message.requestId,
+                );
+                if (resolvePending) {
+                    ollamaModelRequestResolvers.delete(message.requestId);
+                    resolvePending({ modelIds: [] });
+                }
+                return;
+            }
+
+            if (message.type === "OLLAMA_MODELS_RESPONSE") {
+                const resolvePending = ollamaModelRequestResolvers.get(
+                    message.requestId,
+                );
+                if (resolvePending) {
+                    ollamaModelRequestResolvers.delete(message.requestId);
                     resolvePending(message);
                 }
             }
@@ -862,10 +974,16 @@ document.addEventListener("DOMContentLoaded", () => {
         const engine = els.engine_select.value;
         const hideOpenAI =
             engine === "browser" ||
+            engine === "ollama" ||
             engine === "webllm" ||
             engine === "google" ||
             engine === "bing";
         openaiSection.classList.toggle("jyt-hidden", hideOpenAI);
+
+        if (ollamaSection) {
+            const showOllama = engine === "ollama";
+            ollamaSection.classList.toggle("jyt-hidden", !showOllama);
+        }
 
         if (webllmSection) {
             const showWebLLM = engine === "webllm" && isWebLLMSupportedBrowser;
@@ -1029,6 +1147,24 @@ document.addEventListener("DOMContentLoaded", () => {
             els.openai_model.value = items.openai_model;
             els.openai_thinking_model.value = items.openai_thinking_model;
             els.show_thoughts.value = items.show_thoughts ? "true" : "false";
+            const savedOllamaModel = items.ollama_model || "";
+            els.ollama_api_url.value =
+                items.ollama_api_url || "http://localhost:11434/api/chat";
+            els.ollama_custom_model.value = items.ollama_custom_model || "";
+            els.ollama_show_thoughts.value = items.ollama_show_thoughts
+                ? "true"
+                : "false";
+            populateOllamaModelSelect([], savedOllamaModel);
+            void requestOllamaModelList(els.ollama_api_url.value)
+                .then((res) => {
+                    const modelIds = Array.isArray(res.modelIds)
+                        ? res.modelIds
+                        : [];
+                    populateOllamaModelSelect(modelIds, savedOllamaModel);
+                })
+                .catch(() => {
+                    populateOllamaModelSelect([], savedOllamaModel);
+                });
             const savedModel = items.webllm_model || "Qwen3-0.6B-q4f16_1-MLC";
             els.webllm_custom_model.value = items.webllm_custom_model || "";
             els.webllm_show_thoughts.value = items.webllm_show_thoughts
@@ -1081,6 +1217,10 @@ document.addEventListener("DOMContentLoaded", () => {
             openai_model: els.openai_model.value,
             openai_thinking_model: els.openai_thinking_model.value,
             show_thoughts: els.show_thoughts.value === "true",
+            ollama_api_url: (els.ollama_api_url.value || "").trim(),
+            ollama_model: els.ollama_model_select.value,
+            ollama_custom_model: (els.ollama_custom_model.value || "").trim(),
+            ollama_show_thoughts: els.ollama_show_thoughts.value === "true",
             webllm_model: els.webllm_model_select.value,
             webllm_custom_model: (els.webllm_custom_model.value || "").trim(),
             webllm_show_thoughts: els.webllm_show_thoughts.value === "true",
@@ -1101,6 +1241,20 @@ document.addEventListener("DOMContentLoaded", () => {
         if (data.engine === "webllm" && !isWebLLMSupportedBrowser) {
             showToast("当前浏览器不支持 WebLLM，请切换到 Chrome/Edge。");
             return;
+        }
+
+        if (data.engine === "ollama") {
+            if (!data.ollama_api_url) {
+                data.ollama_api_url = "http://localhost:11434/api/chat";
+            }
+            const selectedOllamaModel =
+                data.ollama_model === "custom"
+                    ? data.ollama_custom_model
+                    : data.ollama_model;
+            if (!selectedOllamaModel) {
+                showToast("请先选择 Ollama 模型或填写自定义模型名。", true);
+                return;
+            }
         }
 
         if (
@@ -1159,6 +1313,25 @@ document.addEventListener("DOMContentLoaded", () => {
     els.webllm_model_select?.addEventListener("change", () => {
         const isCustom = els.webllm_model_select.value === "custom";
         els.webllm_custom_model.disabled = !isCustom;
+    });
+
+    els.ollama_model_select?.addEventListener("change", () => {
+        const isCustom = els.ollama_model_select.value === "custom";
+        els.ollama_custom_model.disabled = !isCustom;
+    });
+
+    els.ollama_api_url?.addEventListener("change", () => {
+        const selectedModel = (els.ollama_model_select?.value || "").trim();
+        void requestOllamaModelList(els.ollama_api_url.value)
+            .then((res) => {
+                const modelIds = Array.isArray(res.modelIds)
+                    ? res.modelIds
+                    : [];
+                populateOllamaModelSelect(modelIds, selectedModel);
+            })
+            .catch(() => {
+                populateOllamaModelSelect([], selectedModel);
+            });
     });
 
     els.webllm_model_mirror?.addEventListener("change", () => {

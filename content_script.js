@@ -15,6 +15,10 @@
         openai_model: "gpt-4o-mini",
         openai_thinking_model: "gpt-5-thinking",
         show_thoughts: false,
+        ollama_api_url: "http://localhost:11434/api/chat",
+        ollama_model: "",
+        ollama_custom_model: "",
+        ollama_show_thoughts: false,
         webllm_model: "Qwen3-0.6B-q4f16_1-MLC",
         webllm_custom_model: "",
         webllm_show_thoughts: false,
@@ -979,6 +983,23 @@
                 {
                     allowBrowserFallback: false,
                     isThinking: !!settings.webllm_show_thoughts,
+                },
+            );
+            return;
+        }
+
+        if (engine === "ollama") {
+            startBackgroundTranslate(
+                text,
+                from,
+                to,
+                settings,
+                streamEl,
+                thoughtEl,
+                thoughtDetails,
+                {
+                    allowBrowserFallback: false,
+                    isThinking: !!settings.ollama_show_thoughts,
                 },
             );
             return;
