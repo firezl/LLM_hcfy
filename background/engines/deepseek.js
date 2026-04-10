@@ -1,12 +1,12 @@
 import { buildPrompt, resolveLanguagePair } from "../language.js";
 import { postTranslateError, safePostMessage } from "../port-utils.js";
-import {
-    buildOpenAIThinkingPatch,
-    getThinkingEnabledByEngine,
-} from "./thinking-utils.js";
+import { getThinkingEnabledByEngine } from "./thinking-utils.js";
 
-function parseOpenAIStreamLine(line) {
-    const trimmed = line.trim();
+const DEFAULT_DEEPSEEK_API_URL = "https://api.deepseek.com/chat/completions";
+const DEFAULT_DEEPSEEK_MODEL = "deepseek-chat";
+
+function parseDeepSeekStreamLine(line) {
+    const trimmed = String(line || "").trim();
     if (!trimmed || !trimmed.startsWith("data:")) {
         return null;
     }
@@ -20,43 +20,37 @@ function parseOpenAIStreamLine(line) {
         const json = JSON.parse(payload);
         return json.choices?.[0]?.delta || null;
     } catch (err) {
-        console.error("Error parsing stream data", err);
         return null;
     }
 }
 
-export async function streamOpenAITranslate(request, port, state) {
+export async function streamDeepSeekTranslate(request, port, state) {
     const { requestId, text, settings } = request;
     const { to } = resolveLanguagePair(request);
     const glossaryTerms = Array.isArray(request?.glossaryTerms)
         ? request.glossaryTerms
         : [];
-    const apiUrl = settings.openai_api_url;
-    const key = settings.openai_api_key;
+
+    const apiUrl = String(
+        settings?.deepseek_api_url || DEFAULT_DEEPSEEK_API_URL,
+    ).trim();
+    const key = String(settings?.deepseek_api_key || "").trim();
+    const model = String(
+        settings?.deepseek_model || DEFAULT_DEEPSEEK_MODEL,
+    ).trim();
+    const showThoughts = getThinkingEnabledByEngine("deepseek", settings);
 
     if (!apiUrl || !key) {
         postTranslateError(
             port,
             state,
             requestId,
-            "请在设置中配置 OpenAI API 地址与 Key",
+            "请在设置中配置 DeepSeek API 地址与 Key",
         );
         return;
     }
 
-    const model = String(
-        settings.openai_model ||
-            settings.openai_thinking_model ||
-            "gpt-4o-mini",
-    ).trim();
-    const showThoughts = getThinkingEnabledByEngine("openai", settings);
-
-    if (!model) {
-        postTranslateError(port, state, requestId, "请先配置 OpenAI 模型");
-        return;
-    }
-
-    const baseBody = {
+    const body = {
         model,
         messages: [
             {
@@ -66,61 +60,24 @@ export async function streamOpenAITranslate(request, port, state) {
         ],
         temperature: 1.0,
         stream: true,
-    };
-
-    const thinkingPatch = buildOpenAIThinkingPatch({
-        model,
-        showThoughts,
-        settings,
-    });
-
-    const primaryBody = {
-        ...baseBody,
-        ...thinkingPatch,
+        thinking: {
+            type: showThoughts ? "enabled" : "disabled",
+        },
     };
 
     const controller = new AbortController();
     state.controllers.set(requestId, controller);
 
     try {
-        let res = await fetch(apiUrl, {
+        const res = await fetch(apiUrl, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${key}`,
             },
-            body: JSON.stringify(primaryBody),
+            body: JSON.stringify(body),
             signal: controller.signal,
         });
-
-        if (!res.ok && Object.keys(thinkingPatch).length > 0) {
-            const textErr = await res.text();
-            const maybeUnsupportedThinking =
-                res.status === 400 &&
-                /(reasoning|thinking|unsupported|unknown|invalid)/i.test(
-                    textErr || "",
-                );
-
-            if (maybeUnsupportedThinking) {
-                res = await fetch(apiUrl, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${key}`,
-                    },
-                    body: JSON.stringify(baseBody),
-                    signal: controller.signal,
-                });
-            } else {
-                postTranslateError(
-                    port,
-                    state,
-                    requestId,
-                    "OpenAI 请求失败: " + textErr,
-                );
-                return;
-            }
-        }
 
         if (!res.ok) {
             const textErr = await res.text();
@@ -128,7 +85,7 @@ export async function streamOpenAITranslate(request, port, state) {
                 port,
                 state,
                 requestId,
-                "OpenAI 请求失败: " + textErr,
+                "DeepSeek 请求失败: " + textErr,
             );
             return;
         }
@@ -155,20 +112,9 @@ export async function streamOpenAITranslate(request, port, state) {
             carry = lines.pop() || "";
 
             for (const line of lines) {
-                const delta = parseOpenAIStreamLine(line);
+                const delta = parseDeepSeekStreamLine(line);
                 if (!delta) {
                     continue;
-                }
-
-                if (delta.content) {
-                    const ok = safePostMessage(port, state, {
-                        type: "TRANSLATE_CHUNK",
-                        requestId,
-                        content: delta.content,
-                    });
-                    if (!ok) {
-                        return;
-                    }
                 }
 
                 if (delta.reasoning_content) {
@@ -176,6 +122,17 @@ export async function streamOpenAITranslate(request, port, state) {
                         type: "TRANSLATE_THOUGHT",
                         requestId,
                         content: delta.reasoning_content,
+                    });
+                    if (!ok) {
+                        return;
+                    }
+                }
+
+                if (delta.content) {
+                    const ok = safePostMessage(port, state, {
+                        type: "TRANSLATE_CHUNK",
+                        requestId,
+                        content: delta.content,
                     });
                     if (!ok) {
                         return;

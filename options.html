@@ -44,6 +44,15 @@
                         <option value="google">Google 翻译</option>
                         <option value="bing">Bing 翻译</option>
                         <option value="openai">OpenAI（流式）</option>
+                        <option value="custom_openai">
+                            自定义 OpenAI 兼容（流式）
+                        </option>
+                        <option value="deepseek">DeepSeek（流式）</option>
+                        <option value="qwen">Qwen DashScope（流式）</option>
+                        <option value="glm">GLM（流式）</option>
+                        <option value="xiaomi">Xiaomi MiMo（流式）</option>
+                        <option value="claude">Claude（流式）</option>
+                        <option value="gemini">Gemini（流式）</option>
                         <option value="ollama">Ollama 本地服务（流式）</option>
                         <option value="webllm">WebLLM 本地模型（实验）</option>
                     </select>
@@ -137,17 +146,298 @@
                         type="text"
                         placeholder="gpt-4o-mini"
                     />
-                    <label>思考模型</label>
-                    <input
-                        id="openai_thinking_model"
-                        type="text"
-                        placeholder="gpt-5-thinking"
-                    />
                     <label>显示思考过程</label>
                     <select id="show_thoughts">
                         <option value="false">否</option>
                         <option value="true">是</option>
                     </select>
+                    <label>OpenAI 推理强度</label>
+                    <select id="openai_reasoning_effort">
+                        <option value="none">none</option>
+                        <option value="minimal">minimal</option>
+                        <option value="low">low</option>
+                        <option value="medium">medium</option>
+                        <option value="high">high</option>
+                        <option value="xhigh">xhigh</option>
+                    </select>
+                    <label>OpenAI 最大输出 Token（0=自动）</label>
+                    <input
+                        id="openai_max_completion_tokens"
+                        type="number"
+                        min="0"
+                        step="1"
+                        placeholder="0"
+                    />
+                </div>
+
+                <div class="jyt-section jyt-hidden" id="custom_openai_section">
+                    <div class="jyt-section-title">自定义 OpenAI 兼容配置</div>
+                    <label>API 地址</label>
+                    <input
+                        id="custom_openai_api_url"
+                        type="text"
+                        placeholder="https://your-endpoint/v1/chat/completions"
+                    />
+                    <label>API Key</label>
+                    <input
+                        id="custom_openai_api_key"
+                        type="password"
+                        placeholder="sk-..."
+                    />
+                    <label>模型</label>
+                    <input
+                        id="custom_openai_model"
+                        type="text"
+                        placeholder="gpt-4o-mini"
+                    />
+                    <label>显示思考过程</label>
+                    <select id="custom_openai_show_thoughts">
+                        <option value="false">否</option>
+                        <option value="true">是</option>
+                    </select>
+                    <label>推理强度</label>
+                    <select id="custom_openai_reasoning_effort">
+                        <option value="none">none</option>
+                        <option value="minimal">minimal</option>
+                        <option value="low">low</option>
+                        <option value="medium">medium</option>
+                        <option value="high">high</option>
+                        <option value="xhigh">xhigh</option>
+                    </select>
+                    <label>最大输出 Token（0=自动）</label>
+                    <input
+                        id="custom_openai_max_completion_tokens"
+                        type="number"
+                        min="0"
+                        step="1"
+                        placeholder="0"
+                    />
+                </div>
+
+                <div class="jyt-section jyt-hidden" id="deepseek_section">
+                    <div class="jyt-section-title">DeepSeek 配置</div>
+                    <label>API 地址</label>
+                    <input
+                        id="deepseek_api_url"
+                        type="text"
+                        placeholder="https://api.deepseek.com/chat/completions"
+                    />
+                    <label>API Key</label>
+                    <input
+                        id="deepseek_api_key"
+                        type="password"
+                        placeholder="sk-..."
+                    />
+                    <label>模型</label>
+                    <input
+                        id="deepseek_model"
+                        type="text"
+                        placeholder="deepseek-chat"
+                    />
+                    <label>显示思考过程</label>
+                    <select id="deepseek_show_thoughts">
+                        <option value="false">否</option>
+                        <option value="true">是</option>
+                    </select>
+                </div>
+
+                <div class="jyt-section jyt-hidden" id="qwen_section">
+                    <div class="jyt-section-title">Qwen DashScope 配置</div>
+                    <label>API 地址</label>
+                    <input
+                        id="qwen_api_url"
+                        type="text"
+                        placeholder="https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation"
+                    />
+                    <label>API Key</label>
+                    <input
+                        id="qwen_api_key"
+                        type="password"
+                        placeholder="sk-..."
+                    />
+                    <label>模型</label>
+                    <input
+                        id="qwen_model"
+                        type="text"
+                        placeholder="qwen-plus"
+                    />
+                    <label>显示思考过程</label>
+                    <select id="qwen_show_thoughts">
+                        <option value="false">否</option>
+                        <option value="true">是</option>
+                    </select>
+                    <label>思考预算（0=自动）</label>
+                    <input
+                        id="qwen_thinking_budget"
+                        type="number"
+                        min="0"
+                        step="1"
+                        placeholder="0"
+                    />
+                    <label>保留历史思考</label>
+                    <select id="qwen_preserve_thinking">
+                        <option value="false">否</option>
+                        <option value="true">是</option>
+                    </select>
+                </div>
+
+                <div class="jyt-section jyt-hidden" id="glm_section">
+                    <div class="jyt-section-title">GLM 配置</div>
+                    <label>API 地址</label>
+                    <input
+                        id="glm_api_url"
+                        type="text"
+                        placeholder="https://open.bigmodel.cn/api/paas/v4/chat/completions"
+                    />
+                    <label>API Key</label>
+                    <input
+                        id="glm_api_key"
+                        type="password"
+                        placeholder="Bearer token"
+                    />
+                    <label>模型</label>
+                    <input id="glm_model" type="text" placeholder="glm-5.1" />
+                    <label>显示思考过程</label>
+                    <select id="glm_show_thoughts">
+                        <option value="false">否</option>
+                        <option value="true">是</option>
+                    </select>
+                    <label>清理历史思考上下文</label>
+                    <select id="glm_clear_thinking">
+                        <option value="true">是</option>
+                        <option value="false">否</option>
+                    </select>
+                </div>
+
+                <div class="jyt-section jyt-hidden" id="xiaomi_section">
+                    <div class="jyt-section-title">Xiaomi MiMo 配置</div>
+                    <label>API 地址</label>
+                    <input
+                        id="xiaomi_api_url"
+                        type="text"
+                        placeholder="https://api.xiaomimimo.com/v1/chat/completions"
+                    />
+                    <label>API Key</label>
+                    <input
+                        id="xiaomi_api_key"
+                        type="password"
+                        placeholder="mimo-key"
+                    />
+                    <label>模型</label>
+                    <input
+                        id="xiaomi_model"
+                        type="text"
+                        placeholder="mimo-v2-pro"
+                    />
+                    <label>显示思考过程</label>
+                    <select id="xiaomi_show_thoughts">
+                        <option value="false">否</option>
+                        <option value="true">是</option>
+                    </select>
+                    <label>最大输出 Token（0=自动）</label>
+                    <input
+                        id="xiaomi_max_completion_tokens"
+                        type="number"
+                        min="0"
+                        step="1"
+                        placeholder="0"
+                    />
+                </div>
+
+                <div class="jyt-section jyt-hidden" id="claude_section">
+                    <div class="jyt-section-title">Claude 配置</div>
+                    <label>API 地址</label>
+                    <input
+                        id="claude_api_url"
+                        type="text"
+                        placeholder="https://api.anthropic.com/v1/messages"
+                    />
+                    <label>API Key</label>
+                    <input
+                        id="claude_api_key"
+                        type="password"
+                        placeholder="sk-ant-..."
+                    />
+                    <label>模型</label>
+                    <input
+                        id="claude_model"
+                        type="text"
+                        placeholder="claude-sonnet-4-6"
+                    />
+                    <label>显示思考过程</label>
+                    <select id="claude_show_thoughts">
+                        <option value="false">否</option>
+                        <option value="true">是</option>
+                    </select>
+                    <label>思考模式</label>
+                    <select id="claude_thinking_mode">
+                        <option value="adaptive">adaptive（推荐）</option>
+                        <option value="enabled">enabled（手动预算）</option>
+                    </select>
+                    <label>思考预算（enabled 模式）</label>
+                    <input
+                        id="claude_thinking_budget"
+                        type="number"
+                        min="1024"
+                        step="1"
+                        placeholder="2048"
+                    />
+                    <label>adaptive 思考强度</label>
+                    <select id="claude_thinking_effort">
+                        <option value="low">low</option>
+                        <option value="medium">medium</option>
+                        <option value="high">high</option>
+                    </select>
+                    <label>最大输出 Token</label>
+                    <input
+                        id="claude_max_tokens"
+                        type="number"
+                        min="1"
+                        step="1"
+                        placeholder="4096"
+                    />
+                </div>
+
+                <div class="jyt-section jyt-hidden" id="gemini_section">
+                    <div class="jyt-section-title">Gemini 配置</div>
+                    <label>API 地址</label>
+                    <input
+                        id="gemini_api_url"
+                        type="text"
+                        placeholder="https://generativelanguage.googleapis.com/v1beta/models"
+                    />
+                    <label>API Key</label>
+                    <input
+                        id="gemini_api_key"
+                        type="password"
+                        placeholder="AIza..."
+                    />
+                    <label>模型</label>
+                    <input
+                        id="gemini_model"
+                        type="text"
+                        placeholder="gemini-2.5-flash"
+                    />
+                    <label>显示思考过程</label>
+                    <select id="gemini_show_thoughts">
+                        <option value="false">否</option>
+                        <option value="true">是</option>
+                    </select>
+                    <label>Gemini 3 思考等级</label>
+                    <select id="gemini_thinking_level">
+                        <option value="minimal">minimal</option>
+                        <option value="low">low</option>
+                        <option value="medium">medium</option>
+                        <option value="high">high</option>
+                    </select>
+                    <label>Gemini 2.5 思考预算（-1 动态，0 关闭）</label>
+                    <input
+                        id="gemini_thinking_budget"
+                        type="number"
+                        min="-1"
+                        step="1"
+                        placeholder="-1"
+                    />
                 </div>
 
                 <div class="jyt-section jyt-hidden" id="ollama_section">

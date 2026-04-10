@@ -1,8 +1,15 @@
 import { streamBingTranslate } from "./engines/bing.js";
+import { streamClaudeTranslate } from "./engines/claude.js";
+import { streamCustomOpenAITranslate } from "./engines/custom-openai.js";
+import { streamDeepSeekTranslate } from "./engines/deepseek.js";
+import { streamGeminiTranslate } from "./engines/gemini.js";
+import { streamGLMTranslate } from "./engines/glm.js";
 import { streamGoogleTranslate } from "./engines/google.js";
 import { streamOllamaTranslate } from "./engines/ollama.js";
 import { streamOpenAITranslate } from "./engines/openai.js";
+import { streamQwenTranslate } from "./engines/qwen.js";
 import { streamWebLLMTranslate } from "./engines/webllm.js";
+import { streamXiaomiTranslate } from "./engines/xiaomi.js";
 import { postTranslateError } from "./port-utils.js";
 import { getMatchedGlossaryTerms } from "./term.js";
 
@@ -43,6 +50,41 @@ export async function handleTranslateStart(message, port, state) {
 
     if (engine === "bing") {
         await streamBingTranslate(requestWithGlossary, port, state);
+        return;
+    }
+
+    if (engine === "claude") {
+        await streamClaudeTranslate(requestWithGlossary, port, state);
+        return;
+    }
+
+    if (engine === "custom_openai") {
+        await streamCustomOpenAITranslate(requestWithGlossary, port, state);
+        return;
+    }
+
+    if (engine === "deepseek") {
+        await streamDeepSeekTranslate(requestWithGlossary, port, state);
+        return;
+    }
+
+    if (engine === "qwen") {
+        await streamQwenTranslate(requestWithGlossary, port, state);
+        return;
+    }
+
+    if (engine === "glm") {
+        await streamGLMTranslate(requestWithGlossary, port, state);
+        return;
+    }
+
+    if (engine === "xiaomi") {
+        await streamXiaomiTranslate(requestWithGlossary, port, state);
+        return;
+    }
+
+    if (engine === "gemini") {
+        await streamGeminiTranslate(requestWithGlossary, port, state);
         return;
     }
 

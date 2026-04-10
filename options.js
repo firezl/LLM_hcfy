@@ -13,6 +13,50 @@ document.addEventListener("DOMContentLoaded", () => {
         openai_model: "gpt-4o-mini",
         openai_thinking_model: "gpt-5-thinking",
         show_thoughts: false,
+        openai_reasoning_effort: "medium",
+        openai_max_completion_tokens: 0,
+        custom_openai_api_url: "https://api.openai.com/v1/chat/completions",
+        custom_openai_api_key: "",
+        custom_openai_model: "gpt-4o-mini",
+        custom_openai_show_thoughts: false,
+        custom_openai_reasoning_effort: "medium",
+        custom_openai_max_completion_tokens: 0,
+        deepseek_api_url: "https://api.deepseek.com/chat/completions",
+        deepseek_api_key: "",
+        deepseek_model: "deepseek-chat",
+        deepseek_show_thoughts: false,
+        qwen_api_url:
+            "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation",
+        qwen_api_key: "",
+        qwen_model: "qwen-plus",
+        qwen_show_thoughts: false,
+        qwen_thinking_budget: 0,
+        qwen_preserve_thinking: false,
+        glm_api_url: "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+        glm_api_key: "",
+        glm_model: "glm-5.1",
+        glm_show_thoughts: false,
+        glm_clear_thinking: true,
+        xiaomi_api_url: "https://api.xiaomimimo.com/v1/chat/completions",
+        xiaomi_api_key: "",
+        xiaomi_model: "mimo-v2-pro",
+        xiaomi_show_thoughts: false,
+        xiaomi_max_completion_tokens: 0,
+        claude_api_url: "https://api.anthropic.com/v1/messages",
+        claude_api_key: "",
+        claude_model: "claude-sonnet-4-6",
+        claude_show_thoughts: false,
+        claude_max_tokens: 4096,
+        claude_thinking_mode: "adaptive",
+        claude_thinking_budget: 2048,
+        claude_thinking_effort: "medium",
+        gemini_api_url:
+            "https://generativelanguage.googleapis.com/v1beta/models",
+        gemini_api_key: "",
+        gemini_model: "gemini-2.5-flash",
+        gemini_show_thoughts: false,
+        gemini_thinking_level: "high",
+        gemini_thinking_budget: -1,
         ollama_api_url: "http://localhost:11434/api/chat",
         ollama_model: "",
         ollama_custom_model: "",
@@ -50,8 +94,49 @@ document.addEventListener("DOMContentLoaded", () => {
         "openai_api_url",
         "openai_api_key",
         "openai_model",
-        "openai_thinking_model",
         "show_thoughts",
+        "openai_reasoning_effort",
+        "openai_max_completion_tokens",
+        "custom_openai_api_url",
+        "custom_openai_api_key",
+        "custom_openai_model",
+        "custom_openai_show_thoughts",
+        "custom_openai_reasoning_effort",
+        "custom_openai_max_completion_tokens",
+        "deepseek_api_url",
+        "deepseek_api_key",
+        "deepseek_model",
+        "deepseek_show_thoughts",
+        "qwen_api_url",
+        "qwen_api_key",
+        "qwen_model",
+        "qwen_show_thoughts",
+        "qwen_thinking_budget",
+        "qwen_preserve_thinking",
+        "glm_api_url",
+        "glm_api_key",
+        "glm_model",
+        "glm_show_thoughts",
+        "glm_clear_thinking",
+        "xiaomi_api_url",
+        "xiaomi_api_key",
+        "xiaomi_model",
+        "xiaomi_show_thoughts",
+        "xiaomi_max_completion_tokens",
+        "claude_api_url",
+        "claude_api_key",
+        "claude_model",
+        "claude_show_thoughts",
+        "claude_max_tokens",
+        "claude_thinking_mode",
+        "claude_thinking_budget",
+        "claude_thinking_effort",
+        "gemini_api_url",
+        "gemini_api_key",
+        "gemini_model",
+        "gemini_show_thoughts",
+        "gemini_thinking_level",
+        "gemini_thinking_budget",
         "ollama_api_url",
         "ollama_model_select",
         "ollama_custom_model",
@@ -69,6 +154,15 @@ document.addEventListener("DOMContentLoaded", () => {
     const els = {};
     ids.forEach((id) => (els[id] = document.getElementById(id)));
     const openaiSection = document.getElementById("openai_section");
+    const customOpenAISection = document.getElementById(
+        "custom_openai_section",
+    );
+    const deepseekSection = document.getElementById("deepseek_section");
+    const qwenSection = document.getElementById("qwen_section");
+    const glmSection = document.getElementById("glm_section");
+    const xiaomiSection = document.getElementById("xiaomi_section");
+    const claudeSection = document.getElementById("claude_section");
+    const geminiSection = document.getElementById("gemini_section");
     const ollamaSection = document.getElementById("ollama_section");
     const webllmSection = document.getElementById("webllm_section");
     const webllmPerformanceNote = document.getElementById(
@@ -349,8 +443,36 @@ document.addEventListener("DOMContentLoaded", () => {
             const fallback = DEFAULT_SETTINGS[key];
             const value = input[key];
 
-            if (key === "show_thoughts" || key === "webllm_show_thoughts") {
+            if (
+                key === "show_thoughts" ||
+                key === "custom_openai_show_thoughts" ||
+                key === "deepseek_show_thoughts" ||
+                key === "qwen_show_thoughts" ||
+                key === "webllm_show_thoughts" ||
+                key === "qwen_preserve_thinking" ||
+                key === "glm_show_thoughts" ||
+                key === "glm_clear_thinking" ||
+                key === "xiaomi_show_thoughts" ||
+                key === "claude_show_thoughts" ||
+                key === "gemini_show_thoughts"
+            ) {
                 next[key] = typeof value === "boolean" ? value : !!fallback;
+                continue;
+            }
+
+            if (
+                key === "openai_max_completion_tokens" ||
+                key === "custom_openai_max_completion_tokens" ||
+                key === "qwen_thinking_budget" ||
+                key === "xiaomi_max_completion_tokens" ||
+                key === "claude_max_tokens" ||
+                key === "claude_thinking_budget" ||
+                key === "gemini_thinking_budget"
+            ) {
+                const numericValue = Number(value);
+                next[key] = Number.isFinite(numericValue)
+                    ? Math.floor(numericValue)
+                    : fallback;
                 continue;
             }
 
@@ -975,10 +1097,51 @@ document.addEventListener("DOMContentLoaded", () => {
         const hideOpenAI =
             engine === "browser" ||
             engine === "ollama" ||
+            engine === "custom_openai" ||
+            engine === "deepseek" ||
+            engine === "qwen" ||
+            engine === "glm" ||
+            engine === "xiaomi" ||
+            engine === "claude" ||
+            engine === "gemini" ||
             engine === "webllm" ||
             engine === "google" ||
             engine === "bing";
         openaiSection.classList.toggle("jyt-hidden", hideOpenAI);
+
+        if (customOpenAISection) {
+            customOpenAISection.classList.toggle(
+                "jyt-hidden",
+                engine !== "custom_openai",
+            );
+        }
+
+        if (deepseekSection) {
+            deepseekSection.classList.toggle(
+                "jyt-hidden",
+                engine !== "deepseek",
+            );
+        }
+
+        if (qwenSection) {
+            qwenSection.classList.toggle("jyt-hidden", engine !== "qwen");
+        }
+
+        if (glmSection) {
+            glmSection.classList.toggle("jyt-hidden", engine !== "glm");
+        }
+
+        if (xiaomiSection) {
+            xiaomiSection.classList.toggle("jyt-hidden", engine !== "xiaomi");
+        }
+
+        if (claudeSection) {
+            claudeSection.classList.toggle("jyt-hidden", engine !== "claude");
+        }
+
+        if (geminiSection) {
+            geminiSection.classList.toggle("jyt-hidden", engine !== "gemini");
+        }
 
         if (ollamaSection) {
             const showOllama = engine === "ollama";
@@ -1144,9 +1307,122 @@ document.addEventListener("DOMContentLoaded", () => {
             els.target_lang.value = items.target_lang || "auto";
             els.openai_api_url.value = items.openai_api_url;
             els.openai_api_key.value = items.openai_api_key;
-            els.openai_model.value = items.openai_model;
-            els.openai_thinking_model.value = items.openai_thinking_model;
+            const legacyThinkingModel = String(
+                items.openai_thinking_model || "",
+            ).trim();
+            const unifiedOpenAIModel = String(items.openai_model || "").trim();
+            els.openai_model.value =
+                unifiedOpenAIModel || legacyThinkingModel || "gpt-4o-mini";
             els.show_thoughts.value = items.show_thoughts ? "true" : "false";
+            els.openai_reasoning_effort.value =
+                items.openai_reasoning_effort || "medium";
+            els.openai_max_completion_tokens.value = Number.isFinite(
+                Number(items.openai_max_completion_tokens),
+            )
+                ? String(Math.floor(Number(items.openai_max_completion_tokens)))
+                : "0";
+            els.custom_openai_api_url.value =
+                items.custom_openai_api_url ||
+                "https://api.openai.com/v1/chat/completions";
+            els.custom_openai_api_key.value = items.custom_openai_api_key || "";
+            els.custom_openai_model.value =
+                items.custom_openai_model || "gpt-4o-mini";
+            els.custom_openai_show_thoughts.value =
+                items.custom_openai_show_thoughts ? "true" : "false";
+            els.custom_openai_reasoning_effort.value =
+                items.custom_openai_reasoning_effort || "medium";
+            els.custom_openai_max_completion_tokens.value = Number.isFinite(
+                Number(items.custom_openai_max_completion_tokens),
+            )
+                ? String(
+                      Math.floor(
+                          Number(items.custom_openai_max_completion_tokens),
+                      ),
+                  )
+                : "0";
+            els.deepseek_api_url.value =
+                items.deepseek_api_url ||
+                "https://api.deepseek.com/chat/completions";
+            els.deepseek_api_key.value = items.deepseek_api_key || "";
+            els.deepseek_model.value = items.deepseek_model || "deepseek-chat";
+            els.deepseek_show_thoughts.value = items.deepseek_show_thoughts
+                ? "true"
+                : "false";
+            els.qwen_api_url.value =
+                items.qwen_api_url ||
+                "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation";
+            els.qwen_api_key.value = items.qwen_api_key || "";
+            els.qwen_model.value = items.qwen_model || "qwen-plus";
+            els.qwen_show_thoughts.value = items.qwen_show_thoughts
+                ? "true"
+                : "false";
+            els.qwen_thinking_budget.value = Number.isFinite(
+                Number(items.qwen_thinking_budget),
+            )
+                ? String(Math.floor(Number(items.qwen_thinking_budget)))
+                : "0";
+            els.qwen_preserve_thinking.value = items.qwen_preserve_thinking
+                ? "true"
+                : "false";
+            els.glm_api_url.value =
+                items.glm_api_url ||
+                "https://open.bigmodel.cn/api/paas/v4/chat/completions";
+            els.glm_api_key.value = items.glm_api_key || "";
+            els.glm_model.value = items.glm_model || "glm-5.1";
+            els.glm_show_thoughts.value = items.glm_show_thoughts
+                ? "true"
+                : "false";
+            els.glm_clear_thinking.value =
+                items.glm_clear_thinking === false ? "false" : "true";
+            els.xiaomi_api_url.value =
+                items.xiaomi_api_url ||
+                "https://api.xiaomimimo.com/v1/chat/completions";
+            els.xiaomi_api_key.value = items.xiaomi_api_key || "";
+            els.xiaomi_model.value = items.xiaomi_model || "mimo-v2-pro";
+            els.xiaomi_show_thoughts.value = items.xiaomi_show_thoughts
+                ? "true"
+                : "false";
+            els.xiaomi_max_completion_tokens.value = Number.isFinite(
+                Number(items.xiaomi_max_completion_tokens),
+            )
+                ? String(Math.floor(Number(items.xiaomi_max_completion_tokens)))
+                : "0";
+            els.claude_api_url.value =
+                items.claude_api_url || "https://api.anthropic.com/v1/messages";
+            els.claude_api_key.value = items.claude_api_key || "";
+            els.claude_model.value = items.claude_model || "claude-sonnet-4-6";
+            els.claude_show_thoughts.value = items.claude_show_thoughts
+                ? "true"
+                : "false";
+            els.claude_max_tokens.value = Number.isFinite(
+                Number(items.claude_max_tokens),
+            )
+                ? String(Math.floor(Number(items.claude_max_tokens)))
+                : "4096";
+            els.claude_thinking_mode.value =
+                items.claude_thinking_mode || "adaptive";
+            els.claude_thinking_budget.value = Number.isFinite(
+                Number(items.claude_thinking_budget),
+            )
+                ? String(Math.floor(Number(items.claude_thinking_budget)))
+                : "2048";
+            els.claude_thinking_effort.value =
+                items.claude_thinking_effort || "medium";
+            els.gemini_api_url.value =
+                items.gemini_api_url ||
+                "https://generativelanguage.googleapis.com/v1beta/models";
+            els.gemini_api_key.value = items.gemini_api_key || "";
+            els.gemini_model.value = items.gemini_model || "gemini-2.5-flash";
+            els.gemini_show_thoughts.value = items.gemini_show_thoughts
+                ? "true"
+                : "false";
+            els.gemini_thinking_level.value =
+                items.gemini_thinking_level || "high";
+            els.gemini_thinking_budget.value = Number.isFinite(
+                Number(items.gemini_thinking_budget),
+            )
+                ? String(Math.floor(Number(items.gemini_thinking_budget)))
+                : "-1";
             const savedOllamaModel = items.ollama_model || "";
             els.ollama_api_url.value =
                 items.ollama_api_url || "http://localhost:11434/api/chat";
@@ -1215,8 +1491,63 @@ document.addEventListener("DOMContentLoaded", () => {
             openai_api_url: els.openai_api_url.value,
             openai_api_key: els.openai_api_key.value,
             openai_model: els.openai_model.value,
-            openai_thinking_model: els.openai_thinking_model.value,
             show_thoughts: els.show_thoughts.value === "true",
+            openai_reasoning_effort: els.openai_reasoning_effort.value,
+            openai_max_completion_tokens: Number(
+                els.openai_max_completion_tokens.value || 0,
+            ),
+            custom_openai_api_url: (
+                els.custom_openai_api_url.value || ""
+            ).trim(),
+            custom_openai_api_key: els.custom_openai_api_key.value,
+            custom_openai_model: (els.custom_openai_model.value || "").trim(),
+            custom_openai_show_thoughts:
+                els.custom_openai_show_thoughts.value === "true",
+            custom_openai_reasoning_effort:
+                els.custom_openai_reasoning_effort.value,
+            custom_openai_max_completion_tokens: Number(
+                els.custom_openai_max_completion_tokens.value || 0,
+            ),
+            deepseek_api_url: (els.deepseek_api_url.value || "").trim(),
+            deepseek_api_key: els.deepseek_api_key.value,
+            deepseek_model: (els.deepseek_model.value || "").trim(),
+            deepseek_show_thoughts: els.deepseek_show_thoughts.value === "true",
+            qwen_api_url: (els.qwen_api_url.value || "").trim(),
+            qwen_api_key: els.qwen_api_key.value,
+            qwen_model: (els.qwen_model.value || "").trim(),
+            qwen_show_thoughts: els.qwen_show_thoughts.value === "true",
+            qwen_thinking_budget: Number(els.qwen_thinking_budget.value || 0),
+            qwen_preserve_thinking: els.qwen_preserve_thinking.value === "true",
+            glm_api_url: (els.glm_api_url.value || "").trim(),
+            glm_api_key: els.glm_api_key.value,
+            glm_model: (els.glm_model.value || "").trim(),
+            glm_show_thoughts: els.glm_show_thoughts.value === "true",
+            glm_clear_thinking: els.glm_clear_thinking.value === "true",
+            xiaomi_api_url: (els.xiaomi_api_url.value || "").trim(),
+            xiaomi_api_key: els.xiaomi_api_key.value,
+            xiaomi_model: (els.xiaomi_model.value || "").trim(),
+            xiaomi_show_thoughts: els.xiaomi_show_thoughts.value === "true",
+            xiaomi_max_completion_tokens: Number(
+                els.xiaomi_max_completion_tokens.value || 0,
+            ),
+            claude_api_url: (els.claude_api_url.value || "").trim(),
+            claude_api_key: els.claude_api_key.value,
+            claude_model: (els.claude_model.value || "").trim(),
+            claude_show_thoughts: els.claude_show_thoughts.value === "true",
+            claude_max_tokens: Number(els.claude_max_tokens.value || 4096),
+            claude_thinking_mode: els.claude_thinking_mode.value,
+            claude_thinking_budget: Number(
+                els.claude_thinking_budget.value || 2048,
+            ),
+            claude_thinking_effort: els.claude_thinking_effort.value,
+            gemini_api_url: (els.gemini_api_url.value || "").trim(),
+            gemini_api_key: els.gemini_api_key.value,
+            gemini_model: (els.gemini_model.value || "").trim(),
+            gemini_show_thoughts: els.gemini_show_thoughts.value === "true",
+            gemini_thinking_level: els.gemini_thinking_level.value,
+            gemini_thinking_budget: Number(
+                els.gemini_thinking_budget.value || -1,
+            ),
             ollama_api_url: (els.ollama_api_url.value || "").trim(),
             ollama_model: els.ollama_model_select.value,
             ollama_custom_model: (els.ollama_custom_model.value || "").trim(),
@@ -1241,6 +1572,110 @@ document.addEventListener("DOMContentLoaded", () => {
         if (data.engine === "webllm" && !isWebLLMSupportedBrowser) {
             showToast("当前浏览器不支持 WebLLM，请切换到 Chrome/Edge。");
             return;
+        }
+
+        if (data.engine === "custom_openai") {
+            if (!data.custom_openai_api_key) {
+                showToast("请先填写自定义 OpenAI 兼容 API Key。", true);
+                return;
+            }
+            if (!data.custom_openai_model) {
+                showToast("请先填写自定义 OpenAI 兼容模型。", true);
+                return;
+            }
+            if (!data.custom_openai_api_url) {
+                data.custom_openai_api_url =
+                    "https://api.openai.com/v1/chat/completions";
+            }
+        }
+
+        if (data.engine === "deepseek") {
+            if (!data.deepseek_api_key) {
+                showToast("请先填写 DeepSeek API Key。", true);
+                return;
+            }
+            if (!data.deepseek_model) {
+                showToast("请先填写 DeepSeek 模型。", true);
+                return;
+            }
+            if (!data.deepseek_api_url) {
+                data.deepseek_api_url =
+                    "https://api.deepseek.com/chat/completions";
+            }
+        }
+
+        if (data.engine === "qwen") {
+            if (!data.qwen_api_key) {
+                showToast("请先填写 Qwen API Key。", true);
+                return;
+            }
+            if (!data.qwen_model) {
+                showToast("请先填写 Qwen 模型。", true);
+                return;
+            }
+            if (!data.qwen_api_url) {
+                data.qwen_api_url =
+                    "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation";
+            }
+        }
+
+        if (data.engine === "glm") {
+            if (!data.glm_api_key) {
+                showToast("请先填写 GLM API Key。", true);
+                return;
+            }
+            if (!data.glm_model) {
+                showToast("请先填写 GLM 模型。", true);
+                return;
+            }
+            if (!data.glm_api_url) {
+                data.glm_api_url =
+                    "https://open.bigmodel.cn/api/paas/v4/chat/completions";
+            }
+        }
+
+        if (data.engine === "xiaomi") {
+            if (!data.xiaomi_api_key) {
+                showToast("请先填写 Xiaomi API Key。", true);
+                return;
+            }
+            if (!data.xiaomi_model) {
+                showToast("请先填写 Xiaomi 模型。", true);
+                return;
+            }
+            if (!data.xiaomi_api_url) {
+                data.xiaomi_api_url =
+                    "https://api.xiaomimimo.com/v1/chat/completions";
+            }
+        }
+
+        if (data.engine === "claude") {
+            if (!data.claude_api_key) {
+                showToast("请先填写 Claude API Key。", true);
+                return;
+            }
+            if (!data.claude_model) {
+                showToast("请先填写 Claude 模型。", true);
+                return;
+            }
+            if (!data.claude_api_url) {
+                data.claude_api_url = "https://api.anthropic.com/v1/messages";
+            }
+        }
+
+        if (data.engine === "gemini") {
+            if (!data.gemini_api_key) {
+                showToast("请先填写 Gemini API Key。", true);
+                return;
+            }
+            if (!data.gemini_model) {
+                showToast("请先填写 Gemini 模型。", true);
+                return;
+            }
+            if (!data.gemini_api_url) {
+                data.gemini_api_url =
+                    "https://generativelanguage.googleapis.com/v1beta/models";
+            }
         }
 
         if (data.engine === "ollama") {

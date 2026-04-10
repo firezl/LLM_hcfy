@@ -29,6 +29,49 @@ const CONFIG_DEFAULTS = {
     openai_model: "gpt-4o-mini",
     openai_thinking_model: "gpt-5-thinking",
     show_thoughts: false,
+    openai_reasoning_effort: "medium",
+    openai_max_completion_tokens: 0,
+    custom_openai_api_url: "https://api.openai.com/v1/chat/completions",
+    custom_openai_api_key: "",
+    custom_openai_model: "gpt-4o-mini",
+    custom_openai_show_thoughts: false,
+    custom_openai_reasoning_effort: "medium",
+    custom_openai_max_completion_tokens: 0,
+    deepseek_api_url: "https://api.deepseek.com/chat/completions",
+    deepseek_api_key: "",
+    deepseek_model: "deepseek-chat",
+    deepseek_show_thoughts: false,
+    qwen_api_url:
+        "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation",
+    qwen_api_key: "",
+    qwen_model: "qwen-plus",
+    qwen_show_thoughts: false,
+    qwen_thinking_budget: 0,
+    qwen_preserve_thinking: false,
+    glm_api_url: "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+    glm_api_key: "",
+    glm_model: "glm-5.1",
+    glm_show_thoughts: false,
+    glm_clear_thinking: true,
+    xiaomi_api_url: "https://api.xiaomimimo.com/v1/chat/completions",
+    xiaomi_api_key: "",
+    xiaomi_model: "mimo-v2-pro",
+    xiaomi_show_thoughts: false,
+    xiaomi_max_completion_tokens: 0,
+    claude_api_url: "https://api.anthropic.com/v1/messages",
+    claude_api_key: "",
+    claude_model: "claude-sonnet-4-6",
+    claude_show_thoughts: false,
+    claude_max_tokens: 4096,
+    claude_thinking_mode: "adaptive",
+    claude_thinking_budget: 2048,
+    claude_thinking_effort: "medium",
+    gemini_api_url: "https://generativelanguage.googleapis.com/v1beta/models",
+    gemini_api_key: "",
+    gemini_model: "gemini-2.5-flash",
+    gemini_show_thoughts: false,
+    gemini_thinking_level: "high",
+    gemini_thinking_budget: -1,
     webllm_model: "Qwen3-0.6B-q4f16_1-MLC",
     webllm_custom_model: "",
     webllm_show_thoughts: false,
@@ -86,8 +129,36 @@ function normalizeConfigPayload(raw) {
         const fallback = CONFIG_DEFAULTS[key];
         const value = input[key];
 
-        if (key === "show_thoughts" || key === "webllm_show_thoughts") {
+        if (
+            key === "show_thoughts" ||
+            key === "custom_openai_show_thoughts" ||
+            key === "deepseek_show_thoughts" ||
+            key === "qwen_show_thoughts" ||
+            key === "webllm_show_thoughts" ||
+            key === "qwen_preserve_thinking" ||
+            key === "glm_show_thoughts" ||
+            key === "glm_clear_thinking" ||
+            key === "xiaomi_show_thoughts" ||
+            key === "claude_show_thoughts" ||
+            key === "gemini_show_thoughts"
+        ) {
             next[key] = typeof value === "boolean" ? value : !!fallback;
+            continue;
+        }
+
+        if (
+            key === "openai_max_completion_tokens" ||
+            key === "custom_openai_max_completion_tokens" ||
+            key === "qwen_thinking_budget" ||
+            key === "xiaomi_max_completion_tokens" ||
+            key === "claude_max_tokens" ||
+            key === "claude_thinking_budget" ||
+            key === "gemini_thinking_budget"
+        ) {
+            const numericValue = Number(value);
+            next[key] = Number.isFinite(numericValue)
+                ? Math.floor(numericValue)
+                : fallback;
             continue;
         }
 

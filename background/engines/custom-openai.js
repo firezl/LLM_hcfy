@@ -1,12 +1,16 @@
 import { buildPrompt, resolveLanguagePair } from "../language.js";
 import { postTranslateError, safePostMessage } from "../port-utils.js";
 import {
-    buildOpenAIThinkingPatch,
-    getThinkingEnabledByEngine,
+    pickOpenAIReasoningEffort,
+    supportsOpenAIReasoning,
 } from "./thinking-utils.js";
 
-function parseOpenAIStreamLine(line) {
-    const trimmed = line.trim();
+const DEFAULT_CUSTOM_OPENAI_API_URL =
+    "https://api.openai.com/v1/chat/completions";
+const DEFAULT_CUSTOM_OPENAI_MODEL = "gpt-4o-mini";
+
+function parseOpenAICompatStreamLine(line) {
+    const trimmed = String(line || "").trim();
     if (!trimmed || !trimmed.startsWith("data:")) {
         return null;
     }
@@ -20,39 +24,57 @@ function parseOpenAIStreamLine(line) {
         const json = JSON.parse(payload);
         return json.choices?.[0]?.delta || null;
     } catch (err) {
-        console.error("Error parsing stream data", err);
         return null;
     }
 }
 
-export async function streamOpenAITranslate(request, port, state) {
+function buildCustomOpenAIThinkingPatch(model, settings) {
+    const patch = {};
+    const showThoughts = !!settings?.custom_openai_show_thoughts;
+
+    if (!supportsOpenAIReasoning(model)) {
+        return patch;
+    }
+
+    patch.reasoning_effort = showThoughts
+        ? pickOpenAIReasoningEffort(
+              settings?.custom_openai_reasoning_effort,
+              "medium",
+          )
+        : "none";
+
+    const maxCompletionTokens = Number(
+        settings?.custom_openai_max_completion_tokens,
+    );
+    if (Number.isFinite(maxCompletionTokens) && maxCompletionTokens > 0) {
+        patch.max_completion_tokens = Math.floor(maxCompletionTokens);
+    }
+
+    return patch;
+}
+
+export async function streamCustomOpenAITranslate(request, port, state) {
     const { requestId, text, settings } = request;
     const { to } = resolveLanguagePair(request);
     const glossaryTerms = Array.isArray(request?.glossaryTerms)
         ? request.glossaryTerms
         : [];
-    const apiUrl = settings.openai_api_url;
-    const key = settings.openai_api_key;
 
-    if (!apiUrl || !key) {
+    const apiUrl = String(
+        settings?.custom_openai_api_url || DEFAULT_CUSTOM_OPENAI_API_URL,
+    ).trim();
+    const apiKey = String(settings?.custom_openai_api_key || "").trim();
+    const model = String(
+        settings?.custom_openai_model || DEFAULT_CUSTOM_OPENAI_MODEL,
+    ).trim();
+
+    if (!apiUrl || !apiKey) {
         postTranslateError(
             port,
             state,
             requestId,
-            "请在设置中配置 OpenAI API 地址与 Key",
+            "请在设置中配置自定义 OpenAI 兼容 API 地址与 Key",
         );
-        return;
-    }
-
-    const model = String(
-        settings.openai_model ||
-            settings.openai_thinking_model ||
-            "gpt-4o-mini",
-    ).trim();
-    const showThoughts = getThinkingEnabledByEngine("openai", settings);
-
-    if (!model) {
-        postTranslateError(port, state, requestId, "请先配置 OpenAI 模型");
         return;
     }
 
@@ -68,12 +90,7 @@ export async function streamOpenAITranslate(request, port, state) {
         stream: true,
     };
 
-    const thinkingPatch = buildOpenAIThinkingPatch({
-        model,
-        showThoughts,
-        settings,
-    });
-
+    const thinkingPatch = buildCustomOpenAIThinkingPatch(model, settings);
     const primaryBody = {
         ...baseBody,
         ...thinkingPatch,
@@ -87,7 +104,7 @@ export async function streamOpenAITranslate(request, port, state) {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                Authorization: `Bearer ${key}`,
+                Authorization: `Bearer ${apiKey}`,
             },
             body: JSON.stringify(primaryBody),
             signal: controller.signal,
@@ -106,7 +123,7 @@ export async function streamOpenAITranslate(request, port, state) {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        Authorization: `Bearer ${key}`,
+                        Authorization: `Bearer ${apiKey}`,
                     },
                     body: JSON.stringify(baseBody),
                     signal: controller.signal,
@@ -116,7 +133,7 @@ export async function streamOpenAITranslate(request, port, state) {
                     port,
                     state,
                     requestId,
-                    "OpenAI 请求失败: " + textErr,
+                    "自定义 OpenAI 兼容请求失败: " + textErr,
                 );
                 return;
             }
@@ -128,7 +145,7 @@ export async function streamOpenAITranslate(request, port, state) {
                 port,
                 state,
                 requestId,
-                "OpenAI 请求失败: " + textErr,
+                "自定义 OpenAI 兼容请求失败: " + textErr,
             );
             return;
         }
@@ -155,20 +172,9 @@ export async function streamOpenAITranslate(request, port, state) {
             carry = lines.pop() || "";
 
             for (const line of lines) {
-                const delta = parseOpenAIStreamLine(line);
+                const delta = parseOpenAICompatStreamLine(line);
                 if (!delta) {
                     continue;
-                }
-
-                if (delta.content) {
-                    const ok = safePostMessage(port, state, {
-                        type: "TRANSLATE_CHUNK",
-                        requestId,
-                        content: delta.content,
-                    });
-                    if (!ok) {
-                        return;
-                    }
                 }
 
                 if (delta.reasoning_content) {
@@ -176,6 +182,17 @@ export async function streamOpenAITranslate(request, port, state) {
                         type: "TRANSLATE_THOUGHT",
                         requestId,
                         content: delta.reasoning_content,
+                    });
+                    if (!ok) {
+                        return;
+                    }
+                }
+
+                if (delta.content) {
+                    const ok = safePostMessage(port, state, {
+                        type: "TRANSLATE_CHUNK",
+                        requestId,
+                        content: delta.content,
                     });
                     if (!ok) {
                         return;
