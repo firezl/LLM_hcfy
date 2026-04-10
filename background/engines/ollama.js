@@ -1,4 +1,7 @@
-import { buildPrompt, resolveLanguagePair } from "../language.js";
+import {
+    buildPromptWithUserTemplate,
+    resolveLanguagePair,
+} from "../language.js";
 import { postTranslateError, safePostMessage } from "../port-utils.js";
 
 const DEFAULT_OLLAMA_CHAT_URL = "http://localhost:11434/api/chat";
@@ -104,12 +107,17 @@ export async function streamOllamaTranslate(request, port, state) {
         return;
     }
 
+    const promptContent = buildPromptWithUserTemplate(text, to, {
+        glossaryTerms,
+        customPromptTemplate: request?.customPromptTemplate,
+    });
+
     const body = {
         model,
         messages: [
             {
                 role: "user",
-                content: buildPrompt(text, to, { glossaryTerms }),
+                content: promptContent,
             },
         ],
         stream: true,

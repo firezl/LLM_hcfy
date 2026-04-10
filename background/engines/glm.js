@@ -1,4 +1,7 @@
-import { buildPrompt, resolveLanguagePair } from "../language.js";
+import {
+    buildPromptWithUserTemplate,
+    resolveLanguagePair,
+} from "../language.js";
 import { postTranslateError, safePostMessage } from "../port-utils.js";
 import { getThinkingEnabledByEngine } from "./thinking-utils.js";
 
@@ -34,6 +37,10 @@ export async function streamGLMTranslate(request, port, state) {
     const key = String(settings?.glm_api_key || "").trim();
     const model = String(settings?.glm_model || DEFAULT_GLM_MODEL).trim();
     const showThoughts = getThinkingEnabledByEngine("glm", settings);
+    const promptContent = buildPromptWithUserTemplate(text, to, {
+        glossaryTerms,
+        customPromptTemplate: request?.customPromptTemplate,
+    });
 
     if (!apiUrl || !key) {
         postTranslateError(
@@ -50,7 +57,7 @@ export async function streamGLMTranslate(request, port, state) {
         messages: [
             {
                 role: "user",
-                content: buildPrompt(text, to, { glossaryTerms }),
+                content: promptContent,
             },
         ],
         stream: true,

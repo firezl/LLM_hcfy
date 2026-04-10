@@ -1,4 +1,7 @@
-import { buildPrompt, resolveLanguagePair } from "../language.js";
+import {
+    buildPromptWithUserTemplate,
+    resolveLanguagePair,
+} from "../language.js";
 import { postTranslateError, safePostMessage } from "../port-utils.js";
 import {
     buildOpenAIThinkingPatch,
@@ -50,6 +53,10 @@ export async function streamOpenAITranslate(request, port, state) {
             "gpt-4o-mini",
     ).trim();
     const showThoughts = getThinkingEnabledByEngine("openai", settings);
+    const promptContent = buildPromptWithUserTemplate(text, to, {
+        glossaryTerms,
+        customPromptTemplate: request?.customPromptTemplate,
+    });
 
     if (!model) {
         postTranslateError(port, state, requestId, "请先配置 OpenAI 模型");
@@ -61,7 +68,7 @@ export async function streamOpenAITranslate(request, port, state) {
         messages: [
             {
                 role: "user",
-                content: buildPrompt(text, to, { glossaryTerms }),
+                content: promptContent,
             },
         ],
         temperature: 1.0,

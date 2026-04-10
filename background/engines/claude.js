@@ -1,4 +1,7 @@
-import { buildPrompt, resolveLanguagePair } from "../language.js";
+import {
+    buildPromptWithUserTemplate,
+    resolveLanguagePair,
+} from "../language.js";
 import { postTranslateError, safePostMessage } from "../port-utils.js";
 
 const DEFAULT_CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
@@ -64,6 +67,10 @@ export async function streamClaudeTranslate(request, port, state) {
         Number.isFinite(maxTokensRaw) && maxTokensRaw > 0
             ? Math.floor(maxTokensRaw)
             : 4096;
+    const promptContent = buildPromptWithUserTemplate(text, to, {
+        glossaryTerms,
+        customPromptTemplate: request?.customPromptTemplate,
+    });
 
     if (!apiKey) {
         postTranslateError(
@@ -91,7 +98,7 @@ export async function streamClaudeTranslate(request, port, state) {
         messages: [
             {
                 role: "user",
-                content: buildPrompt(text, to, { glossaryTerms }),
+                content: promptContent,
             },
         ],
         thinking,

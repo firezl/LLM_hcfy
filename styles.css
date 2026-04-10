@@ -426,7 +426,8 @@ body {
 .jyt-form input[type="text"],
 .jyt-form select,
 .jyt-form input[type="password"],
-.jyt-form input[type="number"] {
+.jyt-form input[type="number"],
+.jyt-form textarea {
     width: 100%;
     padding: 6px;
     border: 1px solid var(--jyt-input-border);
@@ -439,7 +440,8 @@ body {
 }
 
 .jyt-form input:focus,
-.jyt-form select:focus {
+.jyt-form select:focus,
+.jyt-form textarea:focus {
     border-color: var(--jyt-primary);
     outline: none;
     box-shadow: 0 0 0 3px rgba(24, 119, 242, 0.1);

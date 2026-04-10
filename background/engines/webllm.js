@@ -6,7 +6,10 @@ import {
     WEBLLM_IDLE_TIMEOUT_MS,
 } from "../constants.js";
 import { extensionApi } from "../extension-api.js";
-import { buildWebLLMPrompt, resolveLanguagePair } from "../language.js";
+import {
+    buildWebLLMPromptWithUserTemplate,
+    resolveLanguagePair,
+} from "../language.js";
 import { postTranslateError, safePostMessage } from "../port-utils.js";
 import * as webllmModule from "../../vendor/webllm/index.js";
 
@@ -235,6 +238,10 @@ export async function streamWebLLMTranslate(request, port, state) {
     const mirrorBase = resolveWebLLMMirrorBase(settings);
     const enableThinking = !!settings?.webllm_show_thoughts;
     const isQwen3Model = /^qwen3/i.test(modelId || "");
+    const promptContent = buildWebLLMPromptWithUserTemplate(text, to, {
+        glossaryTerms,
+        customPromptTemplate: request?.customPromptTemplate,
+    });
 
     if (!isWebLLMRuntimeSupported()) {
         postTranslateError(
@@ -272,7 +279,7 @@ export async function streamWebLLMTranslate(request, port, state) {
             messages: [
                 {
                     role: "user",
-                    content: buildWebLLMPrompt(text, to, { glossaryTerms }),
+                    content: promptContent,
                 },
             ],
         };

@@ -1,4 +1,7 @@
-import { buildPrompt, resolveLanguagePair } from "../language.js";
+import {
+    buildPromptWithUserTemplate,
+    resolveLanguagePair,
+} from "../language.js";
 import { postTranslateError, safePostMessage } from "../port-utils.js";
 
 const DEFAULT_GEMINI_BASE_URL =
@@ -82,6 +85,10 @@ export async function streamGeminiTranslate(request, port, state) {
     const apiKey = String(settings?.gemini_api_key || "").trim();
     const model = String(settings?.gemini_model || DEFAULT_GEMINI_MODEL).trim();
     const baseUrl = settings?.gemini_api_url || DEFAULT_GEMINI_BASE_URL;
+    const promptContent = buildPromptWithUserTemplate(text, to, {
+        glossaryTerms,
+        customPromptTemplate: request?.customPromptTemplate,
+    });
 
     if (!apiKey) {
         postTranslateError(
@@ -110,7 +117,7 @@ export async function streamGeminiTranslate(request, port, state) {
                 role: "user",
                 parts: [
                     {
-                        text: buildPrompt(text, to, { glossaryTerms }),
+                        text: promptContent,
                     },
                 ],
             },

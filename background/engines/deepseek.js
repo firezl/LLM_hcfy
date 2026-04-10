@@ -1,4 +1,7 @@
-import { buildPrompt, resolveLanguagePair } from "../language.js";
+import {
+    buildPromptWithUserTemplate,
+    resolveLanguagePair,
+} from "../language.js";
 import { postTranslateError, safePostMessage } from "../port-utils.js";
 import { getThinkingEnabledByEngine } from "./thinking-utils.js";
 
@@ -39,6 +42,10 @@ export async function streamDeepSeekTranslate(request, port, state) {
         settings?.deepseek_model || DEFAULT_DEEPSEEK_MODEL,
     ).trim();
     const showThoughts = getThinkingEnabledByEngine("deepseek", settings);
+    const promptContent = buildPromptWithUserTemplate(text, to, {
+        glossaryTerms,
+        customPromptTemplate: request?.customPromptTemplate,
+    });
 
     if (!apiUrl || !key) {
         postTranslateError(
@@ -55,7 +62,7 @@ export async function streamDeepSeekTranslate(request, port, state) {
         messages: [
             {
                 role: "user",
-                content: buildPrompt(text, to, { glossaryTerms }),
+                content: promptContent,
             },
         ],
         temperature: 1.0,

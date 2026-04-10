@@ -37,22 +37,22 @@
 
                     <label>首选翻译引擎</label>
                     <select id="engine_select">
+                        <option value="openai">OpenAI（流式）</option>
+                        <option value="gemini">Gemini（流式）</option>
+                        <option value="claude">Claude（流式）</option>
+                        <option value="deepseek">DeepSeek（流式）</option>
+                        <option value="qwen">Qwen DashScope（流式）</option>
+                        <option value="glm">GLM（流式）</option>
+                        <option value="xiaomi">Xiaomi MiMo（流式）</option>
+                        <option value="custom_openai">
+                            自定义 OpenAI 兼容（流式）
+                        </option>
                         <option value="auto">自动（优先 OpenAI API）</option>
                         <option value="browser">
                             浏览器 Translation API（实验）
                         </option>
                         <option value="google">Google 翻译</option>
                         <option value="bing">Bing 翻译</option>
-                        <option value="openai">OpenAI（流式）</option>
-                        <option value="custom_openai">
-                            自定义 OpenAI 兼容（流式）
-                        </option>
-                        <option value="deepseek">DeepSeek（流式）</option>
-                        <option value="qwen">Qwen DashScope（流式）</option>
-                        <option value="glm">GLM（流式）</option>
-                        <option value="xiaomi">Xiaomi MiMo（流式）</option>
-                        <option value="claude">Claude（流式）</option>
-                        <option value="gemini">Gemini（流式）</option>
                         <option value="ollama">Ollama 本地服务（流式）</option>
                         <option value="webllm">WebLLM 本地模型（实验）</option>
                     </select>
@@ -146,6 +146,12 @@
                         type="text"
                         placeholder="gpt-4o-mini"
                     />
+                    <label>自定义翻译 Prompt（仅 OpenAI 生效）</label>
+                    <textarea
+                        id="openai_custom_prompt"
+                        rows="4"
+                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。"
+                    ></textarea>
                     <label>显示思考过程</label>
                     <select id="show_thoughts">
                         <option value="false">否</option>
@@ -190,6 +196,12 @@
                         type="text"
                         placeholder="gpt-4o-mini"
                     />
+                    <label>自定义翻译 Prompt（仅自定义 OpenAI 生效）</label>
+                    <textarea
+                        id="custom_openai_custom_prompt"
+                        rows="4"
+                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。"
+                    ></textarea>
                     <label>显示思考过程</label>
                     <select id="custom_openai_show_thoughts">
                         <option value="false">否</option>
@@ -234,6 +246,12 @@
                         type="text"
                         placeholder="deepseek-chat"
                     />
+                    <label>自定义翻译 Prompt（仅 DeepSeek 生效）</label>
+                    <textarea
+                        id="deepseek_custom_prompt"
+                        rows="4"
+                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。"
+                    ></textarea>
                     <label>显示思考过程</label>
                     <select id="deepseek_show_thoughts">
                         <option value="false">否</option>
@@ -261,6 +279,12 @@
                         type="text"
                         placeholder="qwen-plus"
                     />
+                    <label>自定义翻译 Prompt（仅 Qwen 生效）</label>
+                    <textarea
+                        id="qwen_custom_prompt"
+                        rows="4"
+                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。"
+                    ></textarea>
                     <label>显示思考过程</label>
                     <select id="qwen_show_thoughts">
                         <option value="false">否</option>
@@ -297,6 +321,12 @@
                     />
                     <label>模型</label>
                     <input id="glm_model" type="text" placeholder="glm-5.1" />
+                    <label>自定义翻译 Prompt（仅 GLM 生效）</label>
+                    <textarea
+                        id="glm_custom_prompt"
+                        rows="4"
+                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。"
+                    ></textarea>
                     <label>显示思考过程</label>
                     <select id="glm_show_thoughts">
                         <option value="false">否</option>
@@ -329,6 +359,12 @@
                         type="text"
                         placeholder="mimo-v2-pro"
                     />
+                    <label>自定义翻译 Prompt（仅 Xiaomi 生效）</label>
+                    <textarea
+                        id="xiaomi_custom_prompt"
+                        rows="4"
+                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。"
+                    ></textarea>
                     <label>显示思考过程</label>
                     <select id="xiaomi_show_thoughts">
                         <option value="false">否</option>
@@ -364,6 +400,12 @@
                         type="text"
                         placeholder="claude-sonnet-4-6"
                     />
+                    <label>自定义翻译 Prompt（仅 Claude 生效）</label>
+                    <textarea
+                        id="claude_custom_prompt"
+                        rows="4"
+                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。"
+                    ></textarea>
                     <label>显示思考过程</label>
                     <select id="claude_show_thoughts">
                         <option value="false">否</option>
@@ -418,6 +460,12 @@
                         type="text"
                         placeholder="gemini-2.5-flash"
                     />
+                    <label>自定义翻译 Prompt（仅 Gemini 生效）</label>
+                    <textarea
+                        id="gemini_custom_prompt"
+                        rows="4"
+                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。"
+                    ></textarea>
                     <label>显示思考过程</label>
                     <select id="gemini_show_thoughts">
                         <option value="false">否</option>
@@ -462,6 +510,12 @@
                         type="text"
                         placeholder="例如: qwen3:8b"
                     />
+                    <label>自定义翻译 Prompt（仅 Ollama 生效）</label>
+                    <textarea
+                        id="ollama_custom_prompt"
+                        rows="4"
+                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。"
+                    ></textarea>
                     <label>显示思考过程</label>
                     <select id="ollama_show_thoughts">
                         <option value="false">否</option>
@@ -497,6 +551,12 @@
                         type="text"
                         placeholder="例如: Qwen3-0.6B-q4f16_1-MLC"
                     />
+                    <label>自定义翻译 Prompt（仅 WebLLM 生效）</label>
+                    <textarea
+                        id="webllm_custom_prompt"
+                        rows="4"
+                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。"
+                    ></textarea>
                     <label>显示思考过程</label>
                     <select id="webllm_show_thoughts">
                         <option value="false">否</option>

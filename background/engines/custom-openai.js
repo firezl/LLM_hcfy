@@ -1,4 +1,7 @@
-import { buildPrompt, resolveLanguagePair } from "../language.js";
+import {
+    buildPromptWithUserTemplate,
+    resolveLanguagePair,
+} from "../language.js";
 import { postTranslateError, safePostMessage } from "../port-utils.js";
 import {
     pickOpenAIReasoningEffort,
@@ -67,6 +70,10 @@ export async function streamCustomOpenAITranslate(request, port, state) {
     const model = String(
         settings?.custom_openai_model || DEFAULT_CUSTOM_OPENAI_MODEL,
     ).trim();
+    const promptContent = buildPromptWithUserTemplate(text, to, {
+        glossaryTerms,
+        customPromptTemplate: request?.customPromptTemplate,
+    });
 
     if (!apiUrl || !apiKey) {
         postTranslateError(
@@ -83,7 +90,7 @@ export async function streamCustomOpenAITranslate(request, port, state) {
         messages: [
             {
                 role: "user",
-                content: buildPrompt(text, to, { glossaryTerms }),
+                content: promptContent,
             },
         ],
         temperature: 1.0,

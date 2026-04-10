@@ -1,4 +1,7 @@
-import { buildPrompt, resolveLanguagePair } from "../language.js";
+import {
+    buildPromptWithUserTemplate,
+    resolveLanguagePair,
+} from "../language.js";
 import { postTranslateError, safePostMessage } from "../port-utils.js";
 import { getThinkingEnabledByEngine } from "./thinking-utils.js";
 
@@ -47,6 +50,10 @@ export async function streamQwenTranslate(request, port, state) {
     const key = String(settings?.qwen_api_key || "").trim();
     const model = String(settings?.qwen_model || DEFAULT_QWEN_MODEL).trim();
     const showThoughts = getThinkingEnabledByEngine("qwen", settings);
+    const promptContent = buildPromptWithUserTemplate(text, to, {
+        glossaryTerms,
+        customPromptTemplate: request?.customPromptTemplate,
+    });
 
     if (!apiUrl || !key) {
         postTranslateError(
@@ -80,7 +87,7 @@ export async function streamQwenTranslate(request, port, state) {
             messages: [
                 {
                     role: "user",
-                    content: buildPrompt(text, to, { glossaryTerms }),
+                    content: promptContent,
                 },
             ],
         },

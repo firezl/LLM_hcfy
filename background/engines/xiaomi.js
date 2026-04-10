@@ -1,4 +1,7 @@
-import { buildPrompt, resolveLanguagePair } from "../language.js";
+import {
+    buildPromptWithUserTemplate,
+    resolveLanguagePair,
+} from "../language.js";
 import { postTranslateError, safePostMessage } from "../port-utils.js";
 import { getThinkingEnabledByEngine } from "./thinking-utils.js";
 
@@ -36,6 +39,10 @@ export async function streamXiaomiTranslate(request, port, state) {
     const key = String(settings?.xiaomi_api_key || "").trim();
     const model = String(settings?.xiaomi_model || DEFAULT_XIAOMI_MODEL).trim();
     const showThoughts = getThinkingEnabledByEngine("xiaomi", settings);
+    const promptContent = buildPromptWithUserTemplate(text, to, {
+        glossaryTerms,
+        customPromptTemplate: request?.customPromptTemplate,
+    });
 
     if (!apiUrl || !key) {
         postTranslateError(
@@ -52,7 +59,7 @@ export async function streamXiaomiTranslate(request, port, state) {
         messages: [
             {
                 role: "user",
-                content: buildPrompt(text, to, { glossaryTerms }),
+                content: promptContent,
             },
         ],
         temperature: 1.0,

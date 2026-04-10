@@ -13,6 +13,22 @@ import { streamXiaomiTranslate } from "./engines/xiaomi.js";
 import { postTranslateError } from "./port-utils.js";
 import { getMatchedGlossaryTerms } from "./term.js";
 
+const CUSTOM_PROMPT_SETTING_BY_ENGINE = {
+    // `*_custom_prompt` is persisted in settings (options page),
+    // then mapped to request.customPromptTemplate for engine runtime.
+    auto: "openai_custom_prompt",
+    openai: "openai_custom_prompt",
+    gemini: "gemini_custom_prompt",
+    claude: "claude_custom_prompt",
+    deepseek: "deepseek_custom_prompt",
+    qwen: "qwen_custom_prompt",
+    glm: "glm_custom_prompt",
+    xiaomi: "xiaomi_custom_prompt",
+    custom_openai: "custom_openai_custom_prompt",
+    ollama: "ollama_custom_prompt",
+    webllm: "webllm_custom_prompt",
+};
+
 export async function handleTranslateStart(message, port, state) {
     const engine = message?.settings?.engine || "auto";
     const glossaryTerms = await getMatchedGlossaryTerms({
@@ -23,9 +39,15 @@ export async function handleTranslateStart(message, port, state) {
         maxTerms: 20,
     });
 
+    const customPromptSettingKey = CUSTOM_PROMPT_SETTING_BY_ENGINE[engine];
+    const customPromptTemplate = customPromptSettingKey
+        ? String(message?.settings?.[customPromptSettingKey] || "")
+        : "";
+
     const requestWithGlossary = {
         ...message,
         glossaryTerms,
+        customPromptTemplate,
     };
 
     if (engine === "browser") {
