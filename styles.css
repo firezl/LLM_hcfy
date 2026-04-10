@@ -65,24 +65,61 @@
 #jyt-translate-btn.jyt-btn {
     position: absolute;
     z-index: 2147483647;
-    background: var(--jyt-primary);
-    color: #fff;
-    padding: 6px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    box-sizing: border-box;
+    background: rgba(255, 255, 255, 0.95);
+    color: #4b5563;
+    border: 1px solid rgba(0, 0, 0, 0.1);
     border-radius: 6px;
-    font-size: 13px;
-    font-weight: 500;
     cursor: pointer;
-    box-shadow: 0 4px 12px rgba(24, 119, 242, 0.3);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     transition:
-        transform 0.2s,
-        opacity 0.2s;
+        transform 0.15s ease,
+        background 0.15s ease,
+        color 0.15s ease,
+        box-shadow 0.15s ease;
     opacity: 0;
     animation: jyt-fade-in 0.2s forwards;
+    padding: 3px;
+    line-height: 0;
+}
+
+#jyt-translate-btn.jyt-btn svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    margin: 0;
 }
 
 #jyt-translate-btn.jyt-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(24, 119, 242, 0.4);
+    transform: scale(1.05);
+    background: #f9fafb;
+    color: #2563eb;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+#jyt-translate-btn.jyt-btn:active {
+    transform: scale(0.95);
+}
+
+/* Dark mode for the translate button using explicit theme class */
+#jyt-translate-btn.jyt-btn[data-theme="dark"] {
+    background: rgba(30, 32, 34, 0.95);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+}
+
+#jyt-translate-btn.jyt-btn[data-theme="dark"]:hover {
+    background: #111214;
+    color: #60a5fa;
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.35);
 }
 
 .jyt-bubble {
