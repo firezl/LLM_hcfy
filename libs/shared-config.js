@@ -2,6 +2,7 @@
     const DEFAULT_SETTINGS = {
         enabled: "on",
         engine: "auto",
+        llm_engine: "openai",
         translate_shortcut: "",
         source_lang: "auto",
         target_lang: "auto",

@@ -987,7 +987,9 @@
     }
 
     async function translateText(text, settings, bubble) {
-        const engine = settings.engine || "auto";
+        const selectedEngine = settings.engine || "auto";
+        const llmEngine = settings.llm_engine || "openai";
+        const engine = selectedEngine === "llm" ? llmEngine : selectedEngine;
         const sourceSetting = settings.source_lang || "auto";
         const targetSetting = settings.target_lang || "auto";
 

@@ -38,15 +38,7 @@
                     <label>首选翻译引擎</label>
                     <select id="engine_select">
                         <option value="auto">自动（优先 OpenAI API）</option>
-                        <option value="openai">OpenAI</option>
-                        <option value="gemini">Gemini</option>
-                        <option value="claude">Claude</option>
-                        <option value="qwen">Qwen</option>
-                        <option value="deepseek">DeepSeek</option>
-                        <option value="glm">GLM</option>
-                        <option value="xiaomi">Xiaomi Mimo</option>
-                        <option value="ollama">Ollama 本地服务</option>
-                        <option value="webllm">WebLLM 本地模型（实验）</option>
+                        <option value="llm">大模型翻译</option>
                         <option value="custom_openai">自定义 OpenAI</option>
                         <option value="google">谷歌翻译</option>
                         <option value="bing">Bing翻译</option>
@@ -122,6 +114,25 @@
             </div>
 
             <div class="jyt-tab-content" id="tab_engine">
+                <div class="jyt-section jyt-hidden" id="llm_engine_section">
+                    <div class="jyt-section-title">大模型翻译</div>
+                    <label>大模型提供方</label>
+                    <select id="llm_engine_select">
+                        <option value="openai">OpenAI</option>
+                        <option value="gemini">Gemini</option>
+                        <option value="claude">Claude</option>
+                        <option value="qwen">Qwen</option>
+                        <option value="deepseek">DeepSeek</option>
+                        <option value="glm">GLM</option>
+                        <option value="xiaomi">Xiaomi Mimo</option>
+                        <option value="ollama">Ollama 本地服务</option>
+                        <option value="webllm">WebLLM 本地模型（实验）</option>
+                    </select>
+                    <div class="jyt-hint">
+                        先在“通用”里选择“大模型翻译”，再在这里选择具体模型来源。
+                    </div>
+                </div>
+
                 <div class="jyt-section" id="openai_section">
                     <div class="jyt-section-title">OpenAI / 大模型配置</div>
                     <label>API 地址</label>

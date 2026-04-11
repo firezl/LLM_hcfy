@@ -5,6 +5,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const DEFAULT_SETTINGS = shared.DEFAULT_SETTINGS || {
         enabled: "on",
         engine: "auto",
+        llm_engine: "openai",
         translate_shortcut: "",
         source_lang: "auto",
         target_lang: "auto",
@@ -98,6 +99,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const ids = [
         "enable_select",
         "engine_select",
+        "llm_engine_select",
         "translate_shortcut",
         "source_lang",
         "target_lang",
@@ -241,6 +243,17 @@ document.addEventListener("DOMContentLoaded", () => {
     let glossaryTermsCache = [];
     let glossaryEditingOriginal = null;
     let syncBusy = false;
+    const LLM_ENGINES = new Set([
+        "openai",
+        "gemini",
+        "claude",
+        "qwen",
+        "deepseek",
+        "glm",
+        "xiaomi",
+        "ollama",
+        "webllm",
+    ]);
 
     // --- Added: UI Tab Logic & Toast ---
     const tabs = document.querySelectorAll(".jyt-tab");
@@ -1113,7 +1126,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function updateEngineDependentUI() {
         if (!openaiSection) return;
-        const engine = els.engine_select.value;
+        const selectedEngine = els.engine_select.value;
+        const llmEngine = els.llm_engine_select?.value || "openai";
+        const engine = selectedEngine === "llm" ? llmEngine : selectedEngine;
+        const llmEngineSection = document.getElementById("llm_engine_section");
+        if (llmEngineSection) {
+            llmEngineSection.classList.toggle(
+                "jyt-hidden",
+                selectedEngine !== "llm",
+            );
+        }
         const hideOpenAI =
             engine === "browser" ||
             engine === "ollama" ||
@@ -1318,8 +1340,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function load() {
         chrome.storage.sync.get(DEFAULT_SETTINGS, (items) => {
+            const savedEngine = String(items.engine || "auto").trim();
+            const savedLLMEngine = String(items.llm_engine || "").trim();
+            const migratedLLMEngine = LLM_ENGINES.has(savedEngine)
+                ? savedEngine
+                : "";
+            const llmEngine = LLM_ENGINES.has(savedLLMEngine)
+                ? savedLLMEngine
+                : migratedLLMEngine || "openai";
+            const uiEngine = LLM_ENGINES.has(savedEngine)
+                ? "llm"
+                : savedEngine || "auto";
+
             els.enable_select.value = items.enabled;
-            els.engine_select.value = items.engine;
+            els.engine_select.value = uiEngine;
+            if (els.llm_engine_select) {
+                els.llm_engine_select.value = llmEngine;
+            }
             els.translate_shortcut.value = normalizeShortcut(
                 items.translate_shortcut,
             );
@@ -1514,9 +1551,15 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     document.getElementById("save").addEventListener("click", () => {
+        const selectedEngine = els.engine_select.value;
+        const selectedLlmEngine =
+            (els.llm_engine_select?.value || "openai").trim() || "openai";
+        const effectiveEngine =
+            selectedEngine === "llm" ? selectedLlmEngine : selectedEngine;
         const data = {
             enabled: els.enable_select.value,
-            engine: els.engine_select.value,
+            engine: selectedEngine,
+            llm_engine: selectedLlmEngine,
             translate_shortcut: normalizeShortcut(els.translate_shortcut.value),
             source_lang: els.source_lang.value,
             target_lang: els.target_lang.value,
@@ -1612,12 +1655,12 @@ document.addEventListener("DOMContentLoaded", () => {
             ),
             config_updated_at: Date.now(),
         };
-        if (data.engine === "webllm" && !isWebLLMSupportedBrowser) {
+        if (effectiveEngine === "webllm" && !isWebLLMSupportedBrowser) {
             showToast("当前浏览器不支持 WebLLM，请切换到 Chrome/Edge。");
             return;
         }
 
-        if (data.engine === "custom_openai") {
+        if (effectiveEngine === "custom_openai") {
             if (!data.custom_openai_api_key) {
                 showToast("请先填写自定义 OpenAI 兼容 API Key。", true);
                 return;
@@ -1632,7 +1675,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
 
-        if (data.engine === "deepseek") {
+        if (effectiveEngine === "deepseek") {
             if (!data.deepseek_api_key) {
                 showToast("请先填写 DeepSeek API Key。", true);
                 return;
@@ -1647,7 +1690,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
 
-        if (data.engine === "qwen") {
+        if (effectiveEngine === "qwen") {
             if (!data.qwen_api_key) {
                 showToast("请先填写 Qwen API Key。", true);
                 return;
@@ -1662,7 +1705,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
 
-        if (data.engine === "glm") {
+        if (effectiveEngine === "glm") {
             if (!data.glm_api_key) {
                 showToast("请先填写 GLM API Key。", true);
                 return;
@@ -1677,7 +1720,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
 
-        if (data.engine === "xiaomi") {
+        if (effectiveEngine === "xiaomi") {
             if (!data.xiaomi_api_key) {
                 showToast("请先填写 Xiaomi API Key。", true);
                 return;
@@ -1692,7 +1735,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
 
-        if (data.engine === "claude") {
+        if (effectiveEngine === "claude") {
             if (!data.claude_api_key) {
                 showToast("请先填写 Claude API Key。", true);
                 return;
@@ -1706,7 +1749,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
 
-        if (data.engine === "gemini") {
+        if (effectiveEngine === "gemini") {
             if (!data.gemini_api_key) {
                 showToast("请先填写 Gemini API Key。", true);
                 return;
@@ -1721,7 +1764,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
 
-        if (data.engine === "ollama") {
+        if (effectiveEngine === "ollama") {
             if (!data.ollama_api_url) {
                 data.ollama_api_url = "http://localhost:11434/api/chat";
             }
@@ -1736,7 +1779,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         if (
-            data.engine === "webllm" &&
+            effectiveEngine === "webllm" &&
             webllmPerfProfile &&
             webllmPerfProfile.isWeak
         ) {
@@ -1783,6 +1826,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     els.engine_select.addEventListener("change", updateEngineDependentUI);
+    els.llm_engine_select?.addEventListener("change", updateEngineDependentUI);
 
     els.theme_mode.addEventListener("change", () => {
         applyTheme(els.theme_mode.value);
@@ -2380,13 +2424,14 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (!isWebLLMSupportedBrowser) {
-        const webllmOption = els.engine_select.querySelector(
+        const webllmOption = els.llm_engine_select?.querySelector(
             'option[value="webllm"]',
         );
         webllmOption?.remove();
-        if (els.engine_select.value === "webllm") {
-            els.engine_select.value = "auto";
+        if (els.llm_engine_select?.value === "webllm") {
+            els.llm_engine_select.value = "openai";
         }
+        updateEngineDependentUI();
     }
 
     void evaluateWebLLMPerformance().then((profile) => {

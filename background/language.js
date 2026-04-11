@@ -108,7 +108,7 @@ function buildPromptWithTemplate(template, text, to, options, fallbackBuilder) {
 export function buildPrompt(text, to, options) {
     const targetLang = getLanguageDisplayName(to);
     const glossaryBlock = buildGlossaryConstraint(options?.glossaryTerms);
-    return `请把这段文字翻译为${targetLang}，不要有多余的输出。${glossaryBlock}\n输入:\n${text}`;
+    return `${glossaryBlock}\n请把这段文字翻译为${targetLang}，不要有多余的输出。输入:\n${text}`;
 }
 
 export function buildPromptWithUserTemplate(text, to, options) {
@@ -124,7 +124,7 @@ export function buildPromptWithUserTemplate(text, to, options) {
 export function buildWebLLMPrompt(text, to, options) {
     const targetLang = getLanguageDisplayName(to);
     const glossaryBlock = buildGlossaryConstraint(options?.glossaryTerms);
-    return `请把以下文本翻译为${targetLang}，不要有多余的输出。${glossaryBlock}\n输入:\n${text}`;
+    return `${glossaryBlock}\n请把以下文本翻译为${targetLang}，不要有多余的输出。输入:\n${text}`;
 }
 
 export function buildWebLLMPromptWithUserTemplate(text, to, options) {

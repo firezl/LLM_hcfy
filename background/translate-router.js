@@ -29,8 +29,29 @@ const CUSTOM_PROMPT_SETTING_BY_ENGINE = {
     webllm: "webllm_custom_prompt",
 };
 
+const LLM_ENGINES = new Set([
+    "openai",
+    "gemini",
+    "claude",
+    "deepseek",
+    "qwen",
+    "glm",
+    "xiaomi",
+    "ollama",
+    "webllm",
+]);
+
+function resolveEngine(settings) {
+    const selectedEngine = String(settings?.engine || "auto").trim();
+    if (selectedEngine !== "llm") {
+        return selectedEngine || "auto";
+    }
+    const llmEngine = String(settings?.llm_engine || "openai").trim();
+    return LLM_ENGINES.has(llmEngine) ? llmEngine : "openai";
+}
+
 export async function handleTranslateStart(message, port, state) {
-    const engine = message?.settings?.engine || "auto";
+    const engine = resolveEngine(message?.settings);
     const glossaryTerms = await getMatchedGlossaryTerms({
         from: message?.preferredFrom || message?.from,
         to: message?.preferredTo || message?.to,
