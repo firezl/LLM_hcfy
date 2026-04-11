@@ -785,9 +785,106 @@ button#open_local_pdf:hover {
     opacity: 1;
     transform: translateY(0);
 }
-.jyt-toast.jyt-toast-success {
-}
 .jyt-toast.jyt-toast-error {
     background: var(--jyt-error-text);
     color: #fff;
+}
+
+.jyt-pdf-prompt {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 2147483647;
+    width: min(360px, calc(100vw - 24px));
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid var(--jyt-border);
+    box-shadow: var(--jyt-shadow);
+    background: var(--jyt-bg);
+    color: var(--jyt-text);
+    font-family: var(
+        --jyt-font,
+        "Segoe UI",
+        Roboto,
+        "Helvetica Neue",
+        Arial,
+        sans-serif
+    );
+    animation: jyt-pop-in 0.16s ease-out;
+}
+
+.jyt-pdf-prompt-title {
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.jyt-pdf-prompt-desc {
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--jyt-muted-text);
+}
+
+.jyt-pdf-prompt-countdown {
+    margin-top: 6px;
+    font-size: 11px;
+    color: var(--jyt-muted-text);
+}
+
+.jyt-pdf-progress {
+    margin-top: 6px;
+    width: 100%;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--jyt-secondary-bg);
+    border: 1px solid var(--jyt-border);
+    overflow: hidden;
+}
+
+.jyt-pdf-progress-bar {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #f59e0b, #ef4444);
+    transition: width 0.1s linear;
+}
+
+.jyt-pdf-prompt-status {
+    margin-top: 8px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    background: var(--jyt-secondary-bg);
+    border: 1px solid var(--jyt-border);
+}
+
+.jyt-pdf-prompt-status.jyt-pdf-prompt-error {
+    color: var(--jyt-error-text);
+}
+
+.jyt-pdf-prompt-actions {
+    margin-top: 10px;
+    display: flex;
+    gap: 8px;
+}
+
+.jyt-pdf-prompt-actions button {
+    border: 0;
+    border-radius: 6px;
+    padding: 7px 10px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.jyt-pdf-open {
+    background: var(--jyt-primary);
+    color: #fff;
+}
+
+.jyt-pdf-browser {
+    background: var(--jyt-secondary-bg);
+    color: var(--jyt-text);
+}
+
+.jyt-pdf-prompt-actions button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }

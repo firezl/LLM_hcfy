@@ -9,6 +9,10 @@ import {
     MESSAGE_TYPE_SYNC_TEST,
     MESSAGE_TYPE_SYNC_UPLOAD,
     MESSAGE_TYPE_OLLAMA_GET_MODELS,
+    MESSAGE_TYPE_PDF_CHECK_URL,
+    MESSAGE_TYPE_PDF_OPEN_IN_VIEWER,
+    MESSAGE_TYPE_PDF_PROMPT_DECISION,
+    MESSAGE_TYPE_PDF_GET_PENDING_PROMPT,
     MESSAGE_TYPE_TERM_EXPORT,
     MESSAGE_TYPE_TERM_IMPORT,
     MESSAGE_TYPE_TERM_LIST,
@@ -18,7 +22,11 @@ import {
     MESSAGE_TYPE_WEBLLM_PRELOAD,
     PORT_NAME,
 } from "./constants.js";
-import { handleTabRemoved, handleTabUpdated } from "./pdf-redirect.js";
+import {
+    handlePdfRuntimeMessage,
+    handleTabRemoved,
+    handleTabUpdated,
+} from "./pdf-redirect.js";
 import { handleTranslateStart } from "./translate-router.js";
 import { handleOllamaGetModels } from "./engines/ollama.js";
 import {
@@ -96,6 +104,11 @@ extensionApi.tabs.onRemoved.addListener((tabId) => {
 
 extensionApi.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const type = String(message?.type || "");
+    const isPdfMessage =
+        type === MESSAGE_TYPE_PDF_CHECK_URL ||
+        type === MESSAGE_TYPE_PDF_OPEN_IN_VIEWER ||
+        type === MESSAGE_TYPE_PDF_PROMPT_DECISION ||
+        type === MESSAGE_TYPE_PDF_GET_PENDING_PROMPT;
     const isTermMessage =
         type === MESSAGE_TYPE_TERM_UPSERT ||
         type === MESSAGE_TYPE_TERM_IMPORT ||
@@ -111,13 +124,15 @@ extensionApi.runtime.onMessage.addListener((message, sender, sendResponse) => {
         type === MESSAGE_TYPE_SYNC_DOWNLOAD ||
         type === MESSAGE_TYPE_SYNC_BIDIRECTIONAL;
 
-    if (!isTermMessage && !isSyncMessage) {
+    if (!isPdfMessage && !isTermMessage && !isSyncMessage) {
         return false;
     }
 
-    const handler = isTermMessage
-        ? handleBackgroundTermMessage
-        : handleSyncMessage;
+    const handler = isPdfMessage
+        ? (payload) => handlePdfRuntimeMessage(payload, sender)
+        : isTermMessage
+          ? handleBackgroundTermMessage
+          : handleSyncMessage;
 
     void handler(message)
         .then((result) => {

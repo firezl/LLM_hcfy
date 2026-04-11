@@ -11,6 +11,7 @@ $includes = @(
     "background.js",
     "background",
     "content_script.js",
+    "pdf_local_open_helper.js",
     "libs",
     "options.html",
     "options.js",

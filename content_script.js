@@ -98,6 +98,12 @@
     let activeRequest = null;
     let lastTranslateContext = null;
     let runtimeSettings = { ...DEFAULT_SETTINGS };
+    let pdfPromptState = null;
+    let pdfPromptEl = null;
+    let pdfPromptAutoCloseTimer = null;
+    let pdfPromptCountdownInterval = null;
+
+    const PDF_PROMPT_AUTO_CLOSE_MS = 10 * 1000;
 
     const translatorCache = new Map();
     let translationModelReady = false;
@@ -163,6 +169,397 @@
                 reject(err);
             }
         });
+    }
+
+    function isLikelyPdfUrl(url) {
+        if (!url || typeof url !== "string") return false;
+
+        let parsed;
+        try {
+            parsed = new URL(url, window.location.href);
+        } catch (err) {
+            return false;
+        }
+
+        if (!["http:", "https:", "file:"].includes(parsed.protocol)) {
+            return false;
+        }
+
+        if (/\.pdf$/i.test(parsed.pathname)) {
+            return true;
+        }
+
+        if (/\/(pdf)(\/|$)/i.test(parsed.pathname || "")) {
+            return true;
+        }
+
+        let decodedSearch = parsed.search || "";
+        try {
+            decodedSearch = decodeURIComponent(decodedSearch);
+        } catch (err) {
+            // keep raw search
+        }
+        if (/\.pdf(?:$|[&#?])/i.test(decodedSearch)) {
+            return true;
+        }
+
+        return /(?:^|[?&])(format|type|mime|contenttype)=pdf(?:$|[&#])/i.test(
+            decodedSearch,
+        );
+    }
+
+    function ensurePdfPrompt() {
+        if (pdfPromptEl && document.body.contains(pdfPromptEl)) {
+            return pdfPromptEl;
+        }
+
+        pdfPromptEl = document.createElement("div");
+        pdfPromptEl.className = "jyt-pdf-prompt";
+        pdfPromptEl.innerHTML = `
+            <div class="jyt-pdf-prompt-title">检测到可能是 PDF</div>
+            <div class="jyt-pdf-prompt-desc">是否使用插件内置查看器打开？</div>
+            <div class="jyt-pdf-prompt-countdown">10 秒后将自动使用浏览器打开</div>
+            <div class="jyt-pdf-progress" aria-hidden="true">
+                <div class="jyt-pdf-progress-bar"></div>
+            </div>
+            <div class="jyt-pdf-prompt-status"></div>
+            <div class="jyt-pdf-prompt-actions">
+                <button type="button" class="jyt-pdf-open">用划词翻译插件打开</button>
+                <button type="button" class="jyt-pdf-browser">保持浏览器打开</button>
+            </div>
+        `;
+
+        const openBtn = pdfPromptEl.querySelector(".jyt-pdf-open");
+        const browserBtn = pdfPromptEl.querySelector(".jyt-pdf-browser");
+
+        openBtn.addEventListener("click", async () => {
+            clearPdfPromptAutoCloseTimer();
+            if (!pdfPromptState?.pdfUrl) {
+                return;
+            }
+            if (pdfPromptState.isPdf === false) {
+                return;
+            }
+
+            openBtn.disabled = true;
+            browserBtn.disabled = true;
+            updatePdfPromptStatus("正在打开插件内置 PDF 查看器...");
+
+            try {
+                if (pdfPromptState.source === "background") {
+                    await sendTermMessage(
+                        MESSAGE_TYPES.PDF_PROMPT_DECISION ||
+                            "PDF_PROMPT_DECISION",
+                        {
+                            promptId: pdfPromptState.promptId,
+                            pdfUrl: pdfPromptState.pdfUrl,
+                            action: "open",
+                        },
+                    );
+                } else {
+                    await sendTermMessage(
+                        MESSAGE_TYPES.PDF_OPEN_IN_VIEWER ||
+                            "PDF_OPEN_IN_VIEWER",
+                        {
+                            pdfUrl: pdfPromptState.pdfUrl,
+                        },
+                    );
+                }
+                hidePdfPrompt();
+            } catch (err) {
+                openBtn.disabled = false;
+                browserBtn.disabled = false;
+                const message = err?.message || String(err);
+                updatePdfPromptStatus(`打开失败：${message}`, true);
+            }
+        });
+
+        browserBtn.addEventListener("click", async () => {
+            clearPdfPromptAutoCloseTimer();
+            const currentState = pdfPromptState;
+            await openPdfInBrowser(currentState);
+        });
+
+        document.body.appendChild(pdfPromptEl);
+        return pdfPromptEl;
+    }
+
+    function updatePdfPromptStatus(text, isError) {
+        const prompt = ensurePdfPrompt();
+        const statusEl = prompt.querySelector(".jyt-pdf-prompt-status");
+        statusEl.textContent = String(text || "");
+        statusEl.classList.toggle("jyt-pdf-prompt-error", !!isError);
+    }
+
+    function hidePdfPrompt() {
+        clearPdfPromptAutoCloseTimer();
+        if (pdfPromptEl && pdfPromptEl.parentNode) {
+            pdfPromptEl.remove();
+        }
+        pdfPromptEl = null;
+        pdfPromptState = null;
+    }
+
+    function clearPdfPromptAutoCloseTimer() {
+        if (pdfPromptAutoCloseTimer) {
+            window.clearTimeout(pdfPromptAutoCloseTimer);
+            pdfPromptAutoCloseTimer = null;
+        }
+        if (pdfPromptCountdownInterval) {
+            window.clearInterval(pdfPromptCountdownInterval);
+            pdfPromptCountdownInterval = null;
+        }
+    }
+
+    function updatePdfPromptCountdown(msRemaining) {
+        if (!pdfPromptEl) {
+            return;
+        }
+
+        const countdownEl = pdfPromptEl.querySelector(
+            ".jyt-pdf-prompt-countdown",
+        );
+        const progressBarEl = pdfPromptEl.querySelector(
+            ".jyt-pdf-progress-bar",
+        );
+        if (!countdownEl || !progressBarEl) {
+            return;
+        }
+
+        const remaining = Math.max(0, Number(msRemaining) || 0);
+        const remainSeconds = Math.ceil(remaining / 1000);
+        const ratio = Math.max(
+            0,
+            Math.min(1, remaining / PDF_PROMPT_AUTO_CLOSE_MS),
+        );
+
+        countdownEl.textContent = `${remainSeconds} 秒后将自动使用浏览器打开`;
+        progressBarEl.style.width = `${Math.round(ratio * 100)}%`;
+    }
+
+    async function openPdfInBrowser(state) {
+        const currentState = state || pdfPromptState;
+        hidePdfPrompt();
+
+        if (!currentState?.pdfUrl) {
+            return;
+        }
+
+        if (currentState.source === "background") {
+            try {
+                await sendTermMessage(
+                    MESSAGE_TYPES.PDF_PROMPT_DECISION || "PDF_PROMPT_DECISION",
+                    {
+                        promptId: currentState.promptId,
+                        pdfUrl: currentState.pdfUrl,
+                        action: "skip",
+                    },
+                );
+            } catch (err) {
+                // ignore decision failures when user chooses skip
+            }
+        }
+
+        if (window.location.href !== currentState.pdfUrl) {
+            window.location.href = currentState.pdfUrl;
+        }
+    }
+
+    function schedulePdfPromptAutoClose() {
+        clearPdfPromptAutoCloseTimer();
+        const snapshot =
+            pdfPromptState && pdfPromptState.pdfUrl
+                ? {
+                      source: pdfPromptState.source,
+                      promptId: pdfPromptState.promptId,
+                      pdfUrl: pdfPromptState.pdfUrl,
+                  }
+                : null;
+
+        if (!snapshot) {
+            return;
+        }
+
+        const deadline = Date.now() + PDF_PROMPT_AUTO_CLOSE_MS;
+        updatePdfPromptCountdown(PDF_PROMPT_AUTO_CLOSE_MS);
+        pdfPromptCountdownInterval = window.setInterval(() => {
+            const remain = deadline - Date.now();
+            updatePdfPromptCountdown(remain);
+            if (remain <= 0) {
+                if (pdfPromptCountdownInterval) {
+                    window.clearInterval(pdfPromptCountdownInterval);
+                    pdfPromptCountdownInterval = null;
+                }
+            }
+        }, 100);
+
+        pdfPromptAutoCloseTimer = window.setTimeout(() => {
+            if (!pdfPromptState || pdfPromptState.pdfUrl !== snapshot.pdfUrl) {
+                return;
+            }
+            void openPdfInBrowser(snapshot);
+        }, PDF_PROMPT_AUTO_CLOSE_MS);
+    }
+
+    function setPdfPromptOpenEnabled(enabled) {
+        if (!pdfPromptEl) {
+            return;
+        }
+        const openBtn = pdfPromptEl.querySelector(".jyt-pdf-open");
+        if (openBtn) {
+            openBtn.disabled = !enabled;
+        }
+    }
+
+    function showPdfPrompt(state) {
+        pdfPromptState = {
+            source: state?.source || "click",
+            promptId: state?.promptId || "",
+            pdfUrl: state?.pdfUrl || "",
+            isPdf: state?.isPdf ?? null,
+        };
+
+        ensurePdfPrompt();
+        if (pdfPromptState.isPdf === false) {
+            setPdfPromptOpenEnabled(false);
+            updatePdfPromptStatus(
+                "校验结果：该链接不像 PDF（已禁用划词翻译插件打开）",
+                true,
+            );
+            return;
+        }
+
+        setPdfPromptOpenEnabled(true);
+        if (pdfPromptState.isPdf === true) {
+            updatePdfPromptStatus(
+                "校验结果：该链接是 PDF，可以选择用划词翻译插件打开。",
+                false,
+            );
+        } else {
+            updatePdfPromptStatus("正在校验文件类型，可稍候再决定。", false);
+        }
+
+        schedulePdfPromptAutoClose();
+    }
+
+    async function checkPdfUrlAndUpdatePrompt(pdfUrl) {
+        try {
+            const result = await sendTermMessage(
+                MESSAGE_TYPES.PDF_CHECK_URL || "PDF_CHECK_URL",
+                {
+                    pdfUrl,
+                },
+            );
+
+            if (!pdfPromptState || pdfPromptState.pdfUrl !== pdfUrl) {
+                return;
+            }
+
+            if (!result?.ok) {
+                setPdfPromptOpenEnabled(true);
+                updatePdfPromptStatus("校验失败，可按需继续打开。", true);
+                return;
+            }
+
+            pdfPromptState.isPdf = result.isPdf;
+            if (result.isPdf === false) {
+                setPdfPromptOpenEnabled(false);
+                updatePdfPromptStatus(
+                    "校验结果：该链接不是 PDF（将保持浏览器默认行为）。",
+                    true,
+                );
+                return;
+            }
+
+            setPdfPromptOpenEnabled(true);
+            if (result.isPdf === true) {
+                updatePdfPromptStatus("校验结果：确认是 PDF。", false);
+            } else {
+                updatePdfPromptStatus(
+                    "未能完全确认类型，但可按需继续打开。",
+                    false,
+                );
+            }
+        } catch (err) {
+            if (!pdfPromptState || pdfPromptState.pdfUrl !== pdfUrl) {
+                return;
+            }
+            setPdfPromptOpenEnabled(true);
+            updatePdfPromptStatus("校验请求失败，可按需继续打开。", true);
+        }
+    }
+
+    function registerPdfRuntimeListener() {
+        if (!chrome?.runtime?.onMessage?.addListener) {
+            return;
+        }
+
+        chrome.runtime.onMessage.addListener((message) => {
+            const type = String(message?.type || "");
+            if (
+                type === (MESSAGE_TYPES.PDF_PROMPT_OFFER || "PDF_PROMPT_OFFER")
+            ) {
+                showPdfPrompt({
+                    source: "background",
+                    promptId: String(message?.promptId || ""),
+                    pdfUrl: String(message?.pdfUrl || ""),
+                    isPdf: null,
+                });
+                return false;
+            }
+
+            if (
+                type ===
+                (MESSAGE_TYPES.PDF_PROMPT_VERDICT || "PDF_PROMPT_VERDICT")
+            ) {
+                const promptId = String(message?.promptId || "");
+                if (!pdfPromptState || pdfPromptState.promptId !== promptId) {
+                    return false;
+                }
+
+                pdfPromptState.isPdf = message?.isPdf ?? null;
+                if (pdfPromptState.isPdf === false) {
+                    setPdfPromptOpenEnabled(false);
+                    updatePdfPromptStatus("校验结果：该链接不是 PDF。", true);
+                    return false;
+                }
+
+                setPdfPromptOpenEnabled(true);
+                if (pdfPromptState.isPdf === true) {
+                    updatePdfPromptStatus("校验结果：确认是 PDF。", false);
+                } else {
+                    updatePdfPromptStatus(
+                        "未能完全确认类型，但你仍可按需选择划词翻译插件打开。",
+                        false,
+                    );
+                }
+            }
+
+            return false;
+        });
+    }
+
+    async function restorePendingPdfPrompt() {
+        try {
+            const result = await sendTermMessage(
+                MESSAGE_TYPES.PDF_GET_PENDING_PROMPT ||
+                    "PDF_GET_PENDING_PROMPT",
+                {},
+            );
+            const pending = result?.pending;
+            if (!result?.ok || !pending?.pdfUrl) {
+                return;
+            }
+
+            showPdfPrompt({
+                source: "background",
+                promptId: String(pending.promptId || ""),
+                pdfUrl: String(pending.pdfUrl || ""),
+                isPdf: pending.isPdf ?? null,
+            });
+        } catch (err) {
+            // ignore restore errors
+        }
     }
 
     function getCleanTranslatedText() {
@@ -1237,6 +1634,8 @@
     const btn = createButton();
     createBubble();
     loadRuntimeSettings();
+    registerPdfRuntimeListener();
+    void restorePendingPdfPrompt();
 
     // Listen for system theme changes
     window
@@ -1299,6 +1698,49 @@
         triggerTranslate(text, point.x, point.y);
     });
 
+    document.addEventListener(
+        "click",
+        (e) => {
+            if (runtimeSettings.enabled !== "on") {
+                return;
+            }
+
+            if (e.defaultPrevented || e.button !== 0) {
+                return;
+            }
+
+            if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
+                return;
+            }
+
+            const target = e.target;
+            if (!target || typeof target.closest !== "function") {
+                return;
+            }
+
+            const anchor = target.closest("a[href]");
+            if (!anchor || !anchor.href) {
+                return;
+            }
+
+            if (!isLikelyPdfUrl(anchor.href)) {
+                return;
+            }
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            const pdfUrl = anchor.href;
+            showPdfPrompt({
+                source: "click",
+                pdfUrl,
+                isPdf: null,
+            });
+            void checkPdfUrlAndUpdatePrompt(pdfUrl);
+        },
+        true,
+    );
+
     document.addEventListener("click", (e) => {
         const btnEl = document.getElementById(BUTTON_ID);
         const bubble = document.getElementById(BUBBLE_ID);
@@ -1314,6 +1756,7 @@
     });
 
     window.addEventListener("pagehide", () => {
+        hidePdfPrompt();
         if (!translatePort) return;
         try {
             translatePort.disconnect();
