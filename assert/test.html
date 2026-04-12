@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>LLM Translator Test Page</title>
+        <style>
+            :root {
+                --primary: #2563eb;
+                --text: #1e293b;
+                --bg: #f8fafc;
+            }
+            body {
+                font-family:
+                    "Inter",
+                    -apple-system,
+                    sans-serif;
+                line-height: 1.7;
+                color: var(--text);
+                background-color: var(--bg);
+                margin: 0;
+                padding: 40px 20px;
+                display: flex;
+                justify-content: center;
+            }
+            article {
+                max-width: 800px;
+                background: white;
+                padding: 60px;
+                border-radius: 12px;
+                box-shadow:
+                    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+                    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            }
+            .badge {
+                display: inline-block;
+                background: #dbeafe;
+                color: var(--primary);
+                padding: 4px 12px;
+                border-radius: 20px;
+                font-size: 0.85rem;
+                font-weight: 600;
+                margin-bottom: 20px;
+            }
+            h1 {
+                font-size: 2.5rem;
+                line-height: 1.2;
+                margin-bottom: 24px;
+                color: #0f172a;
+            }
+            p {
+                margin-bottom: 20px;
+                font-size: 1.1rem;
+            }
+            .highlight {
+                background-color: #fef08a; /* 模拟鼠标划词后的高亮效果 */
+                color: #000;
+            }
+            .footer {
+                margin-top: 40px;
+                padding-top: 20px;
+                border-top: 1px solid #e2e8f0;
+                font-style: italic;
+                color: #64748b;
+            }
+        </style>
+    </head>
+    <body>
+        <article>
+            <span class="badge">Artificial Intelligence Research</span>
+            <h1>The Emergence of Reasoning in Large Language Models</h1>
+
+            <p>
+                Recent advancements in
+                <strong>Large Language Models (LLMs)</strong> have demonstrated
+                a remarkable shift from simple pattern matching to complex
+                cognitive reasoning. Specifically, the integration of
+                <em>Chain-of-Thought (CoT)</em> prompting and reinforcement
+                learning from human feedback has allowed models to tackle
+                intricate logic puzzles and mathematical proofs.
+            </p>
+
+            <p>
+                <span class="highlight"
+                    >The core paradigm shift lies in the model's ability to
+                    externalize its latent reasoning paths, providing a
+                    transparent trace of how it arrives at a particular
+                    conclusion.</span
+                >
+                This transparency is crucial for high-stakes applications like
+                medical diagnosis or legal analysis, where the "black box"
+                nature of neural networks remains a significant bottleneck for
+                widespread adoption.
+            </p>
+
+            <p>
+                Furthermore, with the advent of edge computing and
+                <strong>WebGPU</strong>, we are seeing a trend towards
+                decentralized AI. Models that once required massive server farms
+                can now run locally within a browser environment, ensuring data
+                privacy and reducing latency for end-users.
+            </p>
+
+            <div class="footer">
+                Reference: DeepSeek-R1 Technical Report, 2025.
+            </div>
+        </article>
+    </body>
+</html>

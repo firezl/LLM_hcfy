@@ -43,7 +43,7 @@
 1. 下载最新的 \.zip\ 压缩包并将其解压至本地文件夹。
 2. 在浏览器地址栏输入扩展管理页地址打开：
     - **Chrome**: \chrome://extensions\
-    - **Edge**: \dge://extensions\
+    - **Edge**: \edge://extensions\
 3. 开启页面右上角的 **"开发者模式" (Developer mode)**。
 4. 点击 **"加载已解压的扩展程序" (Load unpacked)**。
 5. 选择您在第 1 步中解压得到的文件夹即可安装成功，建议将扩展图标固定在工具栏以便随时设置。
@@ -51,10 +51,10 @@
 ### Firefox 浏览器
 
 1. 下载最新的 \.xpi\ 安装包。
-2. 在 Firefox 地址栏输入 \bout:addons\。
+2. 在 Firefox 地址栏输入 \bbout:addons\。
 3. 点击页面右上角的齿轮图标 ⚙️，然后选择 **"从文件安装附加组件" (Install Add-on From File)**。
 4. 选取下载的 \.xpi\ 文件。
-5. _注意：若为您未签名的开发版扩展，可能需要在 Firefox Developer Edition / Nightly 版本中，或通过 \bout:debugging\ 的“临时加载附加组件”模式载入。_
+5. _注意：若为您未签名的开发版扩展，可能需要在 Firefox Developer Edition / Nightly 版本中，或通过 \about:debugging\ 的“临时加载附加组件”模式载入。_
 
 ## ⚙️ 核心功能配置
 
@@ -107,11 +107,11 @@
 
 _如果你有意进行二次修改或对源码感兴趣：_
 
-- \*\*\manifest.json\*\*: Chrome Extension MV3 核心配置文件。
-- \*\*\content_script.js\*\*: 控制页面高亮渲染、划词事件监听、弹窗 UI 管理以及流式消息的 DOM 拼装。
-- **\background/\目录**: 整个翻译流程的后方调度中枢（Service Worker），负责各家 LLM 请求适配封装及 WebDAV 远端网络同步任务等。
-- \*\*\vendor/\*\*: 集成的 PDF.js 等相关核心第三方依赖，用于提供脱离原生的统一 PDF 文档解析界面。
-- \*\*\options/\*\*: 用户交互式偏好配置大本营逻辑（依靠 \chrome.storage.sync/local\ 分割存储策略）。
+- **\manifest.json**: Chrome Extension MV3 核心配置文件。
+- **\content_script.js**: 控制页面高亮渲染、划词事件监听、弹窗 UI 管理以及流式消息的 DOM 拼装。
+- **\background 目录**: 整个翻译流程的后方调度中枢（Service Worker），负责各家 LLM 请求适配封装及 WebDAV 远端网络同步任务等。
+- **\vendor**: 集成的 PDF.js 等相关核心第三方依赖，用于提供脱离原生的统一 PDF 文档解析界面。
+- **\options**: 用户交互式偏好配置大本营逻辑（依靠 \chrome.storage.sync/local\ 分割存储策略）。
 - 本项目不依赖繁琐的前端框架脚手架（如 React/Vue 打包），保持了用原生代码即改即看、易于 Hack 的最轻量级拓展设计思想。
 
 ---
