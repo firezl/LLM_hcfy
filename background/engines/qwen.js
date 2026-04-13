@@ -4,6 +4,7 @@ import {
 } from "../language.js";
 import { postTranslateError, safePostMessage } from "../port-utils.js";
 import { getThinkingEnabledByEngine } from "./thinking-utils.js";
+import { normalizeFixedHttpEndpoint } from "./url-utils.js";
 
 const DEFAULT_QWEN_API_URL =
     "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation";
@@ -44,9 +45,17 @@ export async function streamQwenTranslate(request, port, state) {
         ? request.glossaryTerms
         : [];
 
-    const apiUrl = String(
-        settings?.qwen_api_url || DEFAULT_QWEN_API_URL,
-    ).trim();
+    const endpoint = normalizeFixedHttpEndpoint(
+        settings?.qwen_api_url,
+        DEFAULT_QWEN_API_URL,
+        {
+            preferredProtocol: "https",
+            errorPrefix: "Qwen ",
+            endpointPath: "/api/v1/services/aigc/text-generation/generation",
+            suffixOnVersionBase: "/services/aigc/text-generation/generation",
+            endpointMatchers: [/\/text-generation\/generation$/i],
+        },
+    );
     const key = String(settings?.qwen_api_key || "").trim();
     const model = String(settings?.qwen_model || DEFAULT_QWEN_MODEL).trim();
     const showThoughts = getThinkingEnabledByEngine("qwen", settings);
@@ -55,7 +64,12 @@ export async function streamQwenTranslate(request, port, state) {
         customPromptTemplate: request?.customPromptTemplate,
     });
 
-    if (!apiUrl || !key) {
+    if (!endpoint.ok) {
+        postTranslateError(port, state, requestId, endpoint.error);
+        return;
+    }
+
+    if (!key) {
         postTranslateError(
             port,
             state,
@@ -98,7 +112,7 @@ export async function streamQwenTranslate(request, port, state) {
     state.controllers.set(requestId, controller);
 
     try {
-        const res = await fetch(apiUrl, {
+        const res = await fetch(endpoint.url, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",

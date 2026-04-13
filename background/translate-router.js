@@ -33,6 +33,7 @@ const CUSTOM_PROMPT_SETTING_BY_ENGINE = {
 
 const LLM_ENGINES = new Set([
     "openai",
+    "custom_openai",
     "gemini",
     "claude",
     "deepseek",

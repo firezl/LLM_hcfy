@@ -3,6 +3,7 @@ import {
     resolveLanguagePair,
 } from "../language.js";
 import { postTranslateError, safePostMessage } from "../port-utils.js";
+import { normalizeFixedHttpEndpoint } from "./url-utils.js";
 
 const DEFAULT_GEMINI_BASE_URL =
     "https://generativelanguage.googleapis.com/v1beta/models";
@@ -25,13 +26,13 @@ function parseGeminiSSELine(line) {
 }
 
 function normalizeGeminiBaseUrl(rawUrl) {
-    const raw = String(rawUrl || DEFAULT_GEMINI_BASE_URL)
-        .trim()
-        .replace(/\/+$/, "");
-    if (raw.includes(":streamGenerateContent")) {
-        return raw;
-    }
-    return raw;
+    return normalizeFixedHttpEndpoint(rawUrl, DEFAULT_GEMINI_BASE_URL, {
+        preferredProtocol: "https",
+        errorPrefix: "Gemini ",
+        endpointPath: "/v1beta/models",
+        suffixOnVersionBase: "/models",
+        endpointMatchers: [/\/models$/i, /:streamgeneratecontent$/i],
+    });
 }
 
 function isGemini3Model(model) {
@@ -63,16 +64,27 @@ function buildGeminiThinkingConfig(model, settings) {
 }
 
 function resolveGeminiEndpoint(baseUrl, model, apiKey) {
-    const normalizedBase = normalizeGeminiBaseUrl(baseUrl);
+    const normalizedBaseResult = normalizeGeminiBaseUrl(baseUrl);
+    if (!normalizedBaseResult.ok) {
+        return normalizedBaseResult;
+    }
+
+    const normalizedBase = normalizedBaseResult.url;
     const encodedKey = encodeURIComponent(apiKey);
 
     if (normalizedBase.includes(":streamGenerateContent")) {
         const joiner = normalizedBase.includes("?") ? "&" : "?";
-        return `${normalizedBase}${joiner}alt=sse&key=${encodedKey}`;
+        return {
+            ok: true,
+            url: `${normalizedBase}${joiner}alt=sse&key=${encodedKey}`,
+        };
     }
 
     const normalizedModel = String(model || "").trim();
-    return `${normalizedBase}/${encodeURIComponent(normalizedModel)}:streamGenerateContent?alt=sse&key=${encodedKey}`;
+    return {
+        ok: true,
+        url: `${normalizedBase}/${encodeURIComponent(normalizedModel)}:streamGenerateContent?alt=sse&key=${encodedKey}`,
+    };
 }
 
 export async function streamGeminiTranslate(request, port, state) {
@@ -110,7 +122,12 @@ export async function streamGeminiTranslate(request, port, state) {
         return;
     }
 
-    const apiUrl = resolveGeminiEndpoint(baseUrl, model, apiKey);
+    const endpoint = resolveGeminiEndpoint(baseUrl, model, apiKey);
+    if (!endpoint.ok) {
+        postTranslateError(port, state, requestId, endpoint.error);
+        return;
+    }
+
     const body = {
         contents: [
             {
@@ -132,7 +149,7 @@ export async function streamGeminiTranslate(request, port, state) {
     state.controllers.set(requestId, controller);
 
     try {
-        const res = await fetch(apiUrl, {
+        const res = await fetch(endpoint.url, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",

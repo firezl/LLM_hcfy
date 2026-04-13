@@ -3,51 +3,12 @@ import {
     resolveLanguagePair,
 } from "../language.js";
 import { postTranslateError, safePostMessage } from "../port-utils.js";
+import { normalizeOllamaEndpoint } from "./url-utils.js";
 
 const DEFAULT_OLLAMA_CHAT_URL = "http://localhost:11434/api/chat";
 
 function normalizeOllamaChatEndpoint(rawUrl) {
-    const raw = String(rawUrl || "").trim() || DEFAULT_OLLAMA_CHAT_URL;
-    let parsed;
-    try {
-        parsed = new URL(raw);
-    } catch (err) {
-        return {
-            ok: false,
-            error: "Ollama 地址无效，请填写完整 URL（例如 http://localhost:11434/api/chat）",
-        };
-    }
-
-    if (!/^https?:$/i.test(parsed.protocol)) {
-        return {
-            ok: false,
-            error: "Ollama 地址仅支持 http/https 协议",
-        };
-    }
-
-    let pathname = parsed.pathname || "/";
-    if (!pathname.endsWith("/")) {
-        pathname += "/";
-    }
-
-    const normalizedPath = pathname.toLowerCase();
-    if (
-        !normalizedPath.endsWith("/api/chat/") &&
-        !normalizedPath.endsWith("/api/chat")
-    ) {
-        const basePath = pathname.replace(/\/+$/, "");
-        pathname = `${basePath}/api/chat`;
-    }
-
-    parsed.pathname = pathname;
-    parsed.search = "";
-    parsed.hash = "";
-
-    return {
-        ok: true,
-        chatUrl: parsed.toString(),
-        origin: parsed.origin,
-    };
+    return normalizeOllamaEndpoint(rawUrl, DEFAULT_OLLAMA_CHAT_URL);
 }
 
 function buildTagsEndpoint(rawUrl) {
@@ -58,7 +19,7 @@ function buildTagsEndpoint(rawUrl) {
 
     return {
         ok: true,
-        tagsUrl: `${normalized.origin}/api/tags`,
+        tagsUrl: normalized.tagsUrl,
     };
 }
 

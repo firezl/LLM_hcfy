@@ -22,6 +22,9 @@ import {
     MESSAGE_TYPE_WEBLLM_GET_MODELS,
     MESSAGE_TYPE_WEBLLM_PRELOAD,
     PORT_NAME,
+    MESSAGE_TYPE_OPENAI_COMPAT_GET_MODELS,
+    MESSAGE_TYPE_CLAUDE_GET_MODELS,
+    MESSAGE_TYPE_GEMINI_GET_MODELS,
 } from "./constants.js";
 import {
     handlePdfRuntimeMessage,
@@ -30,6 +33,9 @@ import {
 } from "./pdf-redirect.js";
 import { handleTranslateStart } from "./translate-router.js";
 import { handleOllamaGetModels } from "./engines/ollama.js";
+import { handleOpenAICompatGetModels } from "./engines/openai-compat-models.js";
+import { handleClaudeGetModels } from "./engines/claude-models.js";
+import { handleGeminiGetModels } from "./engines/gemini-models.js";
 import { handleSpecialTranslateGetModels } from "./engines/special-translate.js";
 import {
     handleWebLLMClearCache,
@@ -92,6 +98,21 @@ extensionApi.runtime.onConnect.addListener((port) => {
 
         if (message.type === MESSAGE_TYPE_OLLAMA_GET_MODELS) {
             void handleOllamaGetModels(message, port, state);
+            return;
+        }
+
+        if (message.type === MESSAGE_TYPE_OPENAI_COMPAT_GET_MODELS) {
+            void handleOpenAICompatGetModels(message, port, state);
+            return;
+        }
+
+        if (message.type === MESSAGE_TYPE_CLAUDE_GET_MODELS) {
+            void handleClaudeGetModels(message, port, state);
+            return;
+        }
+
+        if (message.type === MESSAGE_TYPE_GEMINI_GET_MODELS) {
+            void handleGeminiGetModels(message, port, state);
             return;
         }
 

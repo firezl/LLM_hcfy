@@ -42,7 +42,6 @@
                         <option value="special_translate">
                             专用大模型翻译
                         </option>
-                        <option value="custom_openai">自定义 OpenAI</option>
                         <option value="google">谷歌翻译</option>
                         <option value="bing">Bing翻译</option>
                         <option value="browser">浏览器AI（实验）</option>
@@ -122,6 +121,9 @@
                     <label>大模型提供方</label>
                     <select id="llm_engine_select">
                         <option value="openai">OpenAI</option>
+                        <option value="custom_openai">
+                            自定义 OpenAI 兼容
+                        </option>
                         <option value="gemini">Gemini</option>
                         <option value="claude">Claude</option>
                         <option value="qwen">Qwen</option>
@@ -151,10 +153,15 @@
                         placeholder="sk-..."
                     />
                     <label>翻译模型</label>
+                    <select id="openai_model">
+                        <option value="">正在加载模型列表...</option>
+                        <option value="custom">自定义模型名</option>
+                    </select>
+                    <label>自定义模型名</label>
                     <input
-                        id="openai_model"
+                        id="openai_custom_model"
                         type="text"
-                        placeholder="gpt-4o-mini"
+                        placeholder="例如: gpt-4o-mini"
                     />
                     <label>自定义翻译 Prompt（仅 OpenAI 生效）</label>
                     <textarea
@@ -201,10 +208,15 @@
                         placeholder="sk-..."
                     />
                     <label>模型</label>
+                    <select id="custom_openai_model">
+                        <option value="">正在加载模型列表...</option>
+                        <option value="custom">自定义模型名</option>
+                    </select>
+                    <label>自定义模型名</label>
                     <input
-                        id="custom_openai_model"
+                        id="custom_openai_custom_model"
                         type="text"
-                        placeholder="gpt-4o-mini"
+                        placeholder="例如: gpt-4o-mini"
                     />
                     <label>自定义翻译 Prompt（仅自定义 OpenAI 生效）</label>
                     <textarea
@@ -251,10 +263,15 @@
                         placeholder="sk-..."
                     />
                     <label>模型</label>
+                    <select id="deepseek_model">
+                        <option value="">正在加载模型列表...</option>
+                        <option value="custom">自定义模型名</option>
+                    </select>
+                    <label>自定义模型名</label>
                     <input
-                        id="deepseek_model"
+                        id="deepseek_custom_model"
                         type="text"
-                        placeholder="deepseek-chat"
+                        placeholder="例如: deepseek-chat"
                     />
                     <label>自定义翻译 Prompt（仅 DeepSeek 生效）</label>
                     <textarea
@@ -284,10 +301,15 @@
                         placeholder="sk-..."
                     />
                     <label>模型</label>
+                    <select id="qwen_model">
+                        <option value="">正在加载模型列表...</option>
+                        <option value="custom">自定义模型名</option>
+                    </select>
+                    <label>自定义模型名</label>
                     <input
-                        id="qwen_model"
+                        id="qwen_custom_model"
                         type="text"
-                        placeholder="qwen-plus"
+                        placeholder="例如: qwen-plus"
                     />
                     <label>自定义翻译 Prompt（仅 Qwen 生效）</label>
                     <textarea
@@ -330,7 +352,16 @@
                         placeholder="Bearer token"
                     />
                     <label>模型</label>
-                    <input id="glm_model" type="text" placeholder="glm-5.1" />
+                    <select id="glm_model">
+                        <option value="">正在加载模型列表...</option>
+                        <option value="custom">自定义模型名</option>
+                    </select>
+                    <label>自定义模型名</label>
+                    <input
+                        id="glm_custom_model"
+                        type="text"
+                        placeholder="例如: glm-5.1"
+                    />
                     <label>自定义翻译 Prompt（仅 GLM 生效）</label>
                     <textarea
                         id="glm_custom_prompt"
@@ -364,10 +395,15 @@
                         placeholder="mimo-key"
                     />
                     <label>模型</label>
+                    <select id="xiaomi_model">
+                        <option value="">正在加载模型列表...</option>
+                        <option value="custom">自定义模型名</option>
+                    </select>
+                    <label>自定义模型名</label>
                     <input
-                        id="xiaomi_model"
+                        id="xiaomi_custom_model"
                         type="text"
-                        placeholder="mimo-v2-pro"
+                        placeholder="例如: mimo-v2-pro"
                     />
                     <label>自定义翻译 Prompt（仅 Xiaomi 生效）</label>
                     <textarea
@@ -405,10 +441,15 @@
                         placeholder="sk-ant-..."
                     />
                     <label>模型</label>
+                    <select id="claude_model">
+                        <option value="">正在加载模型列表...</option>
+                        <option value="custom">自定义模型名</option>
+                    </select>
+                    <label>自定义模型名</label>
                     <input
-                        id="claude_model"
+                        id="claude_custom_model"
                         type="text"
-                        placeholder="claude-sonnet-4-6"
+                        placeholder="例如: claude-sonnet-4-6"
                     />
                     <label>自定义翻译 Prompt（仅 Claude 生效）</label>
                     <textarea
@@ -465,10 +506,15 @@
                         placeholder="AIza..."
                     />
                     <label>模型</label>
+                    <select id="gemini_model">
+                        <option value="">正在加载模型列表...</option>
+                        <option value="custom">自定义模型名</option>
+                    </select>
+                    <label>自定义模型名</label>
                     <input
-                        id="gemini_model"
+                        id="gemini_custom_model"
                         type="text"
-                        placeholder="gemini-2.5-flash"
+                        placeholder="例如: gemini-2.5-flash"
                     />
                     <label>自定义翻译 Prompt（仅 Gemini 生效）</label>
                     <textarea

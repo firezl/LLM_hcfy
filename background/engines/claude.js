@@ -3,6 +3,7 @@ import {
     resolveLanguagePair,
 } from "../language.js";
 import { postTranslateError, safePostMessage } from "../port-utils.js";
+import { normalizeFixedHttpEndpoint } from "./url-utils.js";
 
 const DEFAULT_CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
 const DEFAULT_CLAUDE_MODEL = "claude-sonnet-4-6";
@@ -57,9 +58,17 @@ export async function streamClaudeTranslate(request, port, state) {
         ? request.glossaryTerms
         : [];
 
-    const apiUrl = String(settings?.claude_api_url || DEFAULT_CLAUDE_API_URL)
-        .trim()
-        .replace(/\/+$/, "");
+    const endpoint = normalizeFixedHttpEndpoint(
+        settings?.claude_api_url,
+        DEFAULT_CLAUDE_API_URL,
+        {
+            preferredProtocol: "https",
+            errorPrefix: "Claude ",
+            endpointPath: "/v1/messages",
+            suffixOnVersionBase: "/messages",
+            endpointMatchers: [/\/messages$/i],
+        },
+    );
     const apiKey = String(settings?.claude_api_key || "").trim();
     const model = String(settings?.claude_model || DEFAULT_CLAUDE_MODEL).trim();
     const maxTokensRaw = Number(settings?.claude_max_tokens);
@@ -71,6 +80,11 @@ export async function streamClaudeTranslate(request, port, state) {
         glossaryTerms,
         customPromptTemplate: request?.customPromptTemplate,
     });
+
+    if (!endpoint.ok) {
+        postTranslateError(port, state, requestId, endpoint.error);
+        return;
+    }
 
     if (!apiKey) {
         postTranslateError(
@@ -108,7 +122,7 @@ export async function streamClaudeTranslate(request, port, state) {
     state.controllers.set(requestId, controller);
 
     try {
-        const res = await fetch(apiUrl, {
+        const res = await fetch(endpoint.url, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",

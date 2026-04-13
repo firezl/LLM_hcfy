@@ -4,6 +4,7 @@ import {
 } from "../language.js";
 import { postTranslateError, safePostMessage } from "../port-utils.js";
 import { getThinkingEnabledByEngine } from "./thinking-utils.js";
+import { normalizeOpenAICompatEndpoint } from "./url-utils.js";
 
 const DEFAULT_DEEPSEEK_API_URL = "https://api.deepseek.com/chat/completions";
 const DEFAULT_DEEPSEEK_MODEL = "deepseek-chat";
@@ -34,9 +35,10 @@ export async function streamDeepSeekTranslate(request, port, state) {
         ? request.glossaryTerms
         : [];
 
-    const apiUrl = String(
-        settings?.deepseek_api_url || DEFAULT_DEEPSEEK_API_URL,
-    ).trim();
+    const endpoint = normalizeOpenAICompatEndpoint(
+        settings?.deepseek_api_url,
+        DEFAULT_DEEPSEEK_API_URL,
+    );
     const key = String(settings?.deepseek_api_key || "").trim();
     const model = String(
         settings?.deepseek_model || DEFAULT_DEEPSEEK_MODEL,
@@ -47,7 +49,12 @@ export async function streamDeepSeekTranslate(request, port, state) {
         customPromptTemplate: request?.customPromptTemplate,
     });
 
-    if (!apiUrl || !key) {
+    if (!endpoint.ok) {
+        postTranslateError(port, state, requestId, endpoint.error);
+        return;
+    }
+
+    if (!key) {
         postTranslateError(
             port,
             state,
@@ -76,7 +83,7 @@ export async function streamDeepSeekTranslate(request, port, state) {
     state.controllers.set(requestId, controller);
 
     try {
-        const res = await fetch(apiUrl, {
+        const res = await fetch(endpoint.url, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",

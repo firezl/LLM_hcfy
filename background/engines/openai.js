@@ -7,6 +7,9 @@ import {
     buildOpenAIThinkingPatch,
     getThinkingEnabledByEngine,
 } from "./thinking-utils.js";
+import { normalizeOpenAICompatEndpoint } from "./url-utils.js";
+
+const DEFAULT_OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
 
 function parseOpenAIStreamLine(line) {
     const trimmed = line.trim();
@@ -34,10 +37,18 @@ export async function streamOpenAITranslate(request, port, state) {
     const glossaryTerms = Array.isArray(request?.glossaryTerms)
         ? request.glossaryTerms
         : [];
-    const apiUrl = settings.openai_api_url;
+    const endpoint = normalizeOpenAICompatEndpoint(
+        settings.openai_api_url,
+        DEFAULT_OPENAI_API_URL,
+    );
     const key = settings.openai_api_key;
 
-    if (!apiUrl || !key) {
+    if (!endpoint.ok) {
+        postTranslateError(port, state, requestId, endpoint.error);
+        return;
+    }
+
+    if (!key) {
         postTranslateError(
             port,
             state,
@@ -90,7 +101,7 @@ export async function streamOpenAITranslate(request, port, state) {
     state.controllers.set(requestId, controller);
 
     try {
-        let res = await fetch(apiUrl, {
+        let res = await fetch(endpoint.url, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -109,7 +120,7 @@ export async function streamOpenAITranslate(request, port, state) {
                 );
 
             if (maybeUnsupportedThinking) {
-                res = await fetch(apiUrl, {
+                res = await fetch(endpoint.url, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",

@@ -7,6 +7,7 @@ import {
     pickOpenAIReasoningEffort,
     supportsOpenAIReasoning,
 } from "./thinking-utils.js";
+import { normalizeOpenAICompatEndpoint } from "./url-utils.js";
 
 const DEFAULT_CUSTOM_OPENAI_API_URL =
     "https://api.openai.com/v1/chat/completions";
@@ -63,9 +64,10 @@ export async function streamCustomOpenAITranslate(request, port, state) {
         ? request.glossaryTerms
         : [];
 
-    const apiUrl = String(
-        settings?.custom_openai_api_url || DEFAULT_CUSTOM_OPENAI_API_URL,
-    ).trim();
+    const endpoint = normalizeOpenAICompatEndpoint(
+        settings?.custom_openai_api_url,
+        DEFAULT_CUSTOM_OPENAI_API_URL,
+    );
     const apiKey = String(settings?.custom_openai_api_key || "").trim();
     const model = String(
         settings?.custom_openai_model || DEFAULT_CUSTOM_OPENAI_MODEL,
@@ -75,7 +77,12 @@ export async function streamCustomOpenAITranslate(request, port, state) {
         customPromptTemplate: request?.customPromptTemplate,
     });
 
-    if (!apiUrl || !apiKey) {
+    if (!endpoint.ok) {
+        postTranslateError(port, state, requestId, endpoint.error);
+        return;
+    }
+
+    if (!apiKey) {
         postTranslateError(
             port,
             state,
@@ -107,7 +114,7 @@ export async function streamCustomOpenAITranslate(request, port, state) {
     state.controllers.set(requestId, controller);
 
     try {
-        let res = await fetch(apiUrl, {
+        let res = await fetch(endpoint.url, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -126,7 +133,7 @@ export async function streamCustomOpenAITranslate(request, port, state) {
                 );
 
             if (maybeUnsupportedThinking) {
-                res = await fetch(apiUrl, {
+                res = await fetch(endpoint.url, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",

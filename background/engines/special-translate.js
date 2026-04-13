@@ -4,96 +4,31 @@ import {
     resolveLanguagePair,
 } from "../language.js";
 import { postTranslateError, safePostMessage } from "../port-utils.js";
+import {
+    normalizeOllamaEndpoint,
+    normalizeOpenAICompatEndpoint,
+} from "./url-utils.js";
 
 const DEFAULT_OLLAMA_CHAT_URL = "http://localhost:11434/api/chat";
 const DEFAULT_OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
 
-function normalizeHttpUrl(rawUrl, fallbackUrl) {
-    const raw = String(rawUrl || "").trim() || fallbackUrl;
-    let parsed;
-    try {
-        parsed = new URL(raw);
-    } catch (err) {
-        return {
-            ok: false,
-            error: "地址无效，请填写完整 URL",
-        };
-    }
-
-    if (!/^https?:$/i.test(parsed.protocol)) {
-        return {
-            ok: false,
-            error: "地址仅支持 http/https 协议",
-        };
-    }
-
-    return { ok: true, url: parsed };
-}
-
 function normalizeOllamaChatEndpoint(rawUrl) {
-    const normalized = normalizeHttpUrl(rawUrl, DEFAULT_OLLAMA_CHAT_URL);
-    if (!normalized.ok) {
-        return normalized;
-    }
-
-    const parsed = normalized.url;
-    let pathname = parsed.pathname || "/";
-    if (!pathname.endsWith("/")) {
-        pathname += "/";
-    }
-
-    const lowered = pathname.toLowerCase();
-    if (!lowered.endsWith("/api/chat/") && !lowered.endsWith("/api/chat")) {
-        const basePath = pathname.replace(/\/+$/, "");
-        pathname = `${basePath}/api/chat`;
-    }
-
-    parsed.pathname = pathname;
-    parsed.search = "";
-    parsed.hash = "";
-
-    return {
-        ok: true,
-        chatUrl: parsed.toString(),
-        modelsUrl: `${parsed.origin}/api/tags`,
-    };
+    return normalizeOllamaEndpoint(rawUrl, DEFAULT_OLLAMA_CHAT_URL);
 }
 
-function normalizeOpenAICompatEndpoint(rawUrl) {
-    const normalized = normalizeHttpUrl(rawUrl, DEFAULT_OPENAI_CHAT_URL);
+function normalizeOpenAICompatChatEndpoint(rawUrl) {
+    const normalized = normalizeOpenAICompatEndpoint(
+        rawUrl,
+        DEFAULT_OPENAI_CHAT_URL,
+    );
     if (!normalized.ok) {
         return normalized;
     }
 
-    const parsed = normalized.url;
-    let pathname = parsed.pathname || "/";
-    if (!pathname.endsWith("/")) {
-        pathname += "/";
-    }
-
-    const lowered = pathname.toLowerCase();
-    if (
-        !lowered.endsWith("/v1/chat/completions/") &&
-        !lowered.endsWith("/v1/chat/completions") &&
-        !lowered.endsWith("/chat/completions/") &&
-        !lowered.endsWith("/chat/completions")
-    ) {
-        const basePath = pathname.replace(/\/+$/, "");
-        pathname = `${basePath}/v1/chat/completions`;
-    }
-
-    parsed.pathname = pathname;
-    parsed.search = "";
-    parsed.hash = "";
-
-    const modelsPath = pathname
-        .replace(/\/chat\/completions\/?$/i, "/models")
-        .replace(/\/v1\/v1\//i, "/v1/");
-
     return {
         ok: true,
-        chatUrl: parsed.toString(),
-        modelsUrl: `${parsed.origin}${modelsPath.startsWith("/") ? "" : "/"}${modelsPath}`,
+        chatUrl: normalized.url,
+        modelsUrl: normalized.modelsUrl,
     };
 }
 
@@ -374,7 +309,7 @@ export async function streamSpecialTranslate(request, port, state) {
 
     try {
         if (provider === "openai_compatible") {
-            const endpoint = normalizeOpenAICompatEndpoint(
+            const endpoint = normalizeOpenAICompatChatEndpoint(
                 settings?.special_translate_api_url,
             );
             if (!endpoint.ok) {
@@ -468,7 +403,7 @@ export async function handleSpecialTranslateGetModels(message, port, state) {
 
     const endpoint =
         provider === "openai_compatible"
-            ? normalizeOpenAICompatEndpoint(apiUrl)
+            ? normalizeOpenAICompatChatEndpoint(apiUrl)
             : normalizeOllamaChatEndpoint(apiUrl);
 
     if (!endpoint.ok) {

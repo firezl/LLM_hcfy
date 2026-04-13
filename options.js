@@ -12,6 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
         openai_api_url: "",
         openai_api_key: "",
         openai_model: "gpt-4o-mini",
+        openai_custom_model: "",
         openai_custom_prompt: "",
         openai_thinking_model: "gpt-5-thinking",
         show_thoughts: false,
@@ -20,6 +21,7 @@ document.addEventListener("DOMContentLoaded", () => {
         custom_openai_api_url: "https://api.openai.com/v1/chat/completions",
         custom_openai_api_key: "",
         custom_openai_model: "gpt-4o-mini",
+        custom_openai_custom_model: "",
         custom_openai_custom_prompt: "",
         custom_openai_show_thoughts: false,
         custom_openai_reasoning_effort: "medium",
@@ -27,12 +29,14 @@ document.addEventListener("DOMContentLoaded", () => {
         deepseek_api_url: "https://api.deepseek.com/chat/completions",
         deepseek_api_key: "",
         deepseek_model: "deepseek-chat",
+        deepseek_custom_model: "",
         deepseek_custom_prompt: "",
         deepseek_show_thoughts: false,
         qwen_api_url:
             "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation",
         qwen_api_key: "",
         qwen_model: "qwen-plus",
+        qwen_custom_model: "",
         qwen_custom_prompt: "",
         qwen_show_thoughts: false,
         qwen_thinking_budget: 0,
@@ -40,18 +44,21 @@ document.addEventListener("DOMContentLoaded", () => {
         glm_api_url: "https://open.bigmodel.cn/api/paas/v4/chat/completions",
         glm_api_key: "",
         glm_model: "glm-5.1",
+        glm_custom_model: "",
         glm_custom_prompt: "",
         glm_show_thoughts: false,
         glm_clear_thinking: true,
         xiaomi_api_url: "https://api.xiaomimimo.com/v1/chat/completions",
         xiaomi_api_key: "",
         xiaomi_model: "mimo-v2-pro",
+        xiaomi_custom_model: "",
         xiaomi_custom_prompt: "",
         xiaomi_show_thoughts: false,
         xiaomi_max_completion_tokens: 0,
         claude_api_url: "https://api.anthropic.com/v1/messages",
         claude_api_key: "",
         claude_model: "claude-sonnet-4-6",
+        claude_custom_model: "",
         claude_custom_prompt: "",
         claude_show_thoughts: false,
         claude_max_tokens: 4096,
@@ -62,6 +69,7 @@ document.addEventListener("DOMContentLoaded", () => {
             "https://generativelanguage.googleapis.com/v1beta/models",
         gemini_api_key: "",
         gemini_model: "gemini-2.5-flash",
+        gemini_custom_model: "",
         gemini_custom_prompt: "",
         gemini_show_thoughts: false,
         gemini_thinking_level: "high",
@@ -109,6 +117,56 @@ document.addEventListener("DOMContentLoaded", () => {
         [SPECIAL_PROVIDER_OLLAMA]: "http://localhost:11434/api/chat",
         [SPECIAL_PROVIDER_OPENAI]: "https://api.openai.com/v1/chat/completions",
     };
+    const OPENAI_COMPAT_MODEL_ENGINES = [
+        {
+            name: "openai",
+            apiUrlId: "openai_api_url",
+            apiKeyId: "openai_api_key",
+            modelId: "openai_model",
+            customModelId: "openai_custom_model",
+            defaultModel: "gpt-4o-mini",
+        },
+        {
+            name: "custom_openai",
+            apiUrlId: "custom_openai_api_url",
+            apiKeyId: "custom_openai_api_key",
+            modelId: "custom_openai_model",
+            customModelId: "custom_openai_custom_model",
+            defaultModel: "gpt-4o-mini",
+        },
+        {
+            name: "deepseek",
+            apiUrlId: "deepseek_api_url",
+            apiKeyId: "deepseek_api_key",
+            modelId: "deepseek_model",
+            customModelId: "deepseek_custom_model",
+            defaultModel: "deepseek-chat",
+        },
+        {
+            name: "qwen",
+            apiUrlId: "qwen_api_url",
+            apiKeyId: "qwen_api_key",
+            modelId: "qwen_model",
+            customModelId: "qwen_custom_model",
+            defaultModel: "qwen-plus",
+        },
+        {
+            name: "glm",
+            apiUrlId: "glm_api_url",
+            apiKeyId: "glm_api_key",
+            modelId: "glm_model",
+            customModelId: "glm_custom_model",
+            defaultModel: "glm-5.1",
+        },
+        {
+            name: "xiaomi",
+            apiUrlId: "xiaomi_api_url",
+            apiKeyId: "xiaomi_api_key",
+            modelId: "xiaomi_model",
+            customModelId: "xiaomi_custom_model",
+            defaultModel: "mimo-v2-pro",
+        },
+    ];
 
     const ids = [
         "enable_select",
@@ -120,6 +178,7 @@ document.addEventListener("DOMContentLoaded", () => {
         "openai_api_url",
         "openai_api_key",
         "openai_model",
+        "openai_custom_model",
         "openai_custom_prompt",
         "show_thoughts",
         "openai_reasoning_effort",
@@ -127,6 +186,7 @@ document.addEventListener("DOMContentLoaded", () => {
         "custom_openai_api_url",
         "custom_openai_api_key",
         "custom_openai_model",
+        "custom_openai_custom_model",
         "custom_openai_custom_prompt",
         "custom_openai_show_thoughts",
         "custom_openai_reasoning_effort",
@@ -134,11 +194,13 @@ document.addEventListener("DOMContentLoaded", () => {
         "deepseek_api_url",
         "deepseek_api_key",
         "deepseek_model",
+        "deepseek_custom_model",
         "deepseek_custom_prompt",
         "deepseek_show_thoughts",
         "qwen_api_url",
         "qwen_api_key",
         "qwen_model",
+        "qwen_custom_model",
         "qwen_custom_prompt",
         "qwen_show_thoughts",
         "qwen_thinking_budget",
@@ -146,18 +208,21 @@ document.addEventListener("DOMContentLoaded", () => {
         "glm_api_url",
         "glm_api_key",
         "glm_model",
+        "glm_custom_model",
         "glm_custom_prompt",
         "glm_show_thoughts",
         "glm_clear_thinking",
         "xiaomi_api_url",
         "xiaomi_api_key",
         "xiaomi_model",
+        "xiaomi_custom_model",
         "xiaomi_custom_prompt",
         "xiaomi_show_thoughts",
         "xiaomi_max_completion_tokens",
         "claude_api_url",
         "claude_api_key",
         "claude_model",
+        "claude_custom_model",
         "claude_custom_prompt",
         "claude_show_thoughts",
         "claude_max_tokens",
@@ -167,6 +232,7 @@ document.addEventListener("DOMContentLoaded", () => {
         "gemini_api_url",
         "gemini_api_key",
         "gemini_model",
+        "gemini_custom_model",
         "gemini_custom_prompt",
         "gemini_show_thoughts",
         "gemini_thinking_level",
@@ -264,12 +330,16 @@ document.addEventListener("DOMContentLoaded", () => {
     let webllmPerfProfile = null;
     const webllmModelRequestResolvers = new Map();
     const ollamaModelRequestResolvers = new Map();
+    const openaiCompatModelRequestResolvers = new Map();
+    const claudeModelRequestResolvers = new Map();
+    const geminiModelRequestResolvers = new Map();
     const specialModelRequestResolvers = new Map();
     let glossaryTermsCache = [];
     let glossaryEditingOriginal = null;
     let syncBusy = false;
     const LLM_ENGINES = new Set([
         "openai",
+        "custom_openai",
         "gemini",
         "claude",
         "qwen",
@@ -879,6 +949,70 @@ document.addEventListener("DOMContentLoaded", () => {
         els.ollama_custom_model.disabled = false;
     }
 
+    function populateOpenAICompatModelSelect(
+        modelSelectEl,
+        customModelEl,
+        modelIds,
+        selectedModel,
+    ) {
+        if (!modelSelectEl || !customModelEl) return;
+
+        const orderedIds = Array.from(
+            new Set((modelIds || []).map((id) => String(id || "").trim())),
+        ).filter(Boolean);
+
+        modelSelectEl.innerHTML = "";
+        orderedIds.forEach((id) => {
+            const option = document.createElement("option");
+            option.value = id;
+            option.textContent = id;
+            modelSelectEl.appendChild(option);
+        });
+
+        const customOption = document.createElement("option");
+        customOption.value = "custom";
+        customOption.textContent = "自定义模型名";
+        modelSelectEl.appendChild(customOption);
+
+        if (selectedModel && orderedIds.includes(selectedModel)) {
+            modelSelectEl.value = selectedModel;
+            customModelEl.disabled = true;
+            return;
+        }
+
+        if (selectedModel && selectedModel !== "custom") {
+            modelSelectEl.value = "custom";
+            if (!customModelEl.value) {
+                customModelEl.value = selectedModel;
+            }
+            customModelEl.disabled = false;
+            return;
+        }
+
+        if (selectedModel === "custom") {
+            modelSelectEl.value = "custom";
+            customModelEl.disabled = false;
+            return;
+        }
+
+        if (orderedIds.length > 0) {
+            modelSelectEl.value = orderedIds[0];
+            customModelEl.disabled = true;
+            return;
+        }
+
+        modelSelectEl.value = "custom";
+        customModelEl.disabled = false;
+    }
+
+    function getSelectedOpenAICompatModel(modelSelectEl, customModelEl) {
+        const selected = String(modelSelectEl?.value || "").trim();
+        if (selected === "custom") {
+            return String(customModelEl?.value || "").trim();
+        }
+        return selected;
+    }
+
     function normalizeSpecialProvider(provider) {
         const normalized = String(provider || "")
             .trim()
@@ -1003,6 +1137,97 @@ document.addEventListener("DOMContentLoaded", () => {
             } catch (err) {
                 clearTimeout(timer);
                 ollamaModelRequestResolvers.delete(requestId);
+                reject(err);
+            }
+        });
+    }
+
+    async function requestOpenAICompatModelList(apiUrl, apiKey) {
+        return new Promise((resolve, reject) => {
+            const requestId = `openai-compat-models-${Date.now()}-${Math.random()}`;
+            const timer = setTimeout(() => {
+                openaiCompatModelRequestResolvers.delete(requestId);
+                reject(new Error("请求 OpenAI 兼容模型列表超时"));
+            }, 8000);
+
+            openaiCompatModelRequestResolvers.set(requestId, (payload) => {
+                clearTimeout(timer);
+                resolve(payload || {});
+            });
+
+            try {
+                const port = ensureWebLLMPort();
+                port.postMessage({
+                    type:
+                        MESSAGE_TYPES.OPENAI_COMPAT_GET_MODELS ||
+                        "OPENAI_COMPAT_GET_MODELS",
+                    requestId,
+                    apiUrl: String(apiUrl || "").trim(),
+                    apiKey: String(apiKey || "").trim(),
+                });
+            } catch (err) {
+                clearTimeout(timer);
+                openaiCompatModelRequestResolvers.delete(requestId);
+                reject(err);
+            }
+        });
+    }
+
+    async function requestClaudeModelList(apiUrl, apiKey) {
+        return new Promise((resolve, reject) => {
+            const requestId = `claude-models-${Date.now()}-${Math.random()}`;
+            const timer = setTimeout(() => {
+                claudeModelRequestResolvers.delete(requestId);
+                reject(new Error("请求 Claude 模型列表超时"));
+            }, 8000);
+
+            claudeModelRequestResolvers.set(requestId, (payload) => {
+                clearTimeout(timer);
+                resolve(payload || {});
+            });
+
+            try {
+                const port = ensureWebLLMPort();
+                port.postMessage({
+                    type:
+                        MESSAGE_TYPES.CLAUDE_GET_MODELS || "CLAUDE_GET_MODELS",
+                    requestId,
+                    apiUrl: String(apiUrl || "").trim(),
+                    apiKey: String(apiKey || "").trim(),
+                });
+            } catch (err) {
+                clearTimeout(timer);
+                claudeModelRequestResolvers.delete(requestId);
+                reject(err);
+            }
+        });
+    }
+
+    async function requestGeminiModelList(apiUrl, apiKey) {
+        return new Promise((resolve, reject) => {
+            const requestId = `gemini-models-${Date.now()}-${Math.random()}`;
+            const timer = setTimeout(() => {
+                geminiModelRequestResolvers.delete(requestId);
+                reject(new Error("请求 Gemini 模型列表超时"));
+            }, 8000);
+
+            geminiModelRequestResolvers.set(requestId, (payload) => {
+                clearTimeout(timer);
+                resolve(payload || {});
+            });
+
+            try {
+                const port = ensureWebLLMPort();
+                port.postMessage({
+                    type:
+                        MESSAGE_TYPES.GEMINI_GET_MODELS || "GEMINI_GET_MODELS",
+                    requestId,
+                    apiUrl: String(apiUrl || "").trim(),
+                    apiKey: String(apiKey || "").trim(),
+                });
+            } catch (err) {
+                clearTimeout(timer);
+                geminiModelRequestResolvers.delete(requestId);
                 reject(err);
             }
         });
@@ -1137,6 +1362,72 @@ document.addEventListener("DOMContentLoaded", () => {
                 );
                 if (resolvePending) {
                     ollamaModelRequestResolvers.delete(message.requestId);
+                    resolvePending(message);
+                }
+                return;
+            }
+
+            if (message.type === "OPENAI_COMPAT_OP_ERROR") {
+                const resolvePending = openaiCompatModelRequestResolvers.get(
+                    message.requestId,
+                );
+                if (resolvePending) {
+                    openaiCompatModelRequestResolvers.delete(message.requestId);
+                    resolvePending({ modelIds: [] });
+                }
+                return;
+            }
+
+            if (message.type === "OPENAI_COMPAT_MODELS_RESPONSE") {
+                const resolvePending = openaiCompatModelRequestResolvers.get(
+                    message.requestId,
+                );
+                if (resolvePending) {
+                    openaiCompatModelRequestResolvers.delete(message.requestId);
+                    resolvePending(message);
+                }
+                return;
+            }
+
+            if (message.type === "CLAUDE_OP_ERROR") {
+                const resolvePending = claudeModelRequestResolvers.get(
+                    message.requestId,
+                );
+                if (resolvePending) {
+                    claudeModelRequestResolvers.delete(message.requestId);
+                    resolvePending({ modelIds: [] });
+                }
+                return;
+            }
+
+            if (message.type === "CLAUDE_MODELS_RESPONSE") {
+                const resolvePending = claudeModelRequestResolvers.get(
+                    message.requestId,
+                );
+                if (resolvePending) {
+                    claudeModelRequestResolvers.delete(message.requestId);
+                    resolvePending(message);
+                }
+                return;
+            }
+
+            if (message.type === "GEMINI_OP_ERROR") {
+                const resolvePending = geminiModelRequestResolvers.get(
+                    message.requestId,
+                );
+                if (resolvePending) {
+                    geminiModelRequestResolvers.delete(message.requestId);
+                    resolvePending({ modelIds: [] });
+                }
+                return;
+            }
+
+            if (message.type === "GEMINI_MODELS_RESPONSE") {
+                const resolvePending = geminiModelRequestResolvers.get(
+                    message.requestId,
+                );
+                if (resolvePending) {
+                    geminiModelRequestResolvers.delete(message.requestId);
                     resolvePending(message);
                 }
                 return;
@@ -1528,8 +1819,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 items.openai_thinking_model || "",
             ).trim();
             const unifiedOpenAIModel = String(items.openai_model || "").trim();
-            els.openai_model.value =
+            const savedOpenAIModel =
                 unifiedOpenAIModel || legacyThinkingModel || "gpt-4o-mini";
+            els.openai_custom_model.value = items.openai_custom_model || "";
             els.openai_custom_prompt.value = items.openai_custom_prompt || "";
             els.show_thoughts.value = items.show_thoughts ? "true" : "false";
             els.openai_reasoning_effort.value =
@@ -1543,8 +1835,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 items.custom_openai_api_url ||
                 "https://api.openai.com/v1/chat/completions";
             els.custom_openai_api_key.value = items.custom_openai_api_key || "";
-            els.custom_openai_model.value =
+            const savedCustomOpenAIModel =
                 items.custom_openai_model || "gpt-4o-mini";
+            els.custom_openai_custom_model.value =
+                items.custom_openai_custom_model || "";
             els.custom_openai_custom_prompt.value =
                 items.custom_openai_custom_prompt || "";
             els.custom_openai_show_thoughts.value =
@@ -1564,7 +1858,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 items.deepseek_api_url ||
                 "https://api.deepseek.com/chat/completions";
             els.deepseek_api_key.value = items.deepseek_api_key || "";
-            els.deepseek_model.value = items.deepseek_model || "deepseek-chat";
+            const savedDeepSeekModel = items.deepseek_model || "deepseek-chat";
+            els.deepseek_custom_model.value = items.deepseek_custom_model || "";
             els.deepseek_custom_prompt.value =
                 items.deepseek_custom_prompt || "";
             els.deepseek_show_thoughts.value = items.deepseek_show_thoughts
@@ -1574,7 +1869,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 items.qwen_api_url ||
                 "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation";
             els.qwen_api_key.value = items.qwen_api_key || "";
-            els.qwen_model.value = items.qwen_model || "qwen-plus";
+            const savedQwenModel = items.qwen_model || "qwen-plus";
+            els.qwen_custom_model.value = items.qwen_custom_model || "";
             els.qwen_custom_prompt.value = items.qwen_custom_prompt || "";
             els.qwen_show_thoughts.value = items.qwen_show_thoughts
                 ? "true"
@@ -1591,7 +1887,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 items.glm_api_url ||
                 "https://open.bigmodel.cn/api/paas/v4/chat/completions";
             els.glm_api_key.value = items.glm_api_key || "";
-            els.glm_model.value = items.glm_model || "glm-5.1";
+            const savedGLMModel = items.glm_model || "glm-5.1";
+            els.glm_custom_model.value = items.glm_custom_model || "";
             els.glm_custom_prompt.value = items.glm_custom_prompt || "";
             els.glm_show_thoughts.value = items.glm_show_thoughts
                 ? "true"
@@ -1602,7 +1899,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 items.xiaomi_api_url ||
                 "https://api.xiaomimimo.com/v1/chat/completions";
             els.xiaomi_api_key.value = items.xiaomi_api_key || "";
-            els.xiaomi_model.value = items.xiaomi_model || "mimo-v2-pro";
+            const savedXiaomiModel = items.xiaomi_model || "mimo-v2-pro";
+            els.xiaomi_custom_model.value = items.xiaomi_custom_model || "";
             els.xiaomi_custom_prompt.value = items.xiaomi_custom_prompt || "";
             els.xiaomi_show_thoughts.value = items.xiaomi_show_thoughts
                 ? "true"
@@ -1612,10 +1910,55 @@ document.addEventListener("DOMContentLoaded", () => {
             )
                 ? String(Math.floor(Number(items.xiaomi_max_completion_tokens)))
                 : "0";
+            const openaiCompatSavedModelMap = {
+                openai: savedOpenAIModel,
+                custom_openai: savedCustomOpenAIModel,
+                deepseek: savedDeepSeekModel,
+                qwen: savedQwenModel,
+                glm: savedGLMModel,
+                xiaomi: savedXiaomiModel,
+            };
+            OPENAI_COMPAT_MODEL_ENGINES.forEach((cfg) => {
+                const selectEl = els[cfg.modelId];
+                const customEl = els[cfg.customModelId];
+                const apiUrl = els[cfg.apiUrlId]?.value || "";
+                const apiKey = els[cfg.apiKeyId]?.value || "";
+                const savedModel =
+                    openaiCompatSavedModelMap[cfg.name] || cfg.defaultModel;
+
+                populateOpenAICompatModelSelect(
+                    selectEl,
+                    customEl,
+                    [],
+                    savedModel,
+                );
+
+                void requestOpenAICompatModelList(apiUrl, apiKey)
+                    .then((res) => {
+                        const modelIds = Array.isArray(res.modelIds)
+                            ? res.modelIds
+                            : [];
+                        populateOpenAICompatModelSelect(
+                            selectEl,
+                            customEl,
+                            modelIds,
+                            savedModel,
+                        );
+                    })
+                    .catch(() => {
+                        populateOpenAICompatModelSelect(
+                            selectEl,
+                            customEl,
+                            [],
+                            savedModel,
+                        );
+                    });
+            });
             els.claude_api_url.value =
                 items.claude_api_url || "https://api.anthropic.com/v1/messages";
             els.claude_api_key.value = items.claude_api_key || "";
-            els.claude_model.value = items.claude_model || "claude-sonnet-4-6";
+            const savedClaudeModel = items.claude_model || "claude-sonnet-4-6";
+            els.claude_custom_model.value = items.claude_custom_model || "";
             els.claude_custom_prompt.value = items.claude_custom_prompt || "";
             els.claude_show_thoughts.value = items.claude_show_thoughts
                 ? "true"
@@ -1634,11 +1977,41 @@ document.addEventListener("DOMContentLoaded", () => {
                 : "2048";
             els.claude_thinking_effort.value =
                 items.claude_thinking_effort || "medium";
+            populateOpenAICompatModelSelect(
+                els.claude_model,
+                els.claude_custom_model,
+                [],
+                savedClaudeModel,
+            );
+            void requestClaudeModelList(
+                els.claude_api_url.value,
+                els.claude_api_key.value,
+            )
+                .then((res) => {
+                    const modelIds = Array.isArray(res.modelIds)
+                        ? res.modelIds
+                        : [];
+                    populateOpenAICompatModelSelect(
+                        els.claude_model,
+                        els.claude_custom_model,
+                        modelIds,
+                        savedClaudeModel,
+                    );
+                })
+                .catch(() => {
+                    populateOpenAICompatModelSelect(
+                        els.claude_model,
+                        els.claude_custom_model,
+                        [],
+                        savedClaudeModel,
+                    );
+                });
             els.gemini_api_url.value =
                 items.gemini_api_url ||
                 "https://generativelanguage.googleapis.com/v1beta/models";
             els.gemini_api_key.value = items.gemini_api_key || "";
-            els.gemini_model.value = items.gemini_model || "gemini-2.5-flash";
+            const savedGeminiModel = items.gemini_model || "gemini-2.5-flash";
+            els.gemini_custom_model.value = items.gemini_custom_model || "";
             els.gemini_custom_prompt.value = items.gemini_custom_prompt || "";
             els.gemini_show_thoughts.value = items.gemini_show_thoughts
                 ? "true"
@@ -1650,6 +2023,35 @@ document.addEventListener("DOMContentLoaded", () => {
             )
                 ? String(Math.floor(Number(items.gemini_thinking_budget)))
                 : "-1";
+            populateOpenAICompatModelSelect(
+                els.gemini_model,
+                els.gemini_custom_model,
+                [],
+                savedGeminiModel,
+            );
+            void requestGeminiModelList(
+                els.gemini_api_url.value,
+                els.gemini_api_key.value,
+            )
+                .then((res) => {
+                    const modelIds = Array.isArray(res.modelIds)
+                        ? res.modelIds
+                        : [];
+                    populateOpenAICompatModelSelect(
+                        els.gemini_model,
+                        els.gemini_custom_model,
+                        modelIds,
+                        savedGeminiModel,
+                    );
+                })
+                .catch(() => {
+                    populateOpenAICompatModelSelect(
+                        els.gemini_model,
+                        els.gemini_custom_model,
+                        [],
+                        savedGeminiModel,
+                    );
+                });
             const savedOllamaModel = items.ollama_model || "";
             els.ollama_api_url.value =
                 items.ollama_api_url || "http://localhost:11434/api/chat";
@@ -1757,6 +2159,38 @@ document.addEventListener("DOMContentLoaded", () => {
             (els.llm_engine_select?.value || "openai").trim() || "openai";
         const effectiveEngine =
             selectedEngine === "llm" ? selectedLlmEngine : selectedEngine;
+        const selectedOpenAIModel = getSelectedOpenAICompatModel(
+            els.openai_model,
+            els.openai_custom_model,
+        );
+        const selectedCustomOpenAIModel = getSelectedOpenAICompatModel(
+            els.custom_openai_model,
+            els.custom_openai_custom_model,
+        );
+        const selectedDeepSeekModel = getSelectedOpenAICompatModel(
+            els.deepseek_model,
+            els.deepseek_custom_model,
+        );
+        const selectedQwenModel = getSelectedOpenAICompatModel(
+            els.qwen_model,
+            els.qwen_custom_model,
+        );
+        const selectedGLMModel = getSelectedOpenAICompatModel(
+            els.glm_model,
+            els.glm_custom_model,
+        );
+        const selectedXiaomiModel = getSelectedOpenAICompatModel(
+            els.xiaomi_model,
+            els.xiaomi_custom_model,
+        );
+        const selectedClaudeModel = getSelectedOpenAICompatModel(
+            els.claude_model,
+            els.claude_custom_model,
+        );
+        const selectedGeminiModel = getSelectedOpenAICompatModel(
+            els.gemini_model,
+            els.gemini_custom_model,
+        );
         const data = {
             enabled: els.enable_select.value,
             engine: selectedEngine,
@@ -1766,7 +2200,8 @@ document.addEventListener("DOMContentLoaded", () => {
             target_lang: els.target_lang.value,
             openai_api_url: els.openai_api_url.value,
             openai_api_key: els.openai_api_key.value,
-            openai_model: els.openai_model.value,
+            openai_model: selectedOpenAIModel,
+            openai_custom_model: (els.openai_custom_model.value || "").trim(),
             openai_custom_prompt: els.openai_custom_prompt.value || "",
             show_thoughts: els.show_thoughts.value === "true",
             openai_reasoning_effort: els.openai_reasoning_effort.value,
@@ -1777,7 +2212,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 els.custom_openai_api_url.value || ""
             ).trim(),
             custom_openai_api_key: els.custom_openai_api_key.value,
-            custom_openai_model: (els.custom_openai_model.value || "").trim(),
+            custom_openai_model: selectedCustomOpenAIModel,
+            custom_openai_custom_model: (
+                els.custom_openai_custom_model.value || ""
+            ).trim(),
             custom_openai_custom_prompt:
                 els.custom_openai_custom_prompt.value || "",
             custom_openai_show_thoughts:
@@ -1789,25 +2227,31 @@ document.addEventListener("DOMContentLoaded", () => {
             ),
             deepseek_api_url: (els.deepseek_api_url.value || "").trim(),
             deepseek_api_key: els.deepseek_api_key.value,
-            deepseek_model: (els.deepseek_model.value || "").trim(),
+            deepseek_model: selectedDeepSeekModel,
+            deepseek_custom_model: (
+                els.deepseek_custom_model.value || ""
+            ).trim(),
             deepseek_custom_prompt: els.deepseek_custom_prompt.value || "",
             deepseek_show_thoughts: els.deepseek_show_thoughts.value === "true",
             qwen_api_url: (els.qwen_api_url.value || "").trim(),
             qwen_api_key: els.qwen_api_key.value,
-            qwen_model: (els.qwen_model.value || "").trim(),
+            qwen_model: selectedQwenModel,
+            qwen_custom_model: (els.qwen_custom_model.value || "").trim(),
             qwen_custom_prompt: els.qwen_custom_prompt.value || "",
             qwen_show_thoughts: els.qwen_show_thoughts.value === "true",
             qwen_thinking_budget: Number(els.qwen_thinking_budget.value || 0),
             qwen_preserve_thinking: els.qwen_preserve_thinking.value === "true",
             glm_api_url: (els.glm_api_url.value || "").trim(),
             glm_api_key: els.glm_api_key.value,
-            glm_model: (els.glm_model.value || "").trim(),
+            glm_model: selectedGLMModel,
+            glm_custom_model: (els.glm_custom_model.value || "").trim(),
             glm_custom_prompt: els.glm_custom_prompt.value || "",
             glm_show_thoughts: els.glm_show_thoughts.value === "true",
             glm_clear_thinking: els.glm_clear_thinking.value === "true",
             xiaomi_api_url: (els.xiaomi_api_url.value || "").trim(),
             xiaomi_api_key: els.xiaomi_api_key.value,
-            xiaomi_model: (els.xiaomi_model.value || "").trim(),
+            xiaomi_model: selectedXiaomiModel,
+            xiaomi_custom_model: (els.xiaomi_custom_model.value || "").trim(),
             xiaomi_custom_prompt: els.xiaomi_custom_prompt.value || "",
             xiaomi_show_thoughts: els.xiaomi_show_thoughts.value === "true",
             xiaomi_max_completion_tokens: Number(
@@ -1815,7 +2259,8 @@ document.addEventListener("DOMContentLoaded", () => {
             ),
             claude_api_url: (els.claude_api_url.value || "").trim(),
             claude_api_key: els.claude_api_key.value,
-            claude_model: (els.claude_model.value || "").trim(),
+            claude_model: selectedClaudeModel,
+            claude_custom_model: (els.claude_custom_model.value || "").trim(),
             claude_custom_prompt: els.claude_custom_prompt.value || "",
             claude_show_thoughts: els.claude_show_thoughts.value === "true",
             claude_max_tokens: Number(els.claude_max_tokens.value || 4096),
@@ -1826,7 +2271,8 @@ document.addEventListener("DOMContentLoaded", () => {
             claude_thinking_effort: els.claude_thinking_effort.value,
             gemini_api_url: (els.gemini_api_url.value || "").trim(),
             gemini_api_key: els.gemini_api_key.value,
-            gemini_model: (els.gemini_model.value || "").trim(),
+            gemini_model: selectedGeminiModel,
+            gemini_custom_model: (els.gemini_custom_model.value || "").trim(),
             gemini_custom_prompt: els.gemini_custom_prompt.value || "",
             gemini_show_thoughts: els.gemini_show_thoughts.value === "true",
             gemini_thinking_level: els.gemini_thinking_level.value,
@@ -2082,6 +2528,186 @@ document.addEventListener("DOMContentLoaded", () => {
     els.special_translate_model_select?.addEventListener("change", () => {
         const isCustom = els.special_translate_model_select.value === "custom";
         els.special_translate_custom_model.disabled = !isCustom;
+    });
+
+    function refreshOpenAICompatModels(cfg) {
+        const selectEl = els[cfg.modelId];
+        const customEl = els[cfg.customModelId];
+        if (!selectEl || !customEl) {
+            return;
+        }
+
+        const selectedModel = getSelectedOpenAICompatModel(selectEl, customEl);
+        void requestOpenAICompatModelList(
+            els[cfg.apiUrlId]?.value,
+            els[cfg.apiKeyId]?.value,
+        )
+            .then((res) => {
+                const modelIds = Array.isArray(res.modelIds)
+                    ? res.modelIds
+                    : [];
+                populateOpenAICompatModelSelect(
+                    selectEl,
+                    customEl,
+                    modelIds,
+                    selectedModel,
+                );
+            })
+            .catch(() => {
+                populateOpenAICompatModelSelect(
+                    selectEl,
+                    customEl,
+                    [],
+                    selectedModel,
+                );
+            });
+    }
+
+    OPENAI_COMPAT_MODEL_ENGINES.forEach((cfg) => {
+        els[cfg.modelId]?.addEventListener("change", () => {
+            const isCustom = (els[cfg.modelId]?.value || "") === "custom";
+            if (els[cfg.customModelId]) {
+                els[cfg.customModelId].disabled = !isCustom;
+            }
+        });
+
+        els[cfg.apiUrlId]?.addEventListener("change", () => {
+            refreshOpenAICompatModels(cfg);
+        });
+
+        els[cfg.apiKeyId]?.addEventListener("change", () => {
+            refreshOpenAICompatModels(cfg);
+        });
+    });
+
+    els.claude_model?.addEventListener("change", () => {
+        const isCustom = els.claude_model.value === "custom";
+        els.claude_custom_model.disabled = !isCustom;
+    });
+
+    els.gemini_model?.addEventListener("change", () => {
+        const isCustom = els.gemini_model.value === "custom";
+        els.gemini_custom_model.disabled = !isCustom;
+    });
+
+    els.claude_api_url?.addEventListener("change", () => {
+        const selectedModel = getSelectedOpenAICompatModel(
+            els.claude_model,
+            els.claude_custom_model,
+        );
+        void requestClaudeModelList(
+            els.claude_api_url.value,
+            els.claude_api_key.value,
+        )
+            .then((res) => {
+                const modelIds = Array.isArray(res.modelIds)
+                    ? res.modelIds
+                    : [];
+                populateOpenAICompatModelSelect(
+                    els.claude_model,
+                    els.claude_custom_model,
+                    modelIds,
+                    selectedModel,
+                );
+            })
+            .catch(() => {
+                populateOpenAICompatModelSelect(
+                    els.claude_model,
+                    els.claude_custom_model,
+                    [],
+                    selectedModel,
+                );
+            });
+    });
+
+    els.claude_api_key?.addEventListener("change", () => {
+        const selectedModel = getSelectedOpenAICompatModel(
+            els.claude_model,
+            els.claude_custom_model,
+        );
+        void requestClaudeModelList(
+            els.claude_api_url.value,
+            els.claude_api_key.value,
+        )
+            .then((res) => {
+                const modelIds = Array.isArray(res.modelIds)
+                    ? res.modelIds
+                    : [];
+                populateOpenAICompatModelSelect(
+                    els.claude_model,
+                    els.claude_custom_model,
+                    modelIds,
+                    selectedModel,
+                );
+            })
+            .catch(() => {
+                populateOpenAICompatModelSelect(
+                    els.claude_model,
+                    els.claude_custom_model,
+                    [],
+                    selectedModel,
+                );
+            });
+    });
+
+    els.gemini_api_url?.addEventListener("change", () => {
+        const selectedModel = getSelectedOpenAICompatModel(
+            els.gemini_model,
+            els.gemini_custom_model,
+        );
+        void requestGeminiModelList(
+            els.gemini_api_url.value,
+            els.gemini_api_key.value,
+        )
+            .then((res) => {
+                const modelIds = Array.isArray(res.modelIds)
+                    ? res.modelIds
+                    : [];
+                populateOpenAICompatModelSelect(
+                    els.gemini_model,
+                    els.gemini_custom_model,
+                    modelIds,
+                    selectedModel,
+                );
+            })
+            .catch(() => {
+                populateOpenAICompatModelSelect(
+                    els.gemini_model,
+                    els.gemini_custom_model,
+                    [],
+                    selectedModel,
+                );
+            });
+    });
+
+    els.gemini_api_key?.addEventListener("change", () => {
+        const selectedModel = getSelectedOpenAICompatModel(
+            els.gemini_model,
+            els.gemini_custom_model,
+        );
+        void requestGeminiModelList(
+            els.gemini_api_url.value,
+            els.gemini_api_key.value,
+        )
+            .then((res) => {
+                const modelIds = Array.isArray(res.modelIds)
+                    ? res.modelIds
+                    : [];
+                populateOpenAICompatModelSelect(
+                    els.gemini_model,
+                    els.gemini_custom_model,
+                    modelIds,
+                    selectedModel,
+                );
+            })
+            .catch(() => {
+                populateOpenAICompatModelSelect(
+                    els.gemini_model,
+                    els.gemini_custom_model,
+                    [],
+                    selectedModel,
+                );
+            });
     });
 
     function refreshSpecialTranslateModels() {

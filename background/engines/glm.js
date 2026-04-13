@@ -4,6 +4,7 @@ import {
 } from "../language.js";
 import { postTranslateError, safePostMessage } from "../port-utils.js";
 import { getThinkingEnabledByEngine } from "./thinking-utils.js";
+import { normalizeOpenAICompatEndpoint } from "./url-utils.js";
 
 const DEFAULT_GLM_API_URL =
     "https://open.bigmodel.cn/api/paas/v4/chat/completions";
@@ -33,7 +34,10 @@ export async function streamGLMTranslate(request, port, state) {
         ? request.glossaryTerms
         : [];
 
-    const apiUrl = String(settings?.glm_api_url || DEFAULT_GLM_API_URL).trim();
+    const endpoint = normalizeOpenAICompatEndpoint(
+        settings?.glm_api_url,
+        DEFAULT_GLM_API_URL,
+    );
     const key = String(settings?.glm_api_key || "").trim();
     const model = String(settings?.glm_model || DEFAULT_GLM_MODEL).trim();
     const showThoughts = getThinkingEnabledByEngine("glm", settings);
@@ -42,7 +46,12 @@ export async function streamGLMTranslate(request, port, state) {
         customPromptTemplate: request?.customPromptTemplate,
     });
 
-    if (!apiUrl || !key) {
+    if (!endpoint.ok) {
+        postTranslateError(port, state, requestId, endpoint.error);
+        return;
+    }
+
+    if (!key) {
         postTranslateError(
             port,
             state,
@@ -72,7 +81,7 @@ export async function streamGLMTranslate(request, port, state) {
     state.controllers.set(requestId, controller);
 
     try {
-        const res = await fetch(apiUrl, {
+        const res = await fetch(endpoint.url, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",

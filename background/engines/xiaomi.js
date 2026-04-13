@@ -4,6 +4,7 @@ import {
 } from "../language.js";
 import { postTranslateError, safePostMessage } from "../port-utils.js";
 import { getThinkingEnabledByEngine } from "./thinking-utils.js";
+import { normalizeOpenAICompatEndpoint } from "./url-utils.js";
 
 const DEFAULT_XIAOMI_API_URL = "https://api.xiaomimimo.com/v1/chat/completions";
 const DEFAULT_XIAOMI_MODEL = "mimo-v2-pro";
@@ -33,9 +34,10 @@ export async function streamXiaomiTranslate(request, port, state) {
         ? request.glossaryTerms
         : [];
 
-    const apiUrl = String(
-        settings?.xiaomi_api_url || DEFAULT_XIAOMI_API_URL,
-    ).trim();
+    const endpoint = normalizeOpenAICompatEndpoint(
+        settings?.xiaomi_api_url,
+        DEFAULT_XIAOMI_API_URL,
+    );
     const key = String(settings?.xiaomi_api_key || "").trim();
     const model = String(settings?.xiaomi_model || DEFAULT_XIAOMI_MODEL).trim();
     const showThoughts = getThinkingEnabledByEngine("xiaomi", settings);
@@ -44,7 +46,12 @@ export async function streamXiaomiTranslate(request, port, state) {
         customPromptTemplate: request?.customPromptTemplate,
     });
 
-    if (!apiUrl || !key) {
+    if (!endpoint.ok) {
+        postTranslateError(port, state, requestId, endpoint.error);
+        return;
+    }
+
+    if (!key) {
         postTranslateError(
             port,
             state,
@@ -78,7 +85,7 @@ export async function streamXiaomiTranslate(request, port, state) {
     state.controllers.set(requestId, controller);
 
     try {
-        const res = await fetch(apiUrl, {
+        const res = await fetch(endpoint.url, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
