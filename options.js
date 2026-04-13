@@ -9,6 +9,7 @@ document.addEventListener("DOMContentLoaded", () => {
         translate_shortcut: "",
         source_lang: "auto",
         target_lang: "auto",
+        ui_lang: "auto",
         openai_api_url: "",
         openai_api_key: "",
         openai_model: "gpt-4o-mini",
@@ -110,6 +111,242 @@ document.addEventListener("DOMContentLoaded", () => {
         [SPECIAL_PROVIDER_OPENAI]: "https://api.openai.com/v1/chat/completions",
     };
 
+    function getI18nApi() {
+        if (
+            typeof chrome !== "undefined" &&
+            chrome.i18n &&
+            typeof chrome.i18n.getMessage === "function"
+        ) {
+            return chrome.i18n;
+        }
+        if (
+            typeof browser !== "undefined" &&
+            browser.i18n &&
+            typeof browser.i18n.getMessage === "function"
+        ) {
+            return browser.i18n;
+        }
+        return null;
+    }
+
+    const i18n = getI18nApi();
+    const UI_LANG_TO_LOCALE = {
+        zh: "zh_CN",
+        en: "en",
+    };
+    let currentUiLang = "auto";
+    let manualLocaleMessages = null;
+
+    function normalizeBasicLang(lang) {
+        if (!lang || typeof lang !== "string") return "";
+        const lower = lang.toLowerCase();
+        if (lower.startsWith("zh")) return "zh";
+        if (lower.startsWith("en")) return "en";
+        if (lower.startsWith("ja")) return "ja";
+        if (lower.startsWith("ko")) return "ko";
+        if (lower.startsWith("fr")) return "fr";
+        if (lower.startsWith("de")) return "de";
+        if (lower.startsWith("es")) return "es";
+        if (lower.startsWith("ru")) return "ru";
+        return lower.split("-")[0] || "";
+    }
+
+    function getManualMessage(key, substitutions) {
+        const entry = manualLocaleMessages?.[key];
+        const template =
+            entry && typeof entry.message === "string" ? entry.message : "";
+        if (!template) return "";
+
+        const values = Array.isArray(substitutions)
+            ? substitutions
+            : substitutions == null
+              ? []
+              : [substitutions];
+
+        return template.replace(/\$(\d+)/g, (full, indexText) => {
+            const idx = Number(indexText) - 1;
+            if (!Number.isInteger(idx) || idx < 0 || idx >= values.length) {
+                return "";
+            }
+            return String(values[idx] ?? "");
+        });
+    }
+
+    async function loadManualLocaleMessages(uiLang) {
+        const normalized = normalizeBasicLang(uiLang);
+        const localeDir = UI_LANG_TO_LOCALE[normalized];
+        if (!localeDir) {
+            manualLocaleMessages = null;
+            return;
+        }
+
+        try {
+            const url = chrome.runtime.getURL(
+                `_locales/${localeDir}/messages.json`,
+            );
+            const resp = await fetch(url, { cache: "no-store" });
+            if (!resp.ok) {
+                manualLocaleMessages = null;
+                return;
+            }
+            const json = await resp.json();
+            manualLocaleMessages =
+                json && typeof json === "object" ? json : null;
+        } catch (err) {
+            manualLocaleMessages = null;
+        }
+    }
+
+    async function applyUiLanguage(uiLang) {
+        currentUiLang = normalizeBasicLang(uiLang) || "auto";
+        if (currentUiLang === "auto") {
+            manualLocaleMessages = null;
+        } else {
+            await loadManualLocaleMessages(currentUiLang);
+        }
+
+        applyStaticI18n();
+        updateCurrentPdfStatusUI(cachedActiveTab, cachedCurrentPdfUrl);
+    }
+
+    function t(key, fallback = "", substitutions) {
+        if (!key) return fallback;
+        if (currentUiLang !== "auto") {
+            const manual = getManualMessage(key, substitutions);
+            if (manual) {
+                return manual;
+            }
+        }
+        try {
+            const message = i18n?.getMessage(key, substitutions);
+            if (typeof message === "string" && message.trim()) {
+                return message;
+            }
+        } catch (err) {
+            // ignore i18n lookup failures and use fallback
+        }
+        return fallback || key;
+    }
+
+    function translateLegacyText(text) {
+        const raw = String(text == null ? "" : text);
+
+        const exactKeyMap = {
+            本地保存失败: "optErrLocalSaveFailed",
+            本地读取失败: "optErrLocalReadFailed",
+            双向同步失败: "optErrBidirectionalSyncFailed",
+            已取消同步: "optErrSyncCanceled",
+            "同步冲突处理次数过多，请重试": "optErrSyncConflictTooManyRetries",
+            请求模型列表超时: "optErrRequestModelListTimeout",
+            "请求 Ollama 模型列表超时": "optErrRequestOllamaModelListTimeout",
+            请求专用翻译模型列表超时: "optErrRequestSpecialModelListTimeout",
+            模型加载中: "optWebllmModelLoading",
+            "模型已加载完成，可直接用于划词翻译": "optWebllmModelReady",
+            模型缓存已清理: "optWebllmCacheCleared",
+            未知错误: "optUnknownError",
+            "当前浏览器不可用 WebGPU": "optWebllmNoWebgpu",
+            "当前浏览器不支持 WebLLM（仅 Chrome/Edge 可用）":
+                "optWebllmUnsupportedChromeEdgeOnly",
+            "设备检测通过，可尝试使用本地模型翻译。": "optWebllmPerfGood",
+            "当前浏览器不支持 WebLLM": "optWebllmUnsupported",
+            "请先选择或输入模型 ID": "optWebllmPleaseSelectModelId",
+            "开始下载/加载模型...": "optWebllmStartingLoad",
+            "无法连接后台服务，请重试": "optCannotConnectBackground",
+            "正在清理模型缓存...": "optWebllmClearingCache",
+            导出失败: "optExportFailed",
+            导入失败: "optImportFailed",
+            旧术语删除失败: "optGlossaryDeleteOldFailed",
+            术语保存失败: "optGlossarySaveFailed",
+            清空失败: "optClearFailed",
+            删除失败: "optDeleteFailed",
+            配置导出失败: "optConfigExportFailed",
+            配置导入失败: "optConfigImportFailed",
+            连接测试失败: "optSyncConnectionTestFailed",
+            上传失败: "optSyncUploadFailed",
+            下载失败: "optSyncDownloadFailed",
+            "WebDAV 配置已保存到本地": "optSyncWebdavSaved",
+            "正在测试 WebDAV 连接...": "optSyncTestingWebdav",
+            "正在上传配置与术语到 WebDAV...": "optSyncUploadingWebdav",
+            "正在从 WebDAV 下载配置与术语...": "optSyncDownloadingWebdav",
+            "正在执行双向同步...": "optSyncRunningBidirectional",
+            配置导出完成: "optConfigExportDone",
+            配置导入完成: "optConfigImportDone",
+            术语已保存: "optGlossarySaved",
+            术语库已清空: "optGlossaryCleared",
+            术语已删除: "optGlossaryDeleted",
+            "已载入术语，编辑后点击更新": "optGlossaryLoadedForEdit",
+            "保存失败: 请完整填写术语字段":
+                "optGlossarySaveFailedIncompleteFields",
+            "导入失败: 文件过大，请控制在 5MB 以内":
+                "optGlossaryImportFailedFileTooLarge",
+            "配置导入失败: 文件过大，请控制在 5MB 以内":
+                "optConfigImportFailedFileTooLarge",
+            "打开内置 PDF 页面失败，请重试": "optOpenBuiltinPdfFailed",
+            已保存: "optSaved",
+            已恢复默认: "optDefaultsRestored",
+            "确定清空术语库吗？该操作不可撤销。": "optConfirmClearGlossary",
+            "设备性能偏弱，继续启用 WebLLM 可能导致卡顿或加载失败，确定继续吗？":
+                "optConfirmWebllmWeakPerf",
+        };
+        if (Object.prototype.hasOwnProperty.call(exactKeyMap, raw)) {
+            return t(exactKeyMap[raw], raw);
+        }
+
+        const patterns = [
+            [/^操作失败: (.+)$/u, "optPatternOperationFailed"],
+            [/^设备内存约 (.+)$/u, "optPatternDeviceMemory"],
+            [/^CPU 逻辑核心数约 (.+)$/u, "optPatternCpuCores"],
+            [/^导出完成，共 (\d+) 条术语$/u, "optPatternGlossaryExportDone"],
+            [/^导出失败: (.+)$/u, "optPatternGlossaryExportFailed"],
+            [
+                /^导入完成: 新增 (\d+)，覆盖 (\d+)，总计 (\d+)$/u,
+                "optPatternGlossaryImportDone",
+            ],
+            [/^导入失败: (.+)$/u, "optPatternGlossaryImportFailed"],
+            [/^保存失败: (.+)$/u, "optPatternSaveFailed"],
+            [/^清空失败: (.+)$/u, "optPatternClearFailed"],
+            [/^删除失败: (.+)$/u, "optPatternDeleteFailed"],
+            [/^配置导出失败: (.+)$/u, "optPatternConfigExportFailed"],
+            [/^配置导入失败: (.+)$/u, "optPatternConfigImportFailed"],
+            [/^连接测试失败: (.+)$/u, "optPatternSyncConnTestFailed"],
+            [
+                /^连接成功: config\((.+)\) glossary\((.+)\)$/u,
+                "optPatternSyncConnSuccess",
+            ],
+            [/^上传完成: 术语 (\d+) 条$/u, "optPatternSyncUploadDone"],
+            [/^上传失败: (.+)$/u, "optPatternSyncUploadFailed"],
+            [/^下载完成: 术语 (\d+) 条$/u, "optPatternSyncDownloadDone"],
+            [/^下载失败: (.+)$/u, "optPatternSyncDownloadFailed"],
+            [
+                /^双向同步完成: 术语 (\d+) 条$/u,
+                "optPatternSyncBidirectionalDone",
+            ],
+            [/^双向同步失败: (.+)$/u, "optPatternSyncBidirectionalFailed"],
+            [
+                /^本地同步配置读取失败: (.+)$/u,
+                "optPatternSyncLocalConfigReadFailed",
+            ],
+            [/^术语列表加载失败: (.+)$/u, "optPatternGlossaryListLoadFailed"],
+            [
+                /^设备性能偏弱，不建议开启 WebLLM: (.+)。$/u,
+                "optPatternWebllmWeakPerfReasons",
+            ],
+            [
+                /^检测到同步冲突：配置字段 (\d+) 项，术语 (\d+) 项。\n请输入策略编号：\n1=远端覆盖本地\n2=本地覆盖远端\n3=按时间戳合并\n取消=中止同步$/u,
+                "optPatternSyncConflictPrompt",
+            ],
+        ];
+
+        for (const [regex, key] of patterns) {
+            const match = raw.match(regex);
+            if (match) {
+                return t(key, raw, match.slice(1));
+            }
+        }
+
+        return raw;
+    }
+
     const ids = [
         "enable_select",
         "engine_select",
@@ -117,6 +354,7 @@ document.addEventListener("DOMContentLoaded", () => {
         "translate_shortcut",
         "source_lang",
         "target_lang",
+        "ui_lang",
         "openai_api_url",
         "openai_api_key",
         "openai_model",
@@ -258,6 +496,437 @@ document.addEventListener("DOMContentLoaded", () => {
     const syncBidirectionalBtn = document.getElementById("sync_bidirectional");
     const syncStatusEl = document.getElementById("sync_status");
 
+    function setOptionText(selectEl, value, messageKey, fallback) {
+        if (!selectEl) return;
+        const option = Array.from(selectEl.options || []).find(
+            (item) => item.value === value,
+        );
+        if (!option) return;
+        option.textContent = t(messageKey, fallback || option.textContent);
+    }
+
+    function applyLanguageOptions(selectEl, autoKey) {
+        if (!selectEl) return;
+        if (autoKey) {
+            setOptionText(selectEl, "auto", autoKey);
+        }
+        setOptionText(selectEl, "zh", "langZh");
+        setOptionText(selectEl, "en", "langEn");
+        setOptionText(selectEl, "ja", "langJa");
+        setOptionText(selectEl, "ko", "langKo");
+        setOptionText(selectEl, "fr", "langFr");
+        setOptionText(selectEl, "de", "langDe");
+        setOptionText(selectEl, "es", "langEs");
+        setOptionText(selectEl, "ru", "langRu");
+    }
+
+    function applyBooleanOptions(selectEl) {
+        if (!selectEl) return;
+        setOptionText(selectEl, "true", "optSelectYes", "是");
+        setOptionText(selectEl, "false", "optSelectNo", "否");
+    }
+
+    function applySelectI18n() {
+        setOptionText(els.enable_select, "on", "optSelectEnableOn", "开启");
+        setOptionText(
+            els.enable_select,
+            "off",
+            "optSelectEnableOff",
+            "关闭（使用快捷键）",
+        );
+
+        setOptionText(
+            els.engine_select,
+            "auto",
+            "optSelectEngineAuto",
+            "自动（优先 OpenAI API）",
+        );
+        setOptionText(
+            els.engine_select,
+            "llm",
+            "optSelectEngineLlm",
+            "大模型翻译",
+        );
+        setOptionText(
+            els.engine_select,
+            "special_translate",
+            "optSelectEngineSpecialTranslate",
+            "专用大模型翻译",
+        );
+        setOptionText(
+            els.engine_select,
+            "custom_openai",
+            "optSelectEngineCustomOpenAI",
+            "自定义 OpenAI",
+        );
+        setOptionText(
+            els.engine_select,
+            "google",
+            "optSelectEngineGoogle",
+            "谷歌翻译",
+        );
+        setOptionText(
+            els.engine_select,
+            "bing",
+            "optSelectEngineBing",
+            "Bing翻译",
+        );
+        setOptionText(
+            els.engine_select,
+            "browser",
+            "optSelectEngineBrowserAiExperimental",
+            "浏览器AI（实验）",
+        );
+
+        setOptionText(
+            els.theme_mode,
+            "auto",
+            "optSelectThemeAuto",
+            "自动（跟随系统）",
+        );
+        setOptionText(els.theme_mode, "light", "optSelectThemeLight", "明亮");
+        setOptionText(els.theme_mode, "dark", "optSelectThemeDark", "黑暗");
+
+        setOptionText(
+            els.llm_engine_select,
+            "ollama",
+            "optSelectLlmProviderOllama",
+            "Ollama 本地服务",
+        );
+        setOptionText(
+            els.llm_engine_select,
+            "webllm",
+            "optSelectLlmProviderWebllm",
+            "WebLLM 本地模型（实验）",
+        );
+
+        applyBooleanOptions(els.show_thoughts);
+        applyBooleanOptions(els.custom_openai_show_thoughts);
+        applyBooleanOptions(els.deepseek_show_thoughts);
+        applyBooleanOptions(els.qwen_show_thoughts);
+        applyBooleanOptions(els.qwen_preserve_thinking);
+        applyBooleanOptions(els.glm_show_thoughts);
+        applyBooleanOptions(els.glm_clear_thinking);
+        applyBooleanOptions(els.xiaomi_show_thoughts);
+        applyBooleanOptions(els.claude_show_thoughts);
+        applyBooleanOptions(els.gemini_show_thoughts);
+        applyBooleanOptions(els.ollama_show_thoughts);
+        applyBooleanOptions(els.webllm_show_thoughts);
+        applyBooleanOptions(els.special_translate_show_thoughts);
+
+        setOptionText(
+            els.claude_thinking_mode,
+            "adaptive",
+            "optSelectClaudeThinkingModeAdaptive",
+            "adaptive（推荐）",
+        );
+        setOptionText(
+            els.claude_thinking_mode,
+            "enabled",
+            "optSelectClaudeThinkingModeEnabled",
+            "enabled（手动预算）",
+        );
+
+        setOptionText(
+            els.ollama_model_select,
+            "",
+            "optSelectOllamaLoadingModels",
+            "正在加载模型列表...",
+        );
+        setOptionText(
+            els.ollama_model_select,
+            "custom",
+            "modelCustomName",
+            "自定义模型名",
+        );
+
+        setOptionText(
+            els.webllm_model_select,
+            "Qwen3-0.6B-q4f16_1-MLC",
+            "optSelectWebllmModelQwen3Recommended",
+            "Qwen3 0.6B (推荐)",
+        );
+        setOptionText(
+            els.webllm_model_select,
+            "SmolLM2-360M-Instruct-q4f16_1-MLC",
+            "optSelectWebllmModelSmollmLight",
+            "SmolLM2 360M (更轻量)",
+        );
+        setOptionText(
+            els.webllm_model_select,
+            "Llama-3.2-1B-Instruct-q4f16_1-MLC",
+            "optSelectWebllmModelLlamaBetter",
+            "Llama 3.2 1B (效果更好)",
+        );
+        setOptionText(
+            els.webllm_model_select,
+            "custom",
+            "modelCustomId",
+            "自定义模型 ID",
+        );
+
+        setOptionText(
+            els.webllm_model_mirror,
+            "official",
+            "optSelectWebllmMirrorOfficial",
+            "官方 HuggingFace",
+        );
+        setOptionText(
+            els.webllm_model_mirror,
+            "hf-mirror",
+            "optSelectWebllmMirrorHfMirrorCn",
+            "hf-mirror（中国推荐）",
+        );
+        setOptionText(
+            els.webllm_model_mirror,
+            "custom",
+            "optSelectWebllmMirrorCustom",
+            "自定义镜像",
+        );
+
+        setOptionText(
+            els.special_translate_provider,
+            "ollama",
+            "optSelectSpecialProviderOllama",
+            "Ollama 本地/远端",
+        );
+        setOptionText(
+            els.special_translate_provider,
+            "openai_compatible",
+            "optSelectSpecialProviderOpenAiCompatible",
+            "OpenAI 兼容 API",
+        );
+
+        setOptionText(
+            els.special_translate_model_select,
+            "translategemma",
+            "optSelectSpecialModelTranslategemmaRecommended",
+            "translategemma（推荐）",
+        );
+        setOptionText(
+            els.special_translate_model_select,
+            "custom",
+            "modelCustomName",
+            "自定义模型名",
+        );
+    }
+
+    const STATIC_TEXT_I18N_KEYS = {
+        基础设置: "optUiSectionBasicSettings",
+        是否启用划词翻译: "optUiLabelEnableSelectionTranslation",
+        翻译快捷键: "optUiLabelTranslateShortcut",
+        "点击输入框后直接按键录制快捷键；留空表示不启用快捷键。":
+            "optUiHintShortcutRecorder",
+        首选翻译引擎: "optUiLabelPreferredEngine",
+        "实验功能目前只支持最新的Chrome内核浏览器，并且可能会下载模型":
+            "optUiHintBrowserAiExperimental",
+        源语言: "optUiLabelSourceLanguage",
+        目标语言: "optUiLabelTargetLanguage",
+        外观设置: "optUiSectionAppearanceSettings",
+        主题模式: "optUiLabelThemeMode",
+        自定义字体: "optUiLabelCustomFont",
+        "最大宽度占比 (5-95%)": "optUiLabelMaxWidthPercent",
+        "最大高度占比 (5-95%)": "optUiLabelMaxHeightPercent",
+        大模型翻译: "optUiSectionLlmTranslation",
+        大模型提供方: "optUiLabelLlmProvider",
+        "先在“通用”里选择“大模型翻译”，再在这里选择具体模型来源。":
+            "optUiHintLlmProvider",
+        "OpenAI / 大模型配置": "optUiSectionOpenaiConfig",
+        "API 地址": "optUiLabelApiUrl",
+        "API Key": "optUiLabelApiKey",
+        翻译模型: "optUiLabelTranslateModel",
+        "自定义翻译 Prompt（仅 OpenAI 生效）": "optUiLabelCustomPromptOpenai",
+        显示思考过程: "optUiLabelShowThoughts",
+        "OpenAI 推理强度": "optUiLabelOpenaiReasoningEffort",
+        "OpenAI 最大输出 Token（0=自动）": "optUiLabelOpenaiMaxOutputTokens",
+        "自定义 OpenAI 兼容配置": "optUiSectionCustomOpenaiConfig",
+        模型: "optUiLabelModel",
+        "自定义翻译 Prompt（仅自定义 OpenAI 生效）":
+            "optUiLabelCustomPromptCustomOpenai",
+        推理强度: "optUiLabelReasoningEffort",
+        "最大输出 Token（0=自动）": "optUiLabelMaxOutputTokensAuto",
+        "DeepSeek 配置": "optUiSectionDeepseekConfig",
+        "自定义翻译 Prompt（仅 DeepSeek 生效）":
+            "optUiLabelCustomPromptDeepseek",
+        "Qwen DashScope 配置": "optUiSectionQwenConfig",
+        "自定义翻译 Prompt（仅 Qwen 生效）": "optUiLabelCustomPromptQwen",
+        "思考预算（0=自动）": "optUiLabelQwenThinkingBudget",
+        保留历史思考: "optUiLabelQwenPreserveThinking",
+        "GLM 配置": "optUiSectionGlmConfig",
+        "自定义翻译 Prompt（仅 GLM 生效）": "optUiLabelCustomPromptGlm",
+        清理历史思考上下文: "optUiLabelGlmClearThinking",
+        "Xiaomi MiMo 配置": "optUiSectionXiaomiConfig",
+        "自定义翻译 Prompt（仅 Xiaomi 生效）": "optUiLabelCustomPromptXiaomi",
+        "Claude 配置": "optUiSectionClaudeConfig",
+        "自定义翻译 Prompt（仅 Claude 生效）": "optUiLabelCustomPromptClaude",
+        思考模式: "optUiLabelClaudeThinkingMode",
+        "思考预算（enabled 模式）": "optUiLabelClaudeThinkingBudget",
+        "adaptive 思考强度": "optUiLabelClaudeAdaptiveEffort",
+        "最大输出 Token": "optUiLabelMaxOutputTokens",
+        "Gemini 配置": "optUiSectionGeminiConfig",
+        "自定义翻译 Prompt（仅 Gemini 生效）": "optUiLabelCustomPromptGemini",
+        "Gemini 3 思考等级": "optUiLabelGeminiThinkingLevel",
+        "Gemini 2.5 思考预算（-1 动态，0 关闭）":
+            "optUiLabelGeminiThinkingBudget",
+        "Ollama 配置": "optUiSectionOllamaConfig",
+        "Ollama 地址": "optUiLabelOllamaAddress",
+        "默认使用本地 Ollama 服务地址，可修改为远端地址。":
+            "optUiHintOllamaDefaultAddress",
+        "自定义翻译 Prompt（仅 Ollama 生效）": "optUiLabelCustomPromptOllama",
+        "自动检测模型来自 /api/tags 的 models[].name。":
+            "optUiHintOllamaModelSource",
+        "WebLLM 本地模型配置": "optUiSectionWebllmConfig",
+        推荐模型: "optUiLabelRecommendedModel",
+        "自定义翻译 Prompt（仅 WebLLM 生效）": "optUiLabelCustomPromptWebllm",
+        下载镜像: "optUiLabelDownloadMirror",
+        自定义镜像地址: "optUiLabelCustomMirrorAddress",
+        "下载/缓存模型": "optUiBtnWebllmDownload",
+        清理缓存: "optUiBtnWebllmClearCache",
+        专用大模型翻译: "optUiSectionSpecialTranslate",
+        提供方: "optUiLabelProvider",
+        "API Key（OpenAI 兼容可选）":
+            "optUiLabelApiKeyOpenaiCompatibleOptional",
+        专用模型: "optUiLabelSpecialModel",
+        "自定义翻译 Prompt（仅非 translategemma 生效）":
+            "optUiLabelCustomPromptSpecialTranslate",
+        "该引擎面向专用翻译模型。当前内置 Translationgemma，命中后会自动套用官方翻译模板。":
+            "optUiHintSpecialTranslateBuiltin",
+        术语管理: "optUiSectionGlossaryManagement",
+        原文: "optUiLabelSourceText",
+        译文: "optUiLabelTargetText",
+        取消: "optUiBtnCancel",
+        导入: "optUiBtnImport",
+        导出: "optUiBtnExport",
+        清空: "optUiBtnClear",
+        "WebDAV 同步": "optUiSectionWebdavSync",
+        账号: "optUiLabelAccount",
+        密码: "optUiLabelPassword",
+        "目录 (如 /jyt-sync)": "optUiLabelRemoteDir",
+        保存凭证: "optUiBtnSaveCredential",
+        测试连接: "optUiBtnTestConnection",
+        上传到云端: "optUiBtnUploadToCloud",
+        从云端下载: "optUiBtnDownloadFromCloud",
+        双向同步: "optUiBtnBidirectionalSync",
+        本地配置备份: "optUiSectionLocalConfigBackup",
+        导入配置: "optUiBtnImportConfig",
+        导出配置: "optUiBtnExportConfig",
+    };
+
+    const PLACEHOLDER_I18N_KEYS = {
+        "例如: Alt+T / Ctrl+Shift+Y": "optUiPlaceholderShortcut",
+        "例如: 'Microsoft YaHei', 'Segoe UI'": "optUiPlaceholderFontFamily",
+        "例如: qwen3:8b": "optUiPlaceholderOllamaModel",
+        "例如: Qwen3-0.6B-q4f16_1-MLC": "optUiPlaceholderWebllmModelId",
+        "例如: translategemma:4b": "optUiPlaceholderSpecialModel",
+        "可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。":
+            "optUiPlaceholderPromptTemplate",
+        "可用变量: {targetLang} {text} {glossary} {glossaryConstraint}":
+            "optUiPlaceholderPromptTemplateSimple",
+    };
+
+    function normalizeStaticText(text) {
+        return String(text || "")
+            .replace(/\s+/g, " ")
+            .trim();
+    }
+
+    function applyStaticTextI18nMap() {
+        const candidates = document.querySelectorAll(
+            "label, .jyt-section-title, .jyt-hint, button",
+        );
+        candidates.forEach((el) => {
+            const raw = normalizeStaticText(el.textContent);
+            const messageKey = STATIC_TEXT_I18N_KEYS[raw];
+            if (!messageKey) return;
+            el.textContent = t(messageKey, raw);
+        });
+    }
+
+    function applyPlaceholderI18nMap() {
+        const candidates = document.querySelectorAll(
+            "input[placeholder], textarea[placeholder]",
+        );
+        candidates.forEach((el) => {
+            const raw = normalizeStaticText(el.getAttribute("placeholder"));
+            const messageKey = PLACEHOLDER_I18N_KEYS[raw];
+            if (!messageKey) return;
+            el.setAttribute("placeholder", t(messageKey, raw));
+        });
+    }
+
+    function applyStaticI18n() {
+        document.title = t("optionsPageTitle", document.title);
+
+        const titleEl = document.querySelector(".jyt-form h2");
+        if (titleEl)
+            titleEl.textContent = t("optionsHeader", titleEl.textContent);
+
+        const tabGeneralEl = document.querySelector('[data-tab="tab_general"]');
+        if (tabGeneralEl)
+            tabGeneralEl.textContent = t(
+                "optionsTabGeneral",
+                tabGeneralEl.textContent,
+            );
+
+        const tabEngineEl = document.querySelector('[data-tab="tab_engine"]');
+        if (tabEngineEl)
+            tabEngineEl.textContent = t(
+                "optionsTabEngine",
+                tabEngineEl.textContent,
+            );
+
+        const tabGlossaryEl = document.querySelector(
+            '[data-tab="tab_glossary"]',
+        );
+        if (tabGlossaryEl)
+            tabGlossaryEl.textContent = t(
+                "optionsTabGlossary",
+                tabGlossaryEl.textContent,
+            );
+
+        const tabSyncEl = document.querySelector('[data-tab="tab_sync"]');
+        if (tabSyncEl)
+            tabSyncEl.textContent = t("optionsTabSync", tabSyncEl.textContent);
+
+        const saveBtn = document.getElementById("save");
+        if (saveBtn)
+            saveBtn.textContent = t("optionsSaveAll", saveBtn.textContent);
+
+        const resetBtn = document.getElementById("reset");
+        if (resetBtn)
+            resetBtn.textContent = t("optionsReset", resetBtn.textContent);
+
+        if (openLocalPdfBtn) {
+            openLocalPdfBtn.textContent = t(
+                "optionsOpenLocalPdf",
+                openLocalPdfBtn.textContent,
+            );
+        }
+
+        applyLanguageOptions(els.source_lang, "langAutoDetect");
+        applyLanguageOptions(els.target_lang, "langAutoSelect");
+        applyLanguageOptions(els.ui_lang, "langAutoFollowBrowser");
+        applyLanguageOptions(glossarySourceLangEl, null);
+        applyLanguageOptions(glossaryTargetLangEl, null);
+        applySelectI18n();
+        applyStaticTextI18nMap();
+        applyPlaceholderI18nMap();
+
+        const uiLangLabelEl = document.getElementById("ui_lang_label");
+        if (uiLangLabelEl) {
+            uiLangLabelEl.textContent = t("optionsUiLang", "界面语言");
+        }
+        const uiLangHintEl = document.getElementById("ui_lang_hint");
+        if (uiLangHintEl) {
+            uiLangHintEl.textContent = t(
+                "optionsUiLangHint",
+                "当目标语言为“自动选择”时，会优先跟随这里的界面语言设置。",
+            );
+        }
+    }
+
+    applyStaticI18n();
+
     let cachedActiveTab = null;
     let cachedCurrentPdfUrl = "";
     let webllmPort = null;
@@ -299,7 +968,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!toastContainer) return;
         const toast = document.createElement("div");
         toast.className = `jyt-toast jyt-toast-show ${isError ? "jyt-toast-error" : "jyt-toast-success"}`;
-        toast.textContent = msg;
+        toast.textContent = translateLegacyText(msg);
         toastContainer.appendChild(toast);
         setTimeout(() => toast.classList.remove("jyt-toast-show"), 2500);
         setTimeout(() => toast.remove(), 3000);
@@ -360,7 +1029,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function setGlossaryStatus(text, isError) {
         if (!glossaryStatusEl) return;
-        glossaryStatusEl.textContent = text || "";
+        glossaryStatusEl.textContent = translateLegacyText(text || "");
         glossaryStatusEl.classList.toggle("jyt-status-error", !!isError);
     }
 
@@ -379,7 +1048,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (glossaryTargetLangEl) glossaryTargetLangEl.value = "zh";
         if (glossarySourceTermEl) glossarySourceTermEl.value = "";
         if (glossaryTargetTermEl) glossaryTargetTermEl.value = "";
-        if (glossarySaveBtn) glossarySaveBtn.textContent = "新增术语";
+        if (glossarySaveBtn)
+            glossarySaveBtn.textContent = t("glossaryAdd", "新增术语");
     }
 
     function populateGlossaryEditor(term) {
@@ -393,15 +1063,15 @@ document.addEventListener("DOMContentLoaded", () => {
         if (glossaryTargetLangEl) glossaryTargetLangEl.value = term.targetLang;
         if (glossarySourceTermEl) glossarySourceTermEl.value = term.sourceTerm;
         if (glossaryTargetTermEl) glossaryTargetTermEl.value = term.targetTerm;
-        if (glossarySaveBtn) glossarySaveBtn.textContent = "更新术语";
+        if (glossarySaveBtn)
+            glossarySaveBtn.textContent = t("glossaryUpdate", "更新术语");
     }
 
     function renderGlossaryList(terms) {
         if (!glossaryListEl) return;
         const list = Array.isArray(terms) ? terms : [];
         if (list.length === 0) {
-            glossaryListEl.innerHTML =
-                '<div class="jyt-glossary-empty">暂无术语，先添加一条吧。</div>';
+            glossaryListEl.innerHTML = `<div class="jyt-glossary-empty">${t("glossaryEmpty", "暂无术语，先添加一条吧。")}</div>`;
             return;
         }
 
@@ -414,8 +1084,8 @@ document.addEventListener("DOMContentLoaded", () => {
                         <td>${term.sourceTerm}</td>
                         <td>${term.targetTerm}</td>
                         <td>
-                            <button class="jyt-glossary-row-edit" data-index="${index}" type="button">编辑</button>
-                            <button class="jyt-glossary-row-delete" data-index="${index}" type="button">删除</button>
+                            <button class="jyt-glossary-row-edit" data-index="${index}" type="button">${t("glossaryEdit", "编辑")}</button>
+                            <button class="jyt-glossary-row-delete" data-index="${index}" type="button">${t("glossaryDelete", "删除")}</button>
                         </td>
                     </tr>
                 `;
@@ -426,10 +1096,10 @@ document.addEventListener("DOMContentLoaded", () => {
             <table class="jyt-glossary-table">
                 <thead>
                     <tr>
-                        <th>语言对</th>
-                        <th>原文</th>
-                        <th>目标</th>
-                        <th>操作</th>
+                        <th>${t("glossaryHeaderPair", "语言对")}</th>
+                        <th>${t("glossaryHeaderSource", "原文")}</th>
+                        <th>${t("glossaryHeaderTarget", "目标")}</th>
+                        <th>${t("glossaryHeaderAction", "操作")}</th>
                     </tr>
                 </thead>
                 <tbody>${rows}</tbody>
@@ -442,7 +1112,9 @@ document.addEventListener("DOMContentLoaded", () => {
             MESSAGE_TYPES.TERM_LIST || "TERM_LIST",
         );
         if (!result?.ok) {
-            throw new Error(result?.error || "术语列表获取失败");
+            throw new Error(
+                result?.error || t("errorTermListFetch", "术语列表获取失败"),
+            );
         }
 
         const sorted = (Array.isArray(result.terms) ? result.terms : []).sort(
@@ -456,7 +1128,8 @@ document.addEventListener("DOMContentLoaded", () => {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = () => resolve(String(reader.result || ""));
-            reader.onerror = () => reject(new Error("读取文件失败"));
+            reader.onerror = () =>
+                reject(new Error(t("errorReadFile", "读取文件失败")));
             reader.readAsText(file, "utf-8");
         });
     }
@@ -561,13 +1234,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function setConfigStatus(text, isError) {
         if (!configStatusEl) return;
-        configStatusEl.textContent = text || "";
+        configStatusEl.textContent = translateLegacyText(text || "");
         configStatusEl.classList.toggle("jyt-status-error", !!isError);
     }
 
     function setSyncStatus(text, isError) {
         if (!syncStatusEl) return;
-        syncStatusEl.textContent = text || "";
+        syncStatusEl.textContent = translateLegacyText(text || "");
         syncStatusEl.classList.toggle("jyt-status-error", !!isError);
     }
 
@@ -705,7 +1378,15 @@ document.addEventListener("DOMContentLoaded", () => {
                 chrome.runtime.sendMessage(request, (resp) => {
                     const err = chrome.runtime.lastError;
                     if (err) {
-                        reject(new Error(err.message || "后台消息发送失败"));
+                        reject(
+                            new Error(
+                                err.message ||
+                                    t(
+                                        "errorBackgroundMessageSend",
+                                        "后台消息发送失败",
+                                    ),
+                            ),
+                        );
                         return;
                     }
                     resolve(resp);
@@ -726,7 +1407,9 @@ document.addEventListener("DOMContentLoaded", () => {
             : 0;
         const termCount = Number(conflict?.glossaryConflictCount || 0);
         const answer = window.prompt(
-            `检测到同步冲突：配置字段 ${cfgCount} 项，术语 ${termCount} 项。\n请输入策略编号：\n1=远端覆盖本地\n2=本地覆盖远端\n3=按时间戳合并\n取消=中止同步`,
+            translateLegacyText(
+                `检测到同步冲突：配置字段 ${cfgCount} 项，术语 ${termCount} 项。\n请输入策略编号：\n1=远端覆盖本地\n2=本地覆盖远端\n3=按时间戳合并\n取消=中止同步`,
+            ),
             "3",
         );
         if (answer == null) return null;
@@ -770,7 +1453,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function setWebLLMStatus(text, isError) {
         if (!webllmStatusEl) return;
-        webllmStatusEl.textContent = text || "";
+        webllmStatusEl.textContent = translateLegacyText(text || "");
         webllmStatusEl.classList.toggle("jyt-status-error", !!isError);
     }
 
@@ -797,14 +1480,14 @@ document.addEventListener("DOMContentLoaded", () => {
             const option = document.createElement("option");
             option.value = id;
             option.textContent = RECOMMENDED_WEBLLM_MODELS.includes(id)
-                ? `${id}（推荐）`
+                ? `${id}${t("modelRecommendedSuffix", "（推荐）")}`
                 : id;
             els.webllm_model_select.appendChild(option);
         });
 
         const customOption = document.createElement("option");
         customOption.value = "custom";
-        customOption.textContent = "自定义模型 ID";
+        customOption.textContent = t("modelCustomId", "自定义模型 ID");
         els.webllm_model_select.appendChild(customOption);
 
         if (selectedModel && orderedIds.includes(selectedModel)) {
@@ -845,7 +1528,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const customOption = document.createElement("option");
         customOption.value = "custom";
-        customOption.textContent = "自定义模型名";
+        customOption.textContent = t("modelCustomName", "自定义模型名");
         els.ollama_model_select.appendChild(customOption);
 
         if (selectedModel && orderedIds.includes(selectedModel)) {
@@ -910,14 +1593,14 @@ document.addEventListener("DOMContentLoaded", () => {
             option.textContent = RECOMMENDED_SPECIAL_TRANSLATE_MODELS.includes(
                 id.toLowerCase(),
             )
-                ? `${id}（推荐）`
+                ? `${id}${t("modelRecommendedSuffix", "（推荐）")}`
                 : id;
             els.special_translate_model_select.appendChild(option);
         });
 
         const customOption = document.createElement("option");
         customOption.value = "custom";
-        customOption.textContent = "自定义模型名";
+        customOption.textContent = t("modelCustomName", "自定义模型名");
         els.special_translate_model_select.appendChild(customOption);
 
         if (selectedModel && orderedIds.includes(selectedModel)) {
@@ -1452,23 +2135,44 @@ document.addEventListener("DOMContentLoaded", () => {
             const isFilePdf = currentPdfUrl.startsWith("file://");
 
             if (isFirefoxRuntime && isFilePdf) {
-                setOpenButtonLabel("选择本地 PDF（Firefox）");
-                currentPdfStatusEl.textContent = `已检测到当前 PDF：${fileName}。Firefox 无法让扩展直接读取 file://，点击后会打开文件选择器，请选择该文件。`;
+                setOpenButtonLabel(
+                    t("optionsOpenPdfFirefox", "选择本地 PDF（Firefox）"),
+                );
+                currentPdfStatusEl.textContent = t(
+                    "optionsPdfDetectedFirefox",
+                    `已检测到当前 PDF：${fileName}。Firefox 无法让扩展直接读取 file://，点击后会打开文件选择器，请选择该文件。`,
+                    [fileName],
+                );
                 return;
             }
 
-            setOpenButtonLabel("用 LLM 翻译器打开当前 PDF");
-            currentPdfStatusEl.textContent = `已检测到当前 PDF：${fileName}`;
+            setOpenButtonLabel(
+                t("optionsOpenCurrentPdf", "用 LLM 翻译器打开当前 PDF"),
+            );
+            currentPdfStatusEl.textContent = t(
+                "optionsPdfDetected",
+                `已检测到当前 PDF：${fileName}`,
+                [fileName],
+            );
             return;
         }
 
-        setOpenButtonLabel("打开本地 PDF（Firefox 兼容）");
+        setOpenButtonLabel(
+            t(
+                "optionsOpenLocalPdfFirefoxCompat",
+                "打开本地 PDF（Firefox 兼容）",
+            ),
+        );
         if (activeTab?.url) {
-            currentPdfStatusEl.textContent =
-                "当前标签页未检测到 PDF 链接。点击后将进入内置 PDF.js 页面并弹出文件选择器。";
+            currentPdfStatusEl.textContent = t(
+                "optionsPdfNotDetected",
+                "当前标签页未检测到 PDF 链接。点击后将进入内置 PDF.js 页面并弹出文件选择器。",
+            );
         } else {
-            currentPdfStatusEl.textContent =
-                "未获取到当前标签页信息。点击后将进入内置 PDF.js 页面并弹出文件选择器。";
+            currentPdfStatusEl.textContent = t(
+                "optionsTabUnavailable",
+                "未获取到当前标签页信息。点击后将进入内置 PDF.js 页面并弹出文件选择器。",
+            );
         }
     }
 
@@ -1522,6 +2226,8 @@ document.addEventListener("DOMContentLoaded", () => {
             );
             els.source_lang.value = items.source_lang || "auto";
             els.target_lang.value = items.target_lang || "auto";
+            els.ui_lang.value = items.ui_lang || "auto";
+            void applyUiLanguage(items.ui_lang || "auto");
             els.openai_api_url.value = items.openai_api_url;
             els.openai_api_key.value = items.openai_api_key;
             const legacyThinkingModel = String(
@@ -1764,6 +2470,7 @@ document.addEventListener("DOMContentLoaded", () => {
             translate_shortcut: normalizeShortcut(els.translate_shortcut.value),
             source_lang: els.source_lang.value,
             target_lang: els.target_lang.value,
+            ui_lang: els.ui_lang.value,
             openai_api_url: els.openai_api_url.value,
             openai_api_key: els.openai_api_key.value,
             openai_model: els.openai_model.value,
@@ -2021,7 +2728,9 @@ document.addEventListener("DOMContentLoaded", () => {
             webllmPerfProfile.isWeak
         ) {
             const ok = window.confirm(
-                "设备性能偏弱，继续启用 WebLLM 可能导致卡顿或加载失败，确定继续吗？",
+                translateLegacyText(
+                    "设备性能偏弱，继续启用 WebLLM 可能导致卡顿或加载失败，确定继续吗？",
+                ),
             );
             if (!ok) {
                 return;
@@ -2030,6 +2739,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         chrome.storage.sync.set(data, () => {
             applyTheme(data.theme_mode);
+            void applyUiLanguage(data.ui_lang || "auto");
             showToast("已保存");
         });
     });
@@ -2067,6 +2777,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     els.theme_mode.addEventListener("change", () => {
         applyTheme(els.theme_mode.value);
+    });
+
+    els.ui_lang?.addEventListener("change", () => {
+        void applyUiLanguage(els.ui_lang.value || "auto");
     });
 
     els.webllm_model_select?.addEventListener("change", () => {
@@ -2412,7 +3126,9 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     glossaryClearBtn?.addEventListener("click", async () => {
-        const ok = window.confirm("确定清空术语库吗？该操作不可撤销。");
+        const ok = window.confirm(
+            translateLegacyText("确定清空术语库吗？该操作不可撤销。"),
+        );
         if (!ok) return;
 
         try {

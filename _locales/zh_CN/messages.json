@@ -1,0 +1,562 @@
+{
+    "appName": {
+        "message": "LLM划词翻译"
+    },
+    "appDescription": {
+        "message": "在网页划词后快速翻译，支持OpenAI及兼容大模型流式输出与设置页面"
+    },
+    "actionTitle": {
+        "message": "LLM划词翻译"
+    },
+    "optionsPageTitle": {
+        "message": "LLM划词翻译 - 设置"
+    },
+    "optionsHeader": {
+        "message": "LLM划词翻译 设置"
+    },
+    "optionsTabGeneral": {
+        "message": "通用"
+    },
+    "optionsTabEngine": {
+        "message": "引擎"
+    },
+    "optionsTabGlossary": {
+        "message": "术语"
+    },
+    "optionsTabSync": {
+        "message": "同步与数据"
+    },
+    "optionsSaveAll": {
+        "message": "保存所有设置"
+    },
+    "optionsReset": {
+        "message": "恢复默认"
+    },
+    "optionsOpenLocalPdf": {
+        "message": "打开本地 PDF"
+    },
+    "optionsOpenPdfFirefox": {
+        "message": "选择本地 PDF（Firefox）"
+    },
+    "optionsOpenCurrentPdf": {
+        "message": "用 LLM 翻译器打开当前 PDF"
+    },
+    "optionsOpenLocalPdfFirefoxCompat": {
+        "message": "打开本地 PDF（Firefox 兼容）"
+    },
+    "optionsPdfDetectedFirefox": {
+        "message": "已检测到当前 PDF：$1。Firefox 无法让扩展直接读取 file://，点击后会打开文件选择器，请选择该文件。",
+        "placeholders": {
+            "filename": {
+                "content": "$1"
+            }
+        }
+    },
+    "optionsPdfDetected": {
+        "message": "已检测到当前 PDF：$1",
+        "placeholders": {
+            "filename": {
+                "content": "$1"
+            }
+        }
+    },
+    "optionsPdfNotDetected": {
+        "message": "当前标签页未检测到 PDF 链接。点击后将进入内置 PDF.js 页面并弹出文件选择器。"
+    },
+    "optionsTabUnavailable": {
+        "message": "未获取到当前标签页信息。点击后将进入内置 PDF.js 页面并弹出文件选择器。"
+    },
+    "langAutoDetect": {
+        "message": "自动检测"
+    },
+    "langAutoSelect": {
+        "message": "自动选择"
+    },
+    "langAutoFollowBrowser": {
+        "message": "自动（跟随浏览器）"
+    },
+    "optionsUiLang": {
+        "message": "界面语言"
+    },
+    "optionsUiLangHint": {
+        "message": "当目标语言为“自动选择”时，会优先跟随这里的界面语言设置。"
+    },
+    "langZh": {
+        "message": "中文"
+    },
+    "langEn": {
+        "message": "英文"
+    },
+    "langJa": {
+        "message": "日文"
+    },
+    "langKo": {
+        "message": "韩文"
+    },
+    "langFr": {
+        "message": "法文"
+    },
+    "langDe": {
+        "message": "德文"
+    },
+    "langEs": {
+        "message": "西班牙文"
+    },
+    "langRu": {
+        "message": "俄文"
+    },
+    "glossaryAdd": {
+        "message": "新增术语"
+    },
+    "glossaryUpdate": {
+        "message": "更新术语"
+    },
+    "glossaryEmpty": {
+        "message": "暂无术语，先添加一条吧。"
+    },
+    "glossaryEdit": {
+        "message": "编辑"
+    },
+    "glossaryDelete": {
+        "message": "删除"
+    },
+    "glossaryHeaderPair": {
+        "message": "语言对"
+    },
+    "glossaryHeaderSource": {
+        "message": "原文"
+    },
+    "glossaryHeaderTarget": {
+        "message": "目标"
+    },
+    "glossaryHeaderAction": {
+        "message": "操作"
+    },
+    "errorTermListFetch": {
+        "message": "术语列表获取失败"
+    },
+    "errorReadFile": {
+        "message": "读取文件失败"
+    },
+    "errorRuntimeUnavailable": {
+        "message": "运行时消息接口不可用"
+    },
+    "errorTermMessageSend": {
+        "message": "术语消息发送失败"
+    },
+    "errorBackgroundMessageSend": {
+        "message": "后台消息发送失败"
+    },
+    "pdfPromptTitle": {
+        "message": "检测到可能是 PDF"
+    },
+    "pdfPromptDesc": {
+        "message": "是否使用插件内置查看器打开？"
+    },
+    "pdfPromptOpen": {
+        "message": "用划词翻译插件打开"
+    },
+    "pdfPromptBrowser": {
+        "message": "保持浏览器打开"
+    },
+    "pdfPromptCountdown": {
+        "message": "$1 秒后将自动使用浏览器打开",
+        "placeholders": {
+            "seconds": {
+                "content": "$1"
+            }
+        }
+    },
+    "pdfPromptOpening": {
+        "message": "正在打开插件内置 PDF 查看器..."
+    },
+    "pdfPromptOpenFailed": {
+        "message": "打开失败：$1",
+        "placeholders": {
+            "detail": {
+                "content": "$1"
+            }
+        }
+    },
+    "pdfCheckNotPdfDisabled": {
+        "message": "校验结果：该链接不像 PDF（已禁用划词翻译插件打开）"
+    },
+    "pdfCheckIsPdf": {
+        "message": "校验结果：该链接是 PDF，可以选择用划词翻译插件打开。"
+    },
+    "pdfCheckInProgress": {
+        "message": "正在校验文件类型，可稍候再决定。"
+    },
+    "pdfCheckFailedCanOpen": {
+        "message": "校验失败，可按需继续打开。"
+    },
+    "pdfCheckNotPdfKeepBrowser": {
+        "message": "校验结果：该链接不是 PDF（将保持浏览器默认行为）。"
+    },
+    "pdfCheckConfirmed": {
+        "message": "校验结果：确认是 PDF。"
+    },
+    "pdfCheckUncertain": {
+        "message": "未能完全确认类型，但可按需继续打开。"
+    },
+    "pdfCheckRequestFailed": {
+        "message": "校验请求失败，可按需继续打开。"
+    },
+    "pdfCheckNotPdf": {
+        "message": "校验结果：该链接不是 PDF。"
+    },
+    "pdfCheckUncertainOpen": {
+        "message": "未能完全确认类型，但你仍可按需选择划词翻译插件打开。"
+    },
+    "backgroundRequestFailed": {
+        "message": "后台处理失败：$1",
+        "placeholders": {
+            "detail": {
+                "content": "$1"
+            }
+        }
+    },
+    "modelRecommendedSuffix": {
+        "message": "（推荐）"
+    },
+    "modelCustomId": {
+        "message": "自定义模型 ID"
+    },
+    "modelCustomName": {
+        "message": "自定义模型名"
+    },
+    "optSelectYes": {
+        "message": "是"
+    },
+    "optSelectNo": {
+        "message": "否"
+    },
+    "optSelectEnableOn": {
+        "message": "开启"
+    },
+    "optSelectEnableOff": {
+        "message": "关闭（使用快捷键）"
+    },
+    "optSelectEngineAuto": {
+        "message": "自动（优先 OpenAI API）"
+    },
+    "optSelectEngineLlm": {
+        "message": "大模型翻译"
+    },
+    "optSelectEngineSpecialTranslate": {
+        "message": "专用大模型翻译"
+    },
+    "optSelectEngineCustomOpenAI": {
+        "message": "自定义 OpenAI"
+    },
+    "optSelectEngineGoogle": {
+        "message": "谷歌翻译"
+    },
+    "optSelectEngineBing": {
+        "message": "Bing翻译"
+    },
+    "optSelectEngineBrowserAiExperimental": {
+        "message": "浏览器AI（实验）"
+    },
+    "optSelectThemeAuto": {
+        "message": "自动（跟随系统）"
+    },
+    "optSelectThemeLight": {
+        "message": "明亮"
+    },
+    "optSelectThemeDark": {
+        "message": "黑暗"
+    },
+    "optSelectLlmProviderOllama": {
+        "message": "Ollama 本地服务"
+    },
+    "optSelectLlmProviderWebllm": {
+        "message": "WebLLM 本地模型（实验）"
+    },
+    "optSelectClaudeThinkingModeAdaptive": {
+        "message": "adaptive（推荐）"
+    },
+    "optSelectClaudeThinkingModeEnabled": {
+        "message": "enabled（手动预算）"
+    },
+    "optSelectOllamaLoadingModels": {
+        "message": "正在加载模型列表..."
+    },
+    "optSelectWebllmModelQwen3Recommended": {
+        "message": "Qwen3 0.6B (推荐)"
+    },
+    "optSelectWebllmModelSmollmLight": {
+        "message": "SmolLM2 360M (更轻量)"
+    },
+    "optSelectWebllmModelLlamaBetter": {
+        "message": "Llama 3.2 1B (效果更好)"
+    },
+    "optSelectWebllmMirrorOfficial": {
+        "message": "官方 HuggingFace"
+    },
+    "optSelectWebllmMirrorHfMirrorCn": {
+        "message": "hf-mirror（中国推荐）"
+    },
+    "optSelectWebllmMirrorCustom": {
+        "message": "自定义镜像"
+    },
+    "optSelectSpecialProviderOllama": {
+        "message": "Ollama 本地/远端"
+    },
+    "optSelectSpecialProviderOpenAiCompatible": {
+        "message": "OpenAI 兼容 API"
+    },
+    "optSelectSpecialModelTranslategemmaRecommended": {
+        "message": "translategemma（推荐）"
+    },
+    "optUiSectionBasicSettings": { "message": "基础设置" },
+    "optUiLabelEnableSelectionTranslation": { "message": "是否启用划词翻译" },
+    "optUiLabelTranslateShortcut": { "message": "翻译快捷键" },
+    "optUiHintShortcutRecorder": {
+        "message": "点击输入框后直接按键录制快捷键；留空表示不启用快捷键。"
+    },
+    "optUiLabelPreferredEngine": { "message": "首选翻译引擎" },
+    "optUiHintBrowserAiExperimental": {
+        "message": "实验功能目前只支持最新的Chrome内核浏览器，并且可能会下载模型"
+    },
+    "optUiLabelSourceLanguage": { "message": "源语言" },
+    "optUiLabelTargetLanguage": { "message": "目标语言" },
+    "optUiSectionAppearanceSettings": { "message": "外观设置" },
+    "optUiLabelThemeMode": { "message": "主题模式" },
+    "optUiLabelCustomFont": { "message": "自定义字体" },
+    "optUiLabelMaxWidthPercent": { "message": "最大宽度占比 (5-95%)" },
+    "optUiLabelMaxHeightPercent": { "message": "最大高度占比 (5-95%)" },
+    "optUiSectionLlmTranslation": { "message": "大模型翻译" },
+    "optUiLabelLlmProvider": { "message": "大模型提供方" },
+    "optUiHintLlmProvider": {
+        "message": "先在“通用”里选择“大模型翻译”，再在这里选择具体模型来源。"
+    },
+    "optUiSectionOpenaiConfig": { "message": "OpenAI / 大模型配置" },
+    "optUiLabelApiUrl": { "message": "API 地址" },
+    "optUiLabelApiKey": { "message": "API Key" },
+    "optUiLabelTranslateModel": { "message": "翻译模型" },
+    "optUiLabelCustomPromptOpenai": {
+        "message": "自定义翻译 Prompt（仅 OpenAI 生效）"
+    },
+    "optUiLabelShowThoughts": { "message": "显示思考过程" },
+    "optUiLabelOpenaiReasoningEffort": { "message": "OpenAI 推理强度" },
+    "optUiLabelOpenaiMaxOutputTokens": {
+        "message": "OpenAI 最大输出 Token（0=自动）"
+    },
+    "optUiSectionCustomOpenaiConfig": { "message": "自定义 OpenAI 兼容配置" },
+    "optUiLabelModel": { "message": "模型" },
+    "optUiLabelCustomPromptCustomOpenai": {
+        "message": "自定义翻译 Prompt（仅自定义 OpenAI 生效）"
+    },
+    "optUiLabelReasoningEffort": { "message": "推理强度" },
+    "optUiLabelMaxOutputTokensAuto": { "message": "最大输出 Token（0=自动）" },
+    "optUiSectionDeepseekConfig": { "message": "DeepSeek 配置" },
+    "optUiLabelCustomPromptDeepseek": {
+        "message": "自定义翻译 Prompt（仅 DeepSeek 生效）"
+    },
+    "optUiSectionQwenConfig": { "message": "Qwen DashScope 配置" },
+    "optUiLabelCustomPromptQwen": {
+        "message": "自定义翻译 Prompt（仅 Qwen 生效）"
+    },
+    "optUiLabelQwenThinkingBudget": { "message": "思考预算（0=自动）" },
+    "optUiLabelQwenPreserveThinking": { "message": "保留历史思考" },
+    "optUiSectionGlmConfig": { "message": "GLM 配置" },
+    "optUiLabelCustomPromptGlm": {
+        "message": "自定义翻译 Prompt（仅 GLM 生效）"
+    },
+    "optUiLabelGlmClearThinking": { "message": "清理历史思考上下文" },
+    "optUiSectionXiaomiConfig": { "message": "Xiaomi MiMo 配置" },
+    "optUiLabelCustomPromptXiaomi": {
+        "message": "自定义翻译 Prompt（仅 Xiaomi 生效）"
+    },
+    "optUiSectionClaudeConfig": { "message": "Claude 配置" },
+    "optUiLabelCustomPromptClaude": {
+        "message": "自定义翻译 Prompt（仅 Claude 生效）"
+    },
+    "optUiLabelClaudeThinkingMode": { "message": "思考模式" },
+    "optUiLabelClaudeThinkingBudget": { "message": "思考预算（enabled 模式）" },
+    "optUiLabelClaudeAdaptiveEffort": { "message": "adaptive 思考强度" },
+    "optUiLabelMaxOutputTokens": { "message": "最大输出 Token" },
+    "optUiSectionGeminiConfig": { "message": "Gemini 配置" },
+    "optUiLabelCustomPromptGemini": {
+        "message": "自定义翻译 Prompt（仅 Gemini 生效）"
+    },
+    "optUiLabelGeminiThinkingLevel": { "message": "Gemini 3 思考等级" },
+    "optUiLabelGeminiThinkingBudget": {
+        "message": "Gemini 2.5 思考预算（-1 动态，0 关闭）"
+    },
+    "optUiSectionOllamaConfig": { "message": "Ollama 配置" },
+    "optUiLabelOllamaAddress": { "message": "Ollama 地址" },
+    "optUiHintOllamaDefaultAddress": {
+        "message": "默认使用本地 Ollama 服务地址，可修改为远端地址。"
+    },
+    "optUiLabelCustomPromptOllama": {
+        "message": "自定义翻译 Prompt（仅 Ollama 生效）"
+    },
+    "optUiHintOllamaModelSource": {
+        "message": "自动检测模型来自 /api/tags 的 models[].name。"
+    },
+    "optUiSectionWebllmConfig": { "message": "WebLLM 本地模型配置" },
+    "optUiLabelRecommendedModel": { "message": "推荐模型" },
+    "optUiLabelCustomPromptWebllm": {
+        "message": "自定义翻译 Prompt（仅 WebLLM 生效）"
+    },
+    "optUiLabelDownloadMirror": { "message": "下载镜像" },
+    "optUiLabelCustomMirrorAddress": { "message": "自定义镜像地址" },
+    "optUiBtnWebllmDownload": { "message": "下载/缓存模型" },
+    "optUiBtnWebllmClearCache": { "message": "清理缓存" },
+    "optUiSectionSpecialTranslate": { "message": "专用大模型翻译" },
+    "optUiLabelProvider": { "message": "提供方" },
+    "optUiLabelApiKeyOpenaiCompatibleOptional": {
+        "message": "API Key（OpenAI 兼容可选）"
+    },
+    "optUiLabelSpecialModel": { "message": "专用模型" },
+    "optUiLabelCustomPromptSpecialTranslate": {
+        "message": "自定义翻译 Prompt（仅非 translategemma 生效）"
+    },
+    "optUiHintSpecialTranslateBuiltin": {
+        "message": "该引擎面向专用翻译模型。当前内置 Translationgemma，命中后会自动套用官方翻译模板。"
+    },
+    "optUiSectionGlossaryManagement": { "message": "术语管理" },
+    "optUiLabelSourceText": { "message": "原文" },
+    "optUiLabelTargetText": { "message": "译文" },
+    "optUiBtnCancel": { "message": "取消" },
+    "optUiBtnImport": { "message": "导入" },
+    "optUiBtnExport": { "message": "导出" },
+    "optUiBtnClear": { "message": "清空" },
+    "optUiSectionWebdavSync": { "message": "WebDAV 同步" },
+    "optUiLabelAccount": { "message": "账号" },
+    "optUiLabelPassword": { "message": "密码" },
+    "optUiLabelRemoteDir": { "message": "目录 (如 /jyt-sync)" },
+    "optUiBtnSaveCredential": { "message": "保存凭证" },
+    "optUiBtnTestConnection": { "message": "测试连接" },
+    "optUiBtnUploadToCloud": { "message": "上传到云端" },
+    "optUiBtnDownloadFromCloud": { "message": "从云端下载" },
+    "optUiBtnBidirectionalSync": { "message": "双向同步" },
+    "optUiSectionLocalConfigBackup": { "message": "本地配置备份" },
+    "optUiBtnImportConfig": { "message": "导入配置" },
+    "optUiBtnExportConfig": { "message": "导出配置" },
+    "optUiPlaceholderShortcut": { "message": "例如: Alt+T / Ctrl+Shift+Y" },
+    "optUiPlaceholderFontFamily": {
+        "message": "例如: 'Microsoft YaHei', 'Segoe UI'"
+    },
+    "optUiPlaceholderOllamaModel": { "message": "例如: qwen3:8b" },
+    "optUiPlaceholderWebllmModelId": {
+        "message": "例如: Qwen3-0.6B-q4f16_1-MLC"
+    },
+    "optUiPlaceholderSpecialModel": { "message": "例如: translategemma:4b" },
+    "optUiPlaceholderPromptTemplate": {
+        "message": "可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。"
+    },
+    "optUiPlaceholderPromptTemplateSimple": {
+        "message": "可用变量: {targetLang} {text} {glossary} {glossaryConstraint}"
+    },
+    "optErrLocalSaveFailed": { "message": "本地保存失败" },
+    "optErrLocalReadFailed": { "message": "本地读取失败" },
+    "optErrBidirectionalSyncFailed": { "message": "双向同步失败" },
+    "optErrSyncCanceled": { "message": "已取消同步" },
+    "optErrSyncConflictTooManyRetries": {
+        "message": "同步冲突处理次数过多，请重试"
+    },
+    "optErrRequestModelListTimeout": { "message": "请求模型列表超时" },
+    "optErrRequestOllamaModelListTimeout": {
+        "message": "请求 Ollama 模型列表超时"
+    },
+    "optErrRequestSpecialModelListTimeout": {
+        "message": "请求专用翻译模型列表超时"
+    },
+    "optWebllmModelLoading": { "message": "模型加载中" },
+    "optWebllmModelReady": { "message": "模型已加载完成，可直接用于划词翻译" },
+    "optWebllmCacheCleared": { "message": "模型缓存已清理" },
+    "optUnknownError": { "message": "未知错误" },
+    "optWebllmNoWebgpu": { "message": "当前浏览器不可用 WebGPU" },
+    "optWebllmUnsupportedChromeEdgeOnly": {
+        "message": "当前浏览器不支持 WebLLM（仅 Chrome/Edge 可用）"
+    },
+    "optWebllmPerfGood": {
+        "message": "设备检测通过，可尝试使用本地模型翻译。"
+    },
+    "optWebllmUnsupported": { "message": "当前浏览器不支持 WebLLM" },
+    "optWebllmPleaseSelectModelId": { "message": "请先选择或输入模型 ID" },
+    "optWebllmStartingLoad": { "message": "开始下载/加载模型..." },
+    "optCannotConnectBackground": { "message": "无法连接后台服务，请重试" },
+    "optWebllmClearingCache": { "message": "正在清理模型缓存..." },
+    "optExportFailed": { "message": "导出失败" },
+    "optImportFailed": { "message": "导入失败" },
+    "optGlossaryDeleteOldFailed": { "message": "旧术语删除失败" },
+    "optGlossarySaveFailed": { "message": "术语保存失败" },
+    "optClearFailed": { "message": "清空失败" },
+    "optDeleteFailed": { "message": "删除失败" },
+    "optConfigExportFailed": { "message": "配置导出失败" },
+    "optConfigImportFailed": { "message": "配置导入失败" },
+    "optSyncConnectionTestFailed": { "message": "连接测试失败" },
+    "optSyncUploadFailed": { "message": "上传失败" },
+    "optSyncDownloadFailed": { "message": "下载失败" },
+    "optSyncWebdavSaved": { "message": "WebDAV 配置已保存到本地" },
+    "optSyncTestingWebdav": { "message": "正在测试 WebDAV 连接..." },
+    "optSyncUploadingWebdav": { "message": "正在上传配置与术语到 WebDAV..." },
+    "optSyncDownloadingWebdav": {
+        "message": "正在从 WebDAV 下载配置与术语..."
+    },
+    "optSyncRunningBidirectional": { "message": "正在执行双向同步..." },
+    "optConfigExportDone": { "message": "配置导出完成" },
+    "optConfigImportDone": { "message": "配置导入完成" },
+    "optGlossarySaved": { "message": "术语已保存" },
+    "optGlossaryCleared": { "message": "术语库已清空" },
+    "optGlossaryDeleted": { "message": "术语已删除" },
+    "optGlossaryLoadedForEdit": { "message": "已载入术语，编辑后点击更新" },
+    "optGlossarySaveFailedIncompleteFields": {
+        "message": "保存失败: 请完整填写术语字段"
+    },
+    "optGlossaryImportFailedFileTooLarge": {
+        "message": "导入失败: 文件过大，请控制在 5MB 以内"
+    },
+    "optConfigImportFailedFileTooLarge": {
+        "message": "配置导入失败: 文件过大，请控制在 5MB 以内"
+    },
+    "optOpenBuiltinPdfFailed": { "message": "打开内置 PDF 页面失败，请重试" },
+    "optSaved": { "message": "已保存" },
+    "optDefaultsRestored": { "message": "已恢复默认" },
+    "optConfirmClearGlossary": {
+        "message": "确定清空术语库吗？该操作不可撤销。"
+    },
+    "optConfirmWebllmWeakPerf": {
+        "message": "设备性能偏弱，继续启用 WebLLM 可能导致卡顿或加载失败，确定继续吗？"
+    },
+    "optPatternOperationFailed": { "message": "操作失败: $1" },
+    "optPatternDeviceMemory": { "message": "设备内存约 $1" },
+    "optPatternCpuCores": { "message": "CPU 逻辑核心数约 $1" },
+    "optPatternGlossaryExportDone": { "message": "导出完成，共 $1 条术语" },
+    "optPatternGlossaryExportFailed": { "message": "导出失败: $1" },
+    "optPatternGlossaryImportDone": {
+        "message": "导入完成: 新增 $1，覆盖 $2，总计 $3"
+    },
+    "optPatternGlossaryImportFailed": { "message": "导入失败: $1" },
+    "optPatternSaveFailed": { "message": "保存失败: $1" },
+    "optPatternClearFailed": { "message": "清空失败: $1" },
+    "optPatternDeleteFailed": { "message": "删除失败: $1" },
+    "optPatternConfigExportFailed": { "message": "配置导出失败: $1" },
+    "optPatternConfigImportFailed": { "message": "配置导入失败: $1" },
+    "optPatternSyncConnTestFailed": { "message": "连接测试失败: $1" },
+    "optPatternSyncConnSuccess": {
+        "message": "连接成功: config($1) glossary($2)"
+    },
+    "optPatternSyncUploadDone": { "message": "上传完成: 术语 $1 条" },
+    "optPatternSyncUploadFailed": { "message": "上传失败: $1" },
+    "optPatternSyncDownloadDone": { "message": "下载完成: 术语 $1 条" },
+    "optPatternSyncDownloadFailed": { "message": "下载失败: $1" },
+    "optPatternSyncBidirectionalDone": {
+        "message": "双向同步完成: 术语 $1 条"
+    },
+    "optPatternSyncBidirectionalFailed": { "message": "双向同步失败: $1" },
+    "optPatternSyncLocalConfigReadFailed": {
+        "message": "本地同步配置读取失败: $1"
+    },
+    "optPatternGlossaryListLoadFailed": { "message": "术语列表加载失败: $1" },
+    "optPatternWebllmWeakPerfReasons": {
+        "message": "设备性能偏弱，不建议开启 WebLLM: $1。"
+    },
+    "optPatternSyncConflictPrompt": {
+        "message": "检测到同步冲突：配置字段 $1 项，术语 $2 项。\n请输入策略编号：\n1=远端覆盖本地\n2=本地覆盖远端\n3=按时间戳合并\n取消=中止同步"
+    }
+}

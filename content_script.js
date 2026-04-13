@@ -10,6 +10,7 @@
         translate_shortcut: "",
         source_lang: "auto",
         target_lang: "auto",
+        ui_lang: "auto",
         openai_api_url: "",
         openai_api_key: "",
         openai_model: "gpt-4o-mini",
@@ -92,6 +93,38 @@
         shared.DEFAULT_SETTINGS || FALLBACK_DEFAULT_SETTINGS;
     const MESSAGE_TYPES = shared.MESSAGE_TYPES || {};
 
+    function getI18nApi() {
+        if (
+            typeof chrome !== "undefined" &&
+            chrome.i18n &&
+            typeof chrome.i18n.getMessage === "function"
+        ) {
+            return chrome.i18n;
+        }
+        if (
+            typeof browser !== "undefined" &&
+            browser.i18n &&
+            typeof browser.i18n.getMessage === "function"
+        ) {
+            return browser.i18n;
+        }
+        return null;
+    }
+
+    const i18n = getI18nApi();
+    function t(key, fallback = "", substitutions) {
+        if (!key) return fallback;
+        try {
+            const message = i18n?.getMessage(key, substitutions);
+            if (typeof message === "string" && message.trim()) {
+                return message;
+            }
+        } catch (err) {
+            // ignore i18n lookup failures and use fallback
+        }
+        return fallback || key;
+    }
+
     let lastSelection = "";
     let isPinned = false;
     let translatePort = null;
@@ -143,7 +176,9 @@
     function sendTermMessage(type, payload) {
         const runtimeApi = getRuntimeApi();
         if (!runtimeApi) {
-            return Promise.reject(new Error("运行时消息接口不可用"));
+            return Promise.reject(
+                new Error(t("errorRuntimeUnavailable", "运行时消息接口不可用")),
+            );
         }
 
         const request = {
@@ -160,7 +195,15 @@
                 runtimeApi.sendMessage(request, (resp) => {
                     const err = chrome?.runtime?.lastError;
                     if (err) {
-                        reject(new Error(err.message || "术语消息发送失败"));
+                        reject(
+                            new Error(
+                                err.message ||
+                                    t(
+                                        "errorTermMessageSend",
+                                        "术语消息发送失败",
+                                    ),
+                            ),
+                        );
                         return;
                     }
                     resolve(resp);
@@ -216,16 +259,16 @@
         pdfPromptEl = document.createElement("div");
         pdfPromptEl.className = "jyt-pdf-prompt";
         pdfPromptEl.innerHTML = `
-            <div class="jyt-pdf-prompt-title">检测到可能是 PDF</div>
-            <div class="jyt-pdf-prompt-desc">是否使用插件内置查看器打开？</div>
-            <div class="jyt-pdf-prompt-countdown">10 秒后将自动使用浏览器打开</div>
+            <div class="jyt-pdf-prompt-title">${t("pdfPromptTitle", "检测到可能是 PDF")}</div>
+            <div class="jyt-pdf-prompt-desc">${t("pdfPromptDesc", "是否使用插件内置查看器打开？")}</div>
+            <div class="jyt-pdf-prompt-countdown">${t("pdfPromptCountdown", "10 秒后将自动使用浏览器打开", ["10"])}</div>
             <div class="jyt-pdf-progress" aria-hidden="true">
                 <div class="jyt-pdf-progress-bar"></div>
             </div>
             <div class="jyt-pdf-prompt-status"></div>
             <div class="jyt-pdf-prompt-actions">
-                <button type="button" class="jyt-pdf-open">用划词翻译插件打开</button>
-                <button type="button" class="jyt-pdf-browser">保持浏览器打开</button>
+                <button type="button" class="jyt-pdf-open">${t("pdfPromptOpen", "用划词翻译插件打开")}</button>
+                <button type="button" class="jyt-pdf-browser">${t("pdfPromptBrowser", "保持浏览器打开")}</button>
             </div>
         `;
 
@@ -243,7 +286,9 @@
 
             openBtn.disabled = true;
             browserBtn.disabled = true;
-            updatePdfPromptStatus("正在打开插件内置 PDF 查看器...");
+            updatePdfPromptStatus(
+                t("pdfPromptOpening", "正在打开插件内置 PDF 查看器..."),
+            );
 
             try {
                 if (pdfPromptState.source === "background") {
@@ -270,7 +315,10 @@
                 openBtn.disabled = false;
                 browserBtn.disabled = false;
                 const message = err?.message || String(err);
-                updatePdfPromptStatus(`打开失败：${message}`, true);
+                updatePdfPromptStatus(
+                    t("pdfPromptOpenFailed", `打开失败：${message}`, [message]),
+                    true,
+                );
             }
         });
 
@@ -333,7 +381,11 @@
             Math.min(1, remaining / PDF_PROMPT_AUTO_CLOSE_MS),
         );
 
-        countdownEl.textContent = `${remainSeconds} 秒后将自动使用浏览器打开`;
+        countdownEl.textContent = t(
+            "pdfPromptCountdown",
+            `${remainSeconds} 秒后将自动使用浏览器打开`,
+            [String(remainSeconds)],
+        );
         progressBarEl.style.width = `${Math.round(ratio * 100)}%`;
     }
 
@@ -423,7 +475,10 @@
         if (pdfPromptState.isPdf === false) {
             setPdfPromptOpenEnabled(false);
             updatePdfPromptStatus(
-                "校验结果：该链接不像 PDF（已禁用划词翻译插件打开）",
+                t(
+                    "pdfCheckNotPdfDisabled",
+                    "校验结果：该链接不像 PDF（已禁用划词翻译插件打开）",
+                ),
                 true,
             );
             return;
@@ -432,11 +487,17 @@
         setPdfPromptOpenEnabled(true);
         if (pdfPromptState.isPdf === true) {
             updatePdfPromptStatus(
-                "校验结果：该链接是 PDF，可以选择用划词翻译插件打开。",
+                t(
+                    "pdfCheckIsPdf",
+                    "校验结果：该链接是 PDF，可以选择用划词翻译插件打开。",
+                ),
                 false,
             );
         } else {
-            updatePdfPromptStatus("正在校验文件类型，可稍候再决定。", false);
+            updatePdfPromptStatus(
+                t("pdfCheckInProgress", "正在校验文件类型，可稍候再决定。"),
+                false,
+            );
         }
 
         schedulePdfPromptAutoClose();
@@ -457,7 +518,10 @@
 
             if (!result?.ok) {
                 setPdfPromptOpenEnabled(true);
-                updatePdfPromptStatus("校验失败，可按需继续打开。", true);
+                updatePdfPromptStatus(
+                    t("pdfCheckFailedCanOpen", "校验失败，可按需继续打开。"),
+                    true,
+                );
                 return;
             }
 
@@ -465,7 +529,10 @@
             if (result.isPdf === false) {
                 setPdfPromptOpenEnabled(false);
                 updatePdfPromptStatus(
-                    "校验结果：该链接不是 PDF（将保持浏览器默认行为）。",
+                    t(
+                        "pdfCheckNotPdfKeepBrowser",
+                        "校验结果：该链接不是 PDF（将保持浏览器默认行为）。",
+                    ),
                     true,
                 );
                 return;
@@ -473,10 +540,16 @@
 
             setPdfPromptOpenEnabled(true);
             if (result.isPdf === true) {
-                updatePdfPromptStatus("校验结果：确认是 PDF。", false);
+                updatePdfPromptStatus(
+                    t("pdfCheckConfirmed", "校验结果：确认是 PDF。"),
+                    false,
+                );
             } else {
                 updatePdfPromptStatus(
-                    "未能完全确认类型，但可按需继续打开。",
+                    t(
+                        "pdfCheckUncertain",
+                        "未能完全确认类型，但可按需继续打开。",
+                    ),
                     false,
                 );
             }
@@ -485,7 +558,10 @@
                 return;
             }
             setPdfPromptOpenEnabled(true);
-            updatePdfPromptStatus("校验请求失败，可按需继续打开。", true);
+            updatePdfPromptStatus(
+                t("pdfCheckRequestFailed", "校验请求失败，可按需继续打开。"),
+                true,
+            );
         }
     }
 
@@ -520,16 +596,25 @@
                 pdfPromptState.isPdf = message?.isPdf ?? null;
                 if (pdfPromptState.isPdf === false) {
                     setPdfPromptOpenEnabled(false);
-                    updatePdfPromptStatus("校验结果：该链接不是 PDF。", true);
+                    updatePdfPromptStatus(
+                        t("pdfCheckNotPdf", "校验结果：该链接不是 PDF。"),
+                        true,
+                    );
                     return false;
                 }
 
                 setPdfPromptOpenEnabled(true);
                 if (pdfPromptState.isPdf === true) {
-                    updatePdfPromptStatus("校验结果：确认是 PDF。", false);
+                    updatePdfPromptStatus(
+                        t("pdfCheckConfirmed", "校验结果：确认是 PDF。"),
+                        false,
+                    );
                 } else {
                     updatePdfPromptStatus(
-                        "未能完全确认类型，但你仍可按需选择划词翻译插件打开。",
+                        t(
+                            "pdfCheckUncertainOpen",
+                            "未能完全确认类型，但你仍可按需选择划词翻译插件打开。",
+                        ),
                         false,
                     );
                 }
@@ -989,6 +1074,14 @@
         return normalizeBasicLang(navLang) || null;
     }
 
+    function detectPreferredTargetLang(settings) {
+        const configuredUiLang = normalizeBasicLang(settings?.ui_lang || "");
+        if (configuredUiLang && configuredUiLang !== "auto") {
+            return configuredUiLang;
+        }
+        return detectBrowserLangByNavigator();
+    }
+
     async function detectTextLangByChromeI18n(text) {
         if (!chrome?.i18n?.detectLanguage) return null;
         try {
@@ -1411,7 +1504,7 @@
         if (!from) from = detectLangHeuristic(text);
 
         let to = targetSetting === "auto" ? "" : targetSetting;
-        if (!to) to = detectBrowserLangByNavigator();
+        if (!to) to = detectPreferredTargetLang(settings);
         if (!to) to = "zh";
         if (to === from) to = from === "zh" ? "en" : "zh";
 

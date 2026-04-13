@@ -1,6 +1,7 @@
 export function resolveLanguagePair(request) {
     const sourceSetting = request?.settings?.source_lang || "auto";
     const targetSetting = request?.settings?.target_lang || "auto";
+    const uiLangSetting = normalizeBasicLang(request?.settings?.ui_lang || "");
 
     const from =
         sourceSetting !== "auto"
@@ -12,6 +13,9 @@ export function resolveLanguagePair(request) {
             ? targetSetting
             : request.to ||
               request.preferredTo ||
+              (uiLangSetting && uiLangSetting !== "auto"
+                  ? uiLangSetting
+                  : "") ||
               (from === "zh" ? "en" : "zh");
 
     if (to === from) {
@@ -19,6 +23,20 @@ export function resolveLanguagePair(request) {
     }
 
     return { from, to };
+}
+
+function normalizeBasicLang(lang) {
+    if (!lang || typeof lang !== "string") return "";
+    const lower = lang.toLowerCase();
+    if (lower.startsWith("zh")) return "zh";
+    if (lower.startsWith("en")) return "en";
+    if (lower.startsWith("ja")) return "ja";
+    if (lower.startsWith("ko")) return "ko";
+    if (lower.startsWith("fr")) return "fr";
+    if (lower.startsWith("de")) return "de";
+    if (lower.startsWith("es")) return "es";
+    if (lower.startsWith("ru")) return "ru";
+    return lower.split("-")[0] || "";
 }
 
 export function getLanguageDisplayName(lang) {

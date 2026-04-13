@@ -6,6 +6,7 @@
         translate_shortcut: "",
         source_lang: "auto",
         target_lang: "auto",
+        ui_lang: "auto",
         openai_api_url: "",
         openai_api_key: "",
         openai_model: "gpt-4o-mini",

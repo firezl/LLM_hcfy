@@ -148,6 +148,7 @@ extensionApi.runtime.onMessage.addListener((message, sender, sendResponse) => {
         .catch((err) => {
             sendResponse({
                 ok: false,
+                errorKey: "backgroundRequestFailed",
                 error: err && err.message ? err.message : String(err),
             });
         });

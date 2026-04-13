@@ -1,0 +1,606 @@
+{
+    "appName": {
+        "message": "LLM Selection Translator"
+    },
+    "appDescription": {
+        "message": "Translate selected text on web pages with OpenAI-compatible LLM streaming output and a settings page"
+    },
+    "actionTitle": {
+        "message": "LLM Selection Translator"
+    },
+    "optionsPageTitle": {
+        "message": "LLM Selection Translator - Settings"
+    },
+    "optionsHeader": {
+        "message": "LLM Selection Translator Settings"
+    },
+    "optionsTabGeneral": {
+        "message": "General"
+    },
+    "optionsTabEngine": {
+        "message": "Engine"
+    },
+    "optionsTabGlossary": {
+        "message": "Glossary"
+    },
+    "optionsTabSync": {
+        "message": "Sync & Data"
+    },
+    "optionsSaveAll": {
+        "message": "Save All Settings"
+    },
+    "optionsReset": {
+        "message": "Restore Defaults"
+    },
+    "optionsOpenLocalPdf": {
+        "message": "Open Local PDF"
+    },
+    "optionsOpenPdfFirefox": {
+        "message": "Choose Local PDF (Firefox)"
+    },
+    "optionsOpenCurrentPdf": {
+        "message": "Open Current PDF with Translator"
+    },
+    "optionsOpenLocalPdfFirefoxCompat": {
+        "message": "Open Local PDF (Firefox Compatible)"
+    },
+    "optionsPdfDetectedFirefox": {
+        "message": "Current PDF detected: $1. Firefox cannot let extensions read file:// directly. Click to open the file picker and choose this file.",
+        "placeholders": {
+            "filename": {
+                "content": "$1"
+            }
+        }
+    },
+    "optionsPdfDetected": {
+        "message": "Current PDF detected: $1",
+        "placeholders": {
+            "filename": {
+                "content": "$1"
+            }
+        }
+    },
+    "optionsPdfNotDetected": {
+        "message": "No PDF link detected in current tab. Click to open built-in PDF.js and choose a file."
+    },
+    "optionsTabUnavailable": {
+        "message": "Current tab info is unavailable. Click to open built-in PDF.js and choose a file."
+    },
+    "langAutoDetect": {
+        "message": "Auto detect"
+    },
+    "langAutoSelect": {
+        "message": "Auto select"
+    },
+    "langAutoFollowBrowser": {
+        "message": "Auto (follow browser)"
+    },
+    "optionsUiLang": {
+        "message": "UI Language"
+    },
+    "optionsUiLangHint": {
+        "message": "When target language is set to Auto, it will prefer this UI language setting."
+    },
+    "langZh": {
+        "message": "Chinese"
+    },
+    "langEn": {
+        "message": "English"
+    },
+    "langJa": {
+        "message": "Japanese"
+    },
+    "langKo": {
+        "message": "Korean"
+    },
+    "langFr": {
+        "message": "French"
+    },
+    "langDe": {
+        "message": "German"
+    },
+    "langEs": {
+        "message": "Spanish"
+    },
+    "langRu": {
+        "message": "Russian"
+    },
+    "glossaryAdd": {
+        "message": "Add Term"
+    },
+    "glossaryUpdate": {
+        "message": "Update Term"
+    },
+    "glossaryEmpty": {
+        "message": "No glossary terms yet. Add one to get started."
+    },
+    "glossaryEdit": {
+        "message": "Edit"
+    },
+    "glossaryDelete": {
+        "message": "Delete"
+    },
+    "glossaryHeaderPair": {
+        "message": "Language Pair"
+    },
+    "glossaryHeaderSource": {
+        "message": "Source"
+    },
+    "glossaryHeaderTarget": {
+        "message": "Target"
+    },
+    "glossaryHeaderAction": {
+        "message": "Action"
+    },
+    "errorTermListFetch": {
+        "message": "Failed to load glossary list"
+    },
+    "errorReadFile": {
+        "message": "Failed to read file"
+    },
+    "errorRuntimeUnavailable": {
+        "message": "Runtime messaging API is unavailable"
+    },
+    "errorTermMessageSend": {
+        "message": "Failed to send glossary message"
+    },
+    "errorBackgroundMessageSend": {
+        "message": "Failed to send background message"
+    },
+    "pdfPromptTitle": {
+        "message": "Potential PDF detected"
+    },
+    "pdfPromptDesc": {
+        "message": "Open it with the extension built-in viewer?"
+    },
+    "pdfPromptOpen": {
+        "message": "Open with translator"
+    },
+    "pdfPromptBrowser": {
+        "message": "Keep browser default"
+    },
+    "pdfPromptCountdown": {
+        "message": "Will open with browser default in $1s",
+        "placeholders": {
+            "seconds": {
+                "content": "$1"
+            }
+        }
+    },
+    "pdfPromptOpening": {
+        "message": "Opening built-in PDF viewer..."
+    },
+    "pdfPromptOpenFailed": {
+        "message": "Open failed: $1",
+        "placeholders": {
+            "detail": {
+                "content": "$1"
+            }
+        }
+    },
+    "pdfCheckNotPdfDisabled": {
+        "message": "Check result: this link does not look like a PDF (open-with-extension disabled)."
+    },
+    "pdfCheckIsPdf": {
+        "message": "Check result: this link is a PDF. You can open it with the extension."
+    },
+    "pdfCheckInProgress": {
+        "message": "Checking file type, please wait."
+    },
+    "pdfCheckFailedCanOpen": {
+        "message": "Check failed, but you can still choose to open it."
+    },
+    "pdfCheckNotPdfKeepBrowser": {
+        "message": "Check result: not a PDF (browser default will be kept)."
+    },
+    "pdfCheckConfirmed": {
+        "message": "Check result: confirmed PDF."
+    },
+    "pdfCheckUncertain": {
+        "message": "Type is not fully confirmed, but you can still choose to open it."
+    },
+    "pdfCheckRequestFailed": {
+        "message": "Type check request failed, but you can still choose to open it."
+    },
+    "pdfCheckNotPdf": {
+        "message": "Check result: not a PDF."
+    },
+    "pdfCheckUncertainOpen": {
+        "message": "Type is not fully confirmed, but you can still choose to open it with the extension."
+    },
+    "backgroundRequestFailed": {
+        "message": "Background request failed: $1",
+        "placeholders": {
+            "detail": {
+                "content": "$1"
+            }
+        }
+    },
+    "modelRecommendedSuffix": {
+        "message": " (Recommended)"
+    },
+    "modelCustomId": {
+        "message": "Custom Model ID"
+    },
+    "modelCustomName": {
+        "message": "Custom Model Name"
+    },
+    "optSelectYes": {
+        "message": "Yes"
+    },
+    "optSelectNo": {
+        "message": "No"
+    },
+    "optSelectEnableOn": {
+        "message": "Enabled"
+    },
+    "optSelectEnableOff": {
+        "message": "Disabled (use shortcut)"
+    },
+    "optSelectEngineAuto": {
+        "message": "Auto (prefer OpenAI API)"
+    },
+    "optSelectEngineLlm": {
+        "message": "LLM Translation"
+    },
+    "optSelectEngineSpecialTranslate": {
+        "message": "Specialized LLM Translation"
+    },
+    "optSelectEngineCustomOpenAI": {
+        "message": "Custom OpenAI"
+    },
+    "optSelectEngineGoogle": {
+        "message": "Google Translate"
+    },
+    "optSelectEngineBing": {
+        "message": "Bing Translate"
+    },
+    "optSelectEngineBrowserAiExperimental": {
+        "message": "Browser AI (Experimental)"
+    },
+    "optSelectThemeAuto": {
+        "message": "Auto (follow system)"
+    },
+    "optSelectThemeLight": {
+        "message": "Light"
+    },
+    "optSelectThemeDark": {
+        "message": "Dark"
+    },
+    "optSelectLlmProviderOllama": {
+        "message": "Ollama Local Service"
+    },
+    "optSelectLlmProviderWebllm": {
+        "message": "WebLLM Local Model (Experimental)"
+    },
+    "optSelectClaudeThinkingModeAdaptive": {
+        "message": "adaptive (recommended)"
+    },
+    "optSelectClaudeThinkingModeEnabled": {
+        "message": "enabled (manual budget)"
+    },
+    "optSelectOllamaLoadingModels": {
+        "message": "Loading model list..."
+    },
+    "optSelectWebllmModelQwen3Recommended": {
+        "message": "Qwen3 0.6B (Recommended)"
+    },
+    "optSelectWebllmModelSmollmLight": {
+        "message": "SmolLM2 360M (Lighter)"
+    },
+    "optSelectWebllmModelLlamaBetter": {
+        "message": "Llama 3.2 1B (Better quality)"
+    },
+    "optSelectWebllmMirrorOfficial": {
+        "message": "Official HuggingFace"
+    },
+    "optSelectWebllmMirrorHfMirrorCn": {
+        "message": "hf-mirror (Recommended in China)"
+    },
+    "optSelectWebllmMirrorCustom": {
+        "message": "Custom Mirror"
+    },
+    "optSelectSpecialProviderOllama": {
+        "message": "Ollama Local/Remote"
+    },
+    "optSelectSpecialProviderOpenAiCompatible": {
+        "message": "OpenAI-Compatible API"
+    },
+    "optSelectSpecialModelTranslategemmaRecommended": {
+        "message": "translategemma (Recommended)"
+    },
+    "optUiSectionBasicSettings": { "message": "Basic Settings" },
+    "optUiLabelEnableSelectionTranslation": {
+        "message": "Enable Selection Translation"
+    },
+    "optUiLabelTranslateShortcut": { "message": "Translate Shortcut" },
+    "optUiHintShortcutRecorder": {
+        "message": "Click the input box and press keys directly to record a shortcut. Leave empty to disable shortcut."
+    },
+    "optUiLabelPreferredEngine": { "message": "Preferred Translation Engine" },
+    "optUiHintBrowserAiExperimental": {
+        "message": "Experimental feature currently supports only latest Chromium-based browsers and may download models."
+    },
+    "optUiLabelSourceLanguage": { "message": "Source Language" },
+    "optUiLabelTargetLanguage": { "message": "Target Language" },
+    "optUiSectionAppearanceSettings": { "message": "Appearance Settings" },
+    "optUiLabelThemeMode": { "message": "Theme Mode" },
+    "optUiLabelCustomFont": { "message": "Custom Font" },
+    "optUiLabelMaxWidthPercent": { "message": "Max Width Percentage (5-95%)" },
+    "optUiLabelMaxHeightPercent": {
+        "message": "Max Height Percentage (5-95%)"
+    },
+    "optUiSectionLlmTranslation": { "message": "LLM Translation" },
+    "optUiLabelLlmProvider": { "message": "LLM Provider" },
+    "optUiHintLlmProvider": {
+        "message": "First choose LLM Translation in General, then choose the specific model provider here."
+    },
+    "optUiSectionOpenaiConfig": { "message": "OpenAI / LLM Settings" },
+    "optUiLabelApiUrl": { "message": "API URL" },
+    "optUiLabelApiKey": { "message": "API Key" },
+    "optUiLabelTranslateModel": { "message": "Translation Model" },
+    "optUiLabelCustomPromptOpenai": {
+        "message": "Custom Translation Prompt (OpenAI only)"
+    },
+    "optUiLabelShowThoughts": { "message": "Show Reasoning" },
+    "optUiLabelOpenaiReasoningEffort": { "message": "OpenAI Reasoning Effort" },
+    "optUiLabelOpenaiMaxOutputTokens": {
+        "message": "OpenAI Max Output Tokens (0=auto)"
+    },
+    "optUiSectionCustomOpenaiConfig": {
+        "message": "Custom OpenAI-Compatible Settings"
+    },
+    "optUiLabelModel": { "message": "Model" },
+    "optUiLabelCustomPromptCustomOpenai": {
+        "message": "Custom Translation Prompt (Custom OpenAI only)"
+    },
+    "optUiLabelReasoningEffort": { "message": "Reasoning Effort" },
+    "optUiLabelMaxOutputTokensAuto": {
+        "message": "Max Output Tokens (0=auto)"
+    },
+    "optUiSectionDeepseekConfig": { "message": "DeepSeek Settings" },
+    "optUiLabelCustomPromptDeepseek": {
+        "message": "Custom Translation Prompt (DeepSeek only)"
+    },
+    "optUiSectionQwenConfig": { "message": "Qwen DashScope Settings" },
+    "optUiLabelCustomPromptQwen": {
+        "message": "Custom Translation Prompt (Qwen only)"
+    },
+    "optUiLabelQwenThinkingBudget": { "message": "Thinking Budget (0=auto)" },
+    "optUiLabelQwenPreserveThinking": {
+        "message": "Preserve Thinking History"
+    },
+    "optUiSectionGlmConfig": { "message": "GLM Settings" },
+    "optUiLabelCustomPromptGlm": {
+        "message": "Custom Translation Prompt (GLM only)"
+    },
+    "optUiLabelGlmClearThinking": {
+        "message": "Clear Historical Thinking Context"
+    },
+    "optUiSectionXiaomiConfig": { "message": "Xiaomi MiMo Settings" },
+    "optUiLabelCustomPromptXiaomi": {
+        "message": "Custom Translation Prompt (Xiaomi only)"
+    },
+    "optUiSectionClaudeConfig": { "message": "Claude Settings" },
+    "optUiLabelCustomPromptClaude": {
+        "message": "Custom Translation Prompt (Claude only)"
+    },
+    "optUiLabelClaudeThinkingMode": { "message": "Thinking Mode" },
+    "optUiLabelClaudeThinkingBudget": {
+        "message": "Thinking Budget (enabled mode)"
+    },
+    "optUiLabelClaudeAdaptiveEffort": { "message": "Adaptive Thinking Effort" },
+    "optUiLabelMaxOutputTokens": { "message": "Max Output Tokens" },
+    "optUiSectionGeminiConfig": { "message": "Gemini Settings" },
+    "optUiLabelCustomPromptGemini": {
+        "message": "Custom Translation Prompt (Gemini only)"
+    },
+    "optUiLabelGeminiThinkingLevel": { "message": "Gemini 3 Thinking Level" },
+    "optUiLabelGeminiThinkingBudget": {
+        "message": "Gemini 2.5 Thinking Budget (-1 dynamic, 0 off)"
+    },
+    "optUiSectionOllamaConfig": { "message": "Ollama Settings" },
+    "optUiLabelOllamaAddress": { "message": "Ollama URL" },
+    "optUiHintOllamaDefaultAddress": {
+        "message": "Uses local Ollama service URL by default. You can change it to a remote URL."
+    },
+    "optUiLabelCustomPromptOllama": {
+        "message": "Custom Translation Prompt (Ollama only)"
+    },
+    "optUiHintOllamaModelSource": {
+        "message": "Auto-detected models come from /api/tags models[].name."
+    },
+    "optUiSectionWebllmConfig": { "message": "WebLLM Local Model Settings" },
+    "optUiLabelRecommendedModel": { "message": "Recommended Model" },
+    "optUiLabelCustomPromptWebllm": {
+        "message": "Custom Translation Prompt (WebLLM only)"
+    },
+    "optUiLabelDownloadMirror": { "message": "Download Mirror" },
+    "optUiLabelCustomMirrorAddress": { "message": "Custom Mirror URL" },
+    "optUiBtnWebllmDownload": { "message": "Download/Cache Model" },
+    "optUiBtnWebllmClearCache": { "message": "Clear Cache" },
+    "optUiSectionSpecialTranslate": {
+        "message": "Specialized LLM Translation"
+    },
+    "optUiLabelProvider": { "message": "Provider" },
+    "optUiLabelApiKeyOpenaiCompatibleOptional": {
+        "message": "API Key (optional for OpenAI-compatible)"
+    },
+    "optUiLabelSpecialModel": { "message": "Specialized Model" },
+    "optUiLabelCustomPromptSpecialTranslate": {
+        "message": "Custom Translation Prompt (non-translategemma only)"
+    },
+    "optUiHintSpecialTranslateBuiltin": {
+        "message": "This engine is for specialized translation models. Translationgemma is built in and will use official translation templates automatically when matched."
+    },
+    "optUiSectionGlossaryManagement": { "message": "Glossary Management" },
+    "optUiLabelSourceText": { "message": "Source Text" },
+    "optUiLabelTargetText": { "message": "Target Text" },
+    "optUiBtnCancel": { "message": "Cancel" },
+    "optUiBtnImport": { "message": "Import" },
+    "optUiBtnExport": { "message": "Export" },
+    "optUiBtnClear": { "message": "Clear" },
+    "optUiSectionWebdavSync": { "message": "WebDAV Sync" },
+    "optUiLabelAccount": { "message": "Account" },
+    "optUiLabelPassword": { "message": "Password" },
+    "optUiLabelRemoteDir": { "message": "Directory (e.g. /jyt-sync)" },
+    "optUiBtnSaveCredential": { "message": "Save Credentials" },
+    "optUiBtnTestConnection": { "message": "Test Connection" },
+    "optUiBtnUploadToCloud": { "message": "Upload to Cloud" },
+    "optUiBtnDownloadFromCloud": { "message": "Download from Cloud" },
+    "optUiBtnBidirectionalSync": { "message": "Bidirectional Sync" },
+    "optUiSectionLocalConfigBackup": { "message": "Local Config Backup" },
+    "optUiBtnImportConfig": { "message": "Import Config" },
+    "optUiBtnExportConfig": { "message": "Export Config" },
+    "optUiPlaceholderShortcut": { "message": "e.g.: Alt+T / Ctrl+Shift+Y" },
+    "optUiPlaceholderFontFamily": {
+        "message": "e.g.: 'Microsoft YaHei', 'Segoe UI'"
+    },
+    "optUiPlaceholderOllamaModel": { "message": "e.g.: qwen3:8b" },
+    "optUiPlaceholderWebllmModelId": {
+        "message": "e.g.: Qwen3-0.6B-q4f16_1-MLC"
+    },
+    "optUiPlaceholderSpecialModel": { "message": "e.g.: translategemma:4b" },
+    "optUiPlaceholderPromptTemplate": {
+        "message": "Variables: {targetLang} {text} {glossary} {glossaryConstraint}. Example: Glossary constraints (if source text matches, prefer these glossary translations): {glossary}. Translate the text below into {targetLang} with no extra output."
+    },
+    "optUiPlaceholderPromptTemplateSimple": {
+        "message": "Variables: {targetLang} {text} {glossary} {glossaryConstraint}"
+    },
+    "optErrLocalSaveFailed": { "message": "Local save failed" },
+    "optErrLocalReadFailed": { "message": "Local read failed" },
+    "optErrBidirectionalSyncFailed": { "message": "Bidirectional sync failed" },
+    "optErrSyncCanceled": { "message": "Sync canceled" },
+    "optErrSyncConflictTooManyRetries": {
+        "message": "Too many sync conflict retries, please try again"
+    },
+    "optErrRequestModelListTimeout": {
+        "message": "Model list request timed out"
+    },
+    "optErrRequestOllamaModelListTimeout": {
+        "message": "Ollama model list request timed out"
+    },
+    "optErrRequestSpecialModelListTimeout": {
+        "message": "Special translation model list request timed out"
+    },
+    "optWebllmModelLoading": { "message": "Model is loading" },
+    "optWebllmModelReady": {
+        "message": "Model loaded and ready for translation"
+    },
+    "optWebllmCacheCleared": { "message": "Model cache cleared" },
+    "optUnknownError": { "message": "Unknown error" },
+    "optWebllmNoWebgpu": {
+        "message": "WebGPU is not available in current browser"
+    },
+    "optWebllmUnsupportedChromeEdgeOnly": {
+        "message": "WebLLM is not supported in this browser (Chrome/Edge only)"
+    },
+    "optWebllmPerfGood": {
+        "message": "Device check passed. You can try local model translation."
+    },
+    "optWebllmUnsupported": {
+        "message": "WebLLM is not supported in this browser"
+    },
+    "optWebllmPleaseSelectModelId": {
+        "message": "Please select or input a model ID"
+    },
+    "optWebllmStartingLoad": { "message": "Starting model download/load..." },
+    "optCannotConnectBackground": {
+        "message": "Cannot connect to background service, please retry"
+    },
+    "optWebllmClearingCache": { "message": "Clearing model cache..." },
+    "optExportFailed": { "message": "Export failed" },
+    "optImportFailed": { "message": "Import failed" },
+    "optGlossaryDeleteOldFailed": { "message": "Failed to delete old term" },
+    "optGlossarySaveFailed": { "message": "Failed to save term" },
+    "optClearFailed": { "message": "Clear failed" },
+    "optDeleteFailed": { "message": "Delete failed" },
+    "optConfigExportFailed": { "message": "Config export failed" },
+    "optConfigImportFailed": { "message": "Config import failed" },
+    "optSyncConnectionTestFailed": { "message": "Connection test failed" },
+    "optSyncUploadFailed": { "message": "Upload failed" },
+    "optSyncDownloadFailed": { "message": "Download failed" },
+    "optSyncWebdavSaved": { "message": "WebDAV config saved locally" },
+    "optSyncTestingWebdav": { "message": "Testing WebDAV connection..." },
+    "optSyncUploadingWebdav": {
+        "message": "Uploading config and glossary to WebDAV..."
+    },
+    "optSyncDownloadingWebdav": {
+        "message": "Downloading config and glossary from WebDAV..."
+    },
+    "optSyncRunningBidirectional": {
+        "message": "Running bidirectional sync..."
+    },
+    "optConfigExportDone": { "message": "Config export complete" },
+    "optConfigImportDone": { "message": "Config import complete" },
+    "optGlossarySaved": { "message": "Term saved" },
+    "optGlossaryCleared": { "message": "Glossary cleared" },
+    "optGlossaryDeleted": { "message": "Term deleted" },
+    "optGlossaryLoadedForEdit": {
+        "message": "Term loaded. Edit it and click update."
+    },
+    "optGlossarySaveFailedIncompleteFields": {
+        "message": "Save failed: please fill all glossary fields"
+    },
+    "optGlossaryImportFailedFileTooLarge": {
+        "message": "Import failed: file too large (max 5MB)"
+    },
+    "optConfigImportFailedFileTooLarge": {
+        "message": "Config import failed: file too large (max 5MB)"
+    },
+    "optOpenBuiltinPdfFailed": {
+        "message": "Failed to open built-in PDF page, please retry"
+    },
+    "optSaved": { "message": "Saved" },
+    "optDefaultsRestored": { "message": "Defaults restored" },
+    "optConfirmClearGlossary": {
+        "message": "Are you sure to clear the glossary? This cannot be undone."
+    },
+    "optConfirmWebllmWeakPerf": {
+        "message": "Device performance is weak. Continuing with WebLLM may cause lag or load failures. Continue?"
+    },
+    "optPatternOperationFailed": { "message": "Operation failed: $1" },
+    "optPatternDeviceMemory": { "message": "Device memory about $1" },
+    "optPatternCpuCores": { "message": "CPU logical cores about $1" },
+    "optPatternGlossaryExportDone": { "message": "Export complete: $1 terms" },
+    "optPatternGlossaryExportFailed": { "message": "Export failed: $1" },
+    "optPatternGlossaryImportDone": {
+        "message": "Import complete: created $1, replaced $2, total $3"
+    },
+    "optPatternGlossaryImportFailed": { "message": "Import failed: $1" },
+    "optPatternSaveFailed": { "message": "Save failed: $1" },
+    "optPatternClearFailed": { "message": "Clear failed: $1" },
+    "optPatternDeleteFailed": { "message": "Delete failed: $1" },
+    "optPatternConfigExportFailed": { "message": "Config export failed: $1" },
+    "optPatternConfigImportFailed": { "message": "Config import failed: $1" },
+    "optPatternSyncConnTestFailed": { "message": "Connection test failed: $1" },
+    "optPatternSyncConnSuccess": {
+        "message": "Connection succeeded: config($1) glossary($2)"
+    },
+    "optPatternSyncUploadDone": {
+        "message": "Upload complete: $1 glossary terms"
+    },
+    "optPatternSyncUploadFailed": { "message": "Upload failed: $1" },
+    "optPatternSyncDownloadDone": {
+        "message": "Download complete: $1 glossary terms"
+    },
+    "optPatternSyncDownloadFailed": { "message": "Download failed: $1" },
+    "optPatternSyncBidirectionalDone": {
+        "message": "Bidirectional sync complete: $1 glossary terms"
+    },
+    "optPatternSyncBidirectionalFailed": {
+        "message": "Bidirectional sync failed: $1"
+    },
+    "optPatternSyncLocalConfigReadFailed": {
+        "message": "Failed to read local sync config: $1"
+    },
+    "optPatternGlossaryListLoadFailed": {
+        "message": "Failed to load glossary list: $1"
+    },
+    "optPatternWebllmWeakPerfReasons": {
+        "message": "Device performance is weak. WebLLM is not recommended: $1."
+    },
+    "optPatternSyncConflictPrompt": {
+        "message": "Sync conflict detected: $1 config fields, $2 glossary items.\nEnter strategy:\n1=Remote wins\n2=Local wins\n3=Merge by timestamp\nCancel=Abort"
+    }
+}
