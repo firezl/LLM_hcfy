@@ -36,6 +36,39 @@ export function getLanguageDisplayName(lang) {
     return names[normalized] || `${normalized}语言`;
 }
 
+function normalizeLangTag(lang) {
+    return String(lang || "").trim();
+}
+
+function resolveTranslationgemmaLangMeta(lang) {
+    const raw = normalizeLangTag(lang);
+    const normalized = raw.toLowerCase();
+
+    const table = {
+        zh: { name: "Chinese", code: "zh-Hans" },
+        en: { name: "English", code: "en" },
+        ja: { name: "Japanese", code: "ja" },
+        ko: { name: "Korean", code: "ko" },
+        fr: { name: "French", code: "fr" },
+        de: { name: "German", code: "de" },
+        es: { name: "Spanish", code: "es" },
+        ru: { name: "Russian", code: "ru" },
+    };
+
+    if (table[normalized]) {
+        return table[normalized];
+    }
+
+    if (!raw || normalized === "auto") {
+        return { name: "Auto", code: "auto" };
+    }
+
+    return {
+        name: raw,
+        code: raw,
+    };
+}
+
 function normalizeTerm(term) {
     return String(term || "").trim();
 }
@@ -119,6 +152,20 @@ export function buildPromptWithUserTemplate(text, to, options) {
         options,
         buildPrompt,
     );
+}
+
+export function buildTranslationgemmaPrompt(text, from, to, options) {
+    const sourceMeta = resolveTranslationgemmaLangMeta(from);
+    const targetMeta = resolveTranslationgemmaLangMeta(to);
+
+    const instruction =
+        `You are a professional ${sourceMeta.name} (${sourceMeta.code}) to ${targetMeta.name} (${targetMeta.code}) translator. ` +
+        `Your goal is to accurately convey the meaning and nuances of the original ${sourceMeta.name} text while adhering to ${targetMeta.name} grammar, vocabulary, and cultural sensitivities.\n` +
+        `Produce only the ${targetMeta.name} translation, without any additional explanations or commentary. ` +
+        `Please translate the following ${sourceMeta.name} text into ${targetMeta.name}:\n\n\n` +
+        `${text}`;
+
+    return instruction;
 }
 
 export function buildWebLLMPrompt(text, to, options) {

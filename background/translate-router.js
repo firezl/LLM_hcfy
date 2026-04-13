@@ -8,6 +8,7 @@ import { streamGoogleTranslate } from "./engines/google.js";
 import { streamOllamaTranslate } from "./engines/ollama.js";
 import { streamOpenAITranslate } from "./engines/openai.js";
 import { streamQwenTranslate } from "./engines/qwen.js";
+import { streamSpecialTranslate } from "./engines/special-translate.js";
 import { streamWebLLMTranslate } from "./engines/webllm.js";
 import { streamXiaomiTranslate } from "./engines/xiaomi.js";
 import { postTranslateError } from "./port-utils.js";
@@ -26,6 +27,7 @@ const CUSTOM_PROMPT_SETTING_BY_ENGINE = {
     xiaomi: "xiaomi_custom_prompt",
     custom_openai: "custom_openai_custom_prompt",
     ollama: "ollama_custom_prompt",
+    special_translate: "special_translate_custom_prompt",
     webllm: "webllm_custom_prompt",
 };
 
@@ -133,6 +135,11 @@ export async function handleTranslateStart(message, port, state) {
 
     if (engine === "ollama") {
         await streamOllamaTranslate(requestWithGlossary, port, state);
+        return;
+    }
+
+    if (engine === "special_translate") {
+        await streamSpecialTranslate(requestWithGlossary, port, state);
         return;
     }
 

@@ -9,6 +9,7 @@ import {
     MESSAGE_TYPE_SYNC_TEST,
     MESSAGE_TYPE_SYNC_UPLOAD,
     MESSAGE_TYPE_OLLAMA_GET_MODELS,
+    MESSAGE_TYPE_SPECIAL_TRANSLATE_GET_MODELS,
     MESSAGE_TYPE_PDF_CHECK_URL,
     MESSAGE_TYPE_PDF_OPEN_IN_VIEWER,
     MESSAGE_TYPE_PDF_PROMPT_DECISION,
@@ -29,6 +30,7 @@ import {
 } from "./pdf-redirect.js";
 import { handleTranslateStart } from "./translate-router.js";
 import { handleOllamaGetModels } from "./engines/ollama.js";
+import { handleSpecialTranslateGetModels } from "./engines/special-translate.js";
 import {
     handleWebLLMClearCache,
     handleWebLLMGetModels,
@@ -90,6 +92,11 @@ extensionApi.runtime.onConnect.addListener((port) => {
 
         if (message.type === MESSAGE_TYPE_OLLAMA_GET_MODELS) {
             void handleOllamaGetModels(message, port, state);
+            return;
+        }
+
+        if (message.type === MESSAGE_TYPE_SPECIAL_TRANSLATE_GET_MODELS) {
+            void handleSpecialTranslateGetModels(message, port, state);
         }
     });
 });

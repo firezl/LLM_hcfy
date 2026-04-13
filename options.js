@@ -71,6 +71,13 @@ document.addEventListener("DOMContentLoaded", () => {
         ollama_custom_model: "",
         ollama_custom_prompt: "",
         ollama_show_thoughts: false,
+        special_translate_provider: "ollama",
+        special_translate_api_url: "http://localhost:11434/api/chat",
+        special_translate_api_key: "",
+        special_translate_model: "translategemma",
+        special_translate_custom_model: "",
+        special_translate_custom_prompt: "",
+        special_translate_show_thoughts: false,
         webllm_model: "Qwen3-0.6B-q4f16_1-MLC",
         webllm_custom_model: "",
         webllm_custom_prompt: "",
@@ -95,6 +102,13 @@ document.addEventListener("DOMContentLoaded", () => {
         "Qwen3-0.6B-q4f16_1-MLC",
         "Llama-3.2-1B-Instruct-q4f16_1-MLC",
     ];
+    const RECOMMENDED_SPECIAL_TRANSLATE_MODELS = ["translategemma"];
+    const SPECIAL_PROVIDER_OLLAMA = "ollama";
+    const SPECIAL_PROVIDER_OPENAI = "openai_compatible";
+    const SPECIAL_DEFAULT_URL_BY_PROVIDER = {
+        [SPECIAL_PROVIDER_OLLAMA]: "http://localhost:11434/api/chat",
+        [SPECIAL_PROVIDER_OPENAI]: "https://api.openai.com/v1/chat/completions",
+    };
 
     const ids = [
         "enable_select",
@@ -162,6 +176,13 @@ document.addEventListener("DOMContentLoaded", () => {
         "ollama_custom_model",
         "ollama_custom_prompt",
         "ollama_show_thoughts",
+        "special_translate_provider",
+        "special_translate_api_url",
+        "special_translate_api_key",
+        "special_translate_model_select",
+        "special_translate_custom_model",
+        "special_translate_custom_prompt",
+        "special_translate_show_thoughts",
         "webllm_model_select",
         "webllm_custom_model",
         "webllm_custom_prompt",
@@ -186,6 +207,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const claudeSection = document.getElementById("claude_section");
     const geminiSection = document.getElementById("gemini_section");
     const ollamaSection = document.getElementById("ollama_section");
+    const specialTranslateSection = document.getElementById(
+        "special_translate_section",
+    );
     const webllmSection = document.getElementById("webllm_section");
     const webllmPerformanceNote = document.getElementById(
         "webllm_performance_note",
@@ -240,6 +264,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let webllmPerfProfile = null;
     const webllmModelRequestResolvers = new Map();
     const ollamaModelRequestResolvers = new Map();
+    const specialModelRequestResolvers = new Map();
     let glossaryTermsCache = [];
     let glossaryEditingOriginal = null;
     let syncBusy = false;
@@ -854,6 +879,78 @@ document.addEventListener("DOMContentLoaded", () => {
         els.ollama_custom_model.disabled = false;
     }
 
+    function normalizeSpecialProvider(provider) {
+        const normalized = String(provider || "")
+            .trim()
+            .toLowerCase();
+        return normalized === SPECIAL_PROVIDER_OPENAI
+            ? SPECIAL_PROVIDER_OPENAI
+            : SPECIAL_PROVIDER_OLLAMA;
+    }
+
+    function getSpecialApiDefaultByProvider(provider) {
+        return (
+            SPECIAL_DEFAULT_URL_BY_PROVIDER[
+                normalizeSpecialProvider(provider)
+            ] || SPECIAL_DEFAULT_URL_BY_PROVIDER[SPECIAL_PROVIDER_OLLAMA]
+        );
+    }
+
+    function populateSpecialTranslateModelSelect(modelIds, selectedModel) {
+        if (!els.special_translate_model_select) return;
+
+        const orderedIds = Array.from(
+            new Set((modelIds || []).map((id) => String(id || "").trim())),
+        ).filter(Boolean);
+
+        els.special_translate_model_select.innerHTML = "";
+        orderedIds.forEach((id) => {
+            const option = document.createElement("option");
+            option.value = id;
+            option.textContent = RECOMMENDED_SPECIAL_TRANSLATE_MODELS.includes(
+                id.toLowerCase(),
+            )
+                ? `${id}（推荐）`
+                : id;
+            els.special_translate_model_select.appendChild(option);
+        });
+
+        const customOption = document.createElement("option");
+        customOption.value = "custom";
+        customOption.textContent = "自定义模型名";
+        els.special_translate_model_select.appendChild(customOption);
+
+        if (selectedModel && orderedIds.includes(selectedModel)) {
+            els.special_translate_model_select.value = selectedModel;
+            els.special_translate_custom_model.disabled = true;
+            return;
+        }
+
+        if (selectedModel && selectedModel !== "custom") {
+            els.special_translate_model_select.value = "custom";
+            if (!els.special_translate_custom_model.value) {
+                els.special_translate_custom_model.value = selectedModel;
+            }
+            els.special_translate_custom_model.disabled = false;
+            return;
+        }
+
+        if (selectedModel === "custom") {
+            els.special_translate_model_select.value = "custom";
+            els.special_translate_custom_model.disabled = false;
+            return;
+        }
+
+        if (orderedIds.length > 0) {
+            els.special_translate_model_select.value = orderedIds[0];
+            els.special_translate_custom_model.disabled = true;
+            return;
+        }
+
+        els.special_translate_model_select.value = "custom";
+        els.special_translate_custom_model.disabled = false;
+    }
+
     async function requestWebLLMModelList() {
         return new Promise((resolve, reject) => {
             const requestId = `webllm-models-${Date.now()}-${Math.random()}`;
@@ -906,6 +1003,38 @@ document.addEventListener("DOMContentLoaded", () => {
             } catch (err) {
                 clearTimeout(timer);
                 ollamaModelRequestResolvers.delete(requestId);
+                reject(err);
+            }
+        });
+    }
+
+    async function requestSpecialTranslateModelList(provider, apiUrl, apiKey) {
+        return new Promise((resolve, reject) => {
+            const requestId = `special-models-${Date.now()}-${Math.random()}`;
+            const timer = setTimeout(() => {
+                specialModelRequestResolvers.delete(requestId);
+                reject(new Error("请求专用翻译模型列表超时"));
+            }, 8000);
+
+            specialModelRequestResolvers.set(requestId, (payload) => {
+                clearTimeout(timer);
+                resolve(payload || {});
+            });
+
+            try {
+                const port = ensureWebLLMPort();
+                port.postMessage({
+                    type:
+                        MESSAGE_TYPES.SPECIAL_TRANSLATE_GET_MODELS ||
+                        "SPECIAL_TRANSLATE_GET_MODELS",
+                    requestId,
+                    provider: normalizeSpecialProvider(provider),
+                    apiUrl: String(apiUrl || "").trim(),
+                    apiKey: String(apiKey || "").trim(),
+                });
+            } catch (err) {
+                clearTimeout(timer);
+                specialModelRequestResolvers.delete(requestId);
                 reject(err);
             }
         });
@@ -1008,6 +1137,28 @@ document.addEventListener("DOMContentLoaded", () => {
                 );
                 if (resolvePending) {
                     ollamaModelRequestResolvers.delete(message.requestId);
+                    resolvePending(message);
+                }
+                return;
+            }
+
+            if (message.type === "SPECIAL_TRANSLATE_OP_ERROR") {
+                const resolvePending = specialModelRequestResolvers.get(
+                    message.requestId,
+                );
+                if (resolvePending) {
+                    specialModelRequestResolvers.delete(message.requestId);
+                    resolvePending({ modelIds: ["translategemma"] });
+                }
+                return;
+            }
+
+            if (message.type === "SPECIAL_TRANSLATE_MODELS_RESPONSE") {
+                const resolvePending = specialModelRequestResolvers.get(
+                    message.requestId,
+                );
+                if (resolvePending) {
+                    specialModelRequestResolvers.delete(message.requestId);
                     resolvePending(message);
                 }
             }
@@ -1139,6 +1290,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const hideOpenAI =
             engine === "browser" ||
             engine === "ollama" ||
+            engine === "special_translate" ||
             engine === "custom_openai" ||
             engine === "deepseek" ||
             engine === "qwen" ||
@@ -1188,6 +1340,14 @@ document.addEventListener("DOMContentLoaded", () => {
         if (ollamaSection) {
             const showOllama = engine === "ollama";
             ollamaSection.classList.toggle("jyt-hidden", !showOllama);
+        }
+
+        if (specialTranslateSection) {
+            const showSpecialTranslate = engine === "special_translate";
+            specialTranslateSection.classList.toggle(
+                "jyt-hidden",
+                !showSpecialTranslate,
+            );
         }
 
         if (webllmSection) {
@@ -1509,6 +1669,47 @@ document.addEventListener("DOMContentLoaded", () => {
                 .catch(() => {
                     populateOllamaModelSelect([], savedOllamaModel);
                 });
+            const specialProvider = normalizeSpecialProvider(
+                items.special_translate_provider || SPECIAL_PROVIDER_OLLAMA,
+            );
+            const savedSpecialModel =
+                items.special_translate_model || "translategemma";
+            els.special_translate_provider.value = specialProvider;
+            els.special_translate_api_url.value =
+                items.special_translate_api_url ||
+                getSpecialApiDefaultByProvider(specialProvider);
+            els.special_translate_api_key.value =
+                items.special_translate_api_key || "";
+            els.special_translate_custom_model.value =
+                items.special_translate_custom_model || "";
+            els.special_translate_custom_prompt.value =
+                items.special_translate_custom_prompt || "";
+            els.special_translate_show_thoughts.value =
+                items.special_translate_show_thoughts ? "true" : "false";
+            populateSpecialTranslateModelSelect(
+                RECOMMENDED_SPECIAL_TRANSLATE_MODELS,
+                savedSpecialModel,
+            );
+            void requestSpecialTranslateModelList(
+                specialProvider,
+                els.special_translate_api_url.value,
+                els.special_translate_api_key.value,
+            )
+                .then((res) => {
+                    const modelIds = Array.isArray(res.modelIds)
+                        ? res.modelIds
+                        : RECOMMENDED_SPECIAL_TRANSLATE_MODELS;
+                    populateSpecialTranslateModelSelect(
+                        modelIds,
+                        savedSpecialModel,
+                    );
+                })
+                .catch(() => {
+                    populateSpecialTranslateModelSelect(
+                        RECOMMENDED_SPECIAL_TRANSLATE_MODELS,
+                        savedSpecialModel,
+                    );
+                });
             const savedModel = items.webllm_model || "Qwen3-0.6B-q4f16_1-MLC";
             els.webllm_custom_model.value = items.webllm_custom_model || "";
             els.webllm_custom_prompt.value = items.webllm_custom_prompt || "";
@@ -1637,6 +1838,21 @@ document.addEventListener("DOMContentLoaded", () => {
             ollama_custom_model: (els.ollama_custom_model.value || "").trim(),
             ollama_custom_prompt: els.ollama_custom_prompt.value || "",
             ollama_show_thoughts: els.ollama_show_thoughts.value === "true",
+            special_translate_provider: normalizeSpecialProvider(
+                els.special_translate_provider.value,
+            ),
+            special_translate_api_url: (
+                els.special_translate_api_url.value || ""
+            ).trim(),
+            special_translate_api_key: els.special_translate_api_key.value,
+            special_translate_model: els.special_translate_model_select.value,
+            special_translate_custom_model: (
+                els.special_translate_custom_model.value || ""
+            ).trim(),
+            special_translate_custom_prompt:
+                els.special_translate_custom_prompt.value || "",
+            special_translate_show_thoughts:
+                els.special_translate_show_thoughts.value === "true",
             webllm_model: els.webllm_model_select.value,
             webllm_custom_model: (els.webllm_custom_model.value || "").trim(),
             webllm_custom_prompt: els.webllm_custom_prompt.value || "",
@@ -1778,6 +1994,27 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
 
+        if (effectiveEngine === "special_translate") {
+            data.special_translate_provider = normalizeSpecialProvider(
+                data.special_translate_provider,
+            );
+            if (!data.special_translate_api_url) {
+                data.special_translate_api_url = getSpecialApiDefaultByProvider(
+                    data.special_translate_provider,
+                );
+            }
+
+            const selectedSpecialModel =
+                data.special_translate_model === "custom"
+                    ? data.special_translate_custom_model
+                    : data.special_translate_model;
+
+            if (!selectedSpecialModel) {
+                showToast("请先选择专用翻译模型或填写自定义模型名。", true);
+                return;
+            }
+        }
+
         if (
             effectiveEngine === "webllm" &&
             webllmPerfProfile &&
@@ -1840,6 +2077,58 @@ document.addEventListener("DOMContentLoaded", () => {
     els.ollama_model_select?.addEventListener("change", () => {
         const isCustom = els.ollama_model_select.value === "custom";
         els.ollama_custom_model.disabled = !isCustom;
+    });
+
+    els.special_translate_model_select?.addEventListener("change", () => {
+        const isCustom = els.special_translate_model_select.value === "custom";
+        els.special_translate_custom_model.disabled = !isCustom;
+    });
+
+    function refreshSpecialTranslateModels() {
+        const selectedModel =
+            (els.special_translate_model_select?.value || "").trim() ||
+            "translategemma";
+        void requestSpecialTranslateModelList(
+            els.special_translate_provider?.value,
+            els.special_translate_api_url?.value,
+            els.special_translate_api_key?.value,
+        )
+            .then((res) => {
+                const modelIds = Array.isArray(res.modelIds)
+                    ? res.modelIds
+                    : RECOMMENDED_SPECIAL_TRANSLATE_MODELS;
+                populateSpecialTranslateModelSelect(modelIds, selectedModel);
+            })
+            .catch(() => {
+                populateSpecialTranslateModelSelect(
+                    RECOMMENDED_SPECIAL_TRANSLATE_MODELS,
+                    selectedModel,
+                );
+            });
+    }
+
+    els.special_translate_provider?.addEventListener("change", () => {
+        const provider = normalizeSpecialProvider(
+            els.special_translate_provider.value,
+        );
+        if (!String(els.special_translate_api_url.value || "").trim()) {
+            els.special_translate_api_url.value =
+                getSpecialApiDefaultByProvider(provider);
+        }
+        refreshSpecialTranslateModels();
+    });
+
+    els.special_translate_api_url?.addEventListener("change", () => {
+        refreshSpecialTranslateModels();
+    });
+
+    els.special_translate_api_key?.addEventListener("change", () => {
+        if (
+            normalizeSpecialProvider(els.special_translate_provider?.value) ===
+            SPECIAL_PROVIDER_OPENAI
+        ) {
+            refreshSpecialTranslateModels();
+        }
     });
 
     els.ollama_api_url?.addEventListener("change", () => {
