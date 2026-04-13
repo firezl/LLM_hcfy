@@ -130,6 +130,7 @@
                         <option value="deepseek">DeepSeek</option>
                         <option value="glm">GLM</option>
                         <option value="xiaomi">Xiaomi Mimo</option>
+                        <option value="grok">xAI Grok</option>
                         <option value="ollama">Ollama 本地服务</option>
                         <option value="webllm">WebLLM 本地模型（实验）</option>
                     </select>
@@ -424,6 +425,44 @@
                         step="1"
                         placeholder="0"
                     />
+                </div>
+
+                <div class="jyt-section jyt-hidden" id="grok_section">
+                    <div class="jyt-section-title">xAI Grok 配置</div>
+                    <label>API 地址</label>
+                    <input
+                        id="grok_api_url"
+                        type="text"
+                        placeholder="https://api.x.ai/v1/chat/completions"
+                    />
+                    <label>API Key</label>
+                    <input
+                        id="grok_api_key"
+                        type="password"
+                        placeholder="xai-..."
+                    />
+                    <label>模型</label>
+                    <select id="grok_model">
+                        <option value="">正在加载模型列表...</option>
+                        <option value="custom">自定义模型名</option>
+                    </select>
+                    <label>自定义模型名</label>
+                    <input
+                        id="grok_custom_model"
+                        type="text"
+                        placeholder="例如: grok-3-latest"
+                    />
+                    <label>自定义翻译 Prompt（仅 Grok 生效）</label>
+                    <textarea
+                        id="grok_custom_prompt"
+                        rows="4"
+                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。"
+                    ></textarea>
+                    <label>显示思考过程</label>
+                    <select id="grok_show_thoughts">
+                        <option value="false">否</option>
+                        <option value="true">是</option>
+                    </select>
                 </div>
 
                 <div class="jyt-section jyt-hidden" id="claude_section">

@@ -17,7 +17,7 @@
     - 原生支持深度思考模型（如 DeepSeek-R1 等）。
     - 可视化、可折叠的“思考过程”展示窗口，不仅知道译文，更懂模型背后的翻译逻辑与推导思路。
 - **🤖 全面的多引擎支持**
-    - **OpenAI 兼容及各家大模型（推荐）**：支持 OpenAI、Claude、Gemini、DeepSeek、Qwen（通义千问）、GLM（智谱）、Moonshot、小米云大模型等。
+    - **OpenAI 兼容及各家大模型（推荐）**：支持 OpenAI、Claude、Gemini、DeepSeek、Qwen（通义千问）、GLM（智谱）、xAI Grok、Moonshot、小米云大模型等。
     - **Ollama（本地化首选）**：全自动探测本地运行的模型，支持思考流展示，让私有化部署无缝接入您的浏览器。
     - **WebLLM（浏览器端侧 AI）**：基于 WebGPU 的纯前端端侧模型运行，保障绝对的隐私。
     - **浏览器原生 AI API（前沿实验）**：支持调用新版 Chrome 内置的 Translation API 和 LanguageDetector API 进行脱机极速翻译。

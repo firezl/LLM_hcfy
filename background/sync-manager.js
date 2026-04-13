@@ -70,6 +70,12 @@ const CONFIG_DEFAULTS = {
     xiaomi_custom_prompt: "",
     xiaomi_show_thoughts: false,
     xiaomi_max_completion_tokens: 0,
+    grok_api_url: "https://api.x.ai/v1/chat/completions",
+    grok_api_key: "",
+    grok_model: "grok-3-latest",
+    grok_custom_model: "",
+    grok_custom_prompt: "",
+    grok_show_thoughts: false,
     claude_api_url: "https://api.anthropic.com/v1/messages",
     claude_api_key: "",
     claude_model: "claude-sonnet-4-6",
@@ -157,6 +163,7 @@ function normalizeConfigPayload(raw) {
             key === "glm_show_thoughts" ||
             key === "glm_clear_thinking" ||
             key === "xiaomi_show_thoughts" ||
+            key === "grok_show_thoughts" ||
             key === "claude_show_thoughts" ||
             key === "gemini_show_thoughts"
         ) {

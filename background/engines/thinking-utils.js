@@ -81,6 +81,9 @@ export function getThinkingEnabledByEngine(engine, settings) {
     if (engine === "xiaomi") {
         return !!settings?.xiaomi_show_thoughts;
     }
+    if (engine === "grok") {
+        return !!settings?.grok_show_thoughts;
+    }
     if (engine === "custom_openai") {
         return !!settings?.custom_openai_show_thoughts;
     }

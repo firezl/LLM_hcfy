@@ -3,6 +3,7 @@ import { streamClaudeTranslate } from "./engines/claude.js";
 import { streamCustomOpenAITranslate } from "./engines/custom-openai.js";
 import { streamDeepSeekTranslate } from "./engines/deepseek.js";
 import { streamGeminiTranslate } from "./engines/gemini.js";
+import { streamGrokTranslate } from "./engines/grok.js";
 import { streamGLMTranslate } from "./engines/glm.js";
 import { streamGoogleTranslate } from "./engines/google.js";
 import { streamOllamaTranslate } from "./engines/ollama.js";
@@ -25,6 +26,7 @@ const CUSTOM_PROMPT_SETTING_BY_ENGINE = {
     qwen: "qwen_custom_prompt",
     glm: "glm_custom_prompt",
     xiaomi: "xiaomi_custom_prompt",
+    grok: "grok_custom_prompt",
     custom_openai: "custom_openai_custom_prompt",
     ollama: "ollama_custom_prompt",
     special_translate: "special_translate_custom_prompt",
@@ -40,6 +42,7 @@ const LLM_ENGINES = new Set([
     "qwen",
     "glm",
     "xiaomi",
+    "grok",
     "ollama",
     "webllm",
 ]);
@@ -126,6 +129,11 @@ export async function handleTranslateStart(message, port, state) {
 
     if (engine === "xiaomi") {
         await streamXiaomiTranslate(requestWithGlossary, port, state);
+        return;
+    }
+
+    if (engine === "grok") {
+        await streamGrokTranslate(requestWithGlossary, port, state);
         return;
     }
 

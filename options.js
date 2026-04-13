@@ -55,6 +55,12 @@ document.addEventListener("DOMContentLoaded", () => {
         xiaomi_custom_prompt: "",
         xiaomi_show_thoughts: false,
         xiaomi_max_completion_tokens: 0,
+        grok_api_url: "https://api.x.ai/v1/chat/completions",
+        grok_api_key: "",
+        grok_model: "grok-3-latest",
+        grok_custom_model: "",
+        grok_custom_prompt: "",
+        grok_show_thoughts: false,
         claude_api_url: "https://api.anthropic.com/v1/messages",
         claude_api_key: "",
         claude_model: "claude-sonnet-4-6",
@@ -166,6 +172,14 @@ document.addEventListener("DOMContentLoaded", () => {
             customModelId: "xiaomi_custom_model",
             defaultModel: "mimo-v2-pro",
         },
+        {
+            name: "grok",
+            apiUrlId: "grok_api_url",
+            apiKeyId: "grok_api_key",
+            modelId: "grok_model",
+            customModelId: "grok_custom_model",
+            defaultModel: "grok-3-latest",
+        },
     ];
 
     const ids = [
@@ -219,6 +233,12 @@ document.addEventListener("DOMContentLoaded", () => {
         "xiaomi_custom_prompt",
         "xiaomi_show_thoughts",
         "xiaomi_max_completion_tokens",
+        "grok_api_url",
+        "grok_api_key",
+        "grok_model",
+        "grok_custom_model",
+        "grok_custom_prompt",
+        "grok_show_thoughts",
         "claude_api_url",
         "claude_api_key",
         "claude_model",
@@ -270,6 +290,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const qwenSection = document.getElementById("qwen_section");
     const glmSection = document.getElementById("glm_section");
     const xiaomiSection = document.getElementById("xiaomi_section");
+    const grokSection = document.getElementById("grok_section");
     const claudeSection = document.getElementById("claude_section");
     const geminiSection = document.getElementById("gemini_section");
     const ollamaSection = document.getElementById("ollama_section");
@@ -346,6 +367,7 @@ document.addEventListener("DOMContentLoaded", () => {
         "deepseek",
         "glm",
         "xiaomi",
+        "grok",
         "ollama",
         "webllm",
     ]);
@@ -581,6 +603,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 key === "glm_show_thoughts" ||
                 key === "glm_clear_thinking" ||
                 key === "xiaomi_show_thoughts" ||
+                key === "grok_show_thoughts" ||
                 key === "claude_show_thoughts" ||
                 key === "gemini_show_thoughts"
             ) {
@@ -1587,6 +1610,7 @@ document.addEventListener("DOMContentLoaded", () => {
             engine === "qwen" ||
             engine === "glm" ||
             engine === "xiaomi" ||
+            engine === "grok" ||
             engine === "claude" ||
             engine === "gemini" ||
             engine === "webllm" ||
@@ -1618,6 +1642,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (xiaomiSection) {
             xiaomiSection.classList.toggle("jyt-hidden", engine !== "xiaomi");
+        }
+
+        if (grokSection) {
+            grokSection.classList.toggle("jyt-hidden", engine !== "grok");
         }
 
         if (claudeSection) {
@@ -1910,6 +1938,15 @@ document.addEventListener("DOMContentLoaded", () => {
             )
                 ? String(Math.floor(Number(items.xiaomi_max_completion_tokens)))
                 : "0";
+            els.grok_api_url.value =
+                items.grok_api_url || "https://api.x.ai/v1/chat/completions";
+            els.grok_api_key.value = items.grok_api_key || "";
+            const savedGrokModel = items.grok_model || "grok-3-latest";
+            els.grok_custom_model.value = items.grok_custom_model || "";
+            els.grok_custom_prompt.value = items.grok_custom_prompt || "";
+            els.grok_show_thoughts.value = items.grok_show_thoughts
+                ? "true"
+                : "false";
             const openaiCompatSavedModelMap = {
                 openai: savedOpenAIModel,
                 custom_openai: savedCustomOpenAIModel,
@@ -1917,6 +1954,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 qwen: savedQwenModel,
                 glm: savedGLMModel,
                 xiaomi: savedXiaomiModel,
+                grok: savedGrokModel,
             };
             OPENAI_COMPAT_MODEL_ENGINES.forEach((cfg) => {
                 const selectEl = els[cfg.modelId];
@@ -2183,6 +2221,10 @@ document.addEventListener("DOMContentLoaded", () => {
             els.xiaomi_model,
             els.xiaomi_custom_model,
         );
+        const selectedGrokModel = getSelectedOpenAICompatModel(
+            els.grok_model,
+            els.grok_custom_model,
+        );
         const selectedClaudeModel = getSelectedOpenAICompatModel(
             els.claude_model,
             els.claude_custom_model,
@@ -2257,6 +2299,12 @@ document.addEventListener("DOMContentLoaded", () => {
             xiaomi_max_completion_tokens: Number(
                 els.xiaomi_max_completion_tokens.value || 0,
             ),
+            grok_api_url: (els.grok_api_url.value || "").trim(),
+            grok_api_key: els.grok_api_key.value,
+            grok_model: selectedGrokModel,
+            grok_custom_model: (els.grok_custom_model.value || "").trim(),
+            grok_custom_prompt: els.grok_custom_prompt.value || "",
+            grok_show_thoughts: els.grok_show_thoughts.value === "true",
             claude_api_url: (els.claude_api_url.value || "").trim(),
             claude_api_key: els.claude_api_key.value,
             claude_model: selectedClaudeModel,
@@ -2394,6 +2442,20 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!data.xiaomi_api_url) {
                 data.xiaomi_api_url =
                     "https://api.xiaomimimo.com/v1/chat/completions";
+            }
+        }
+
+        if (effectiveEngine === "grok") {
+            if (!data.grok_api_key) {
+                showToast("请先填写 Grok API Key。", true);
+                return;
+            }
+            if (!data.grok_model) {
+                showToast("请先填写 Grok 模型。", true);
+                return;
+            }
+            if (!data.grok_api_url) {
+                data.grok_api_url = "https://api.x.ai/v1/chat/completions";
             }
         }
 
