@@ -7,6 +7,7 @@ const TERM_MIGRATION_FLAG = "glossary_migrated_v1";
 const DEFAULT_MAX_MATCH = 20;
 
 let dbPromise = null;
+let termMatcherIndexPromise = null;
 
 function normalizeLang(lang) {
     const value = String(lang || "")
@@ -29,6 +30,10 @@ function containsTerm(text, sourceTerm) {
 
 function termKey(sourceLang, targetLang, sourceTerm) {
     return `${normalizeLang(sourceLang)}::${normalizeLang(targetLang)}::${normalizeText(sourceTerm).toLowerCase()}`;
+}
+
+function langPairKey(sourceLang, targetLang) {
+    return `${normalizeLang(sourceLang)}::${normalizeLang(targetLang)}`;
 }
 
 function normalizeTermEntry(raw, now) {
@@ -99,6 +104,54 @@ async function getAllTermsFromDb() {
     const store = tx.objectStore(TERM_STORE);
     const values = await requestToPromise(store.getAll());
     return Array.isArray(values) ? values : [];
+}
+
+function invalidateTermMatcherIndex() {
+    termMatcherIndexPromise = null;
+}
+
+function buildTermMatcherIndex(terms) {
+    const grouped = new Map();
+    const sourceLowerByKey = new Map();
+
+    for (const term of terms) {
+        const pairKey = langPairKey(term?.sourceLang, term?.targetLang);
+        if (!pairKey || pairKey === "::") {
+            continue;
+        }
+
+        if (!grouped.has(pairKey)) {
+            grouped.set(pairKey, []);
+        }
+
+        grouped.get(pairKey).push(term);
+        sourceLowerByKey.set(
+            term.key,
+            String(term.sourceTerm || "").toLowerCase(),
+        );
+    }
+
+    return {
+        grouped,
+        sourceLowerByKey,
+    };
+}
+
+async function getTermMatcherIndex() {
+    if (termMatcherIndexPromise) {
+        return termMatcherIndexPromise;
+    }
+
+    termMatcherIndexPromise = getAllTermsFromDb().then((terms) =>
+        buildTermMatcherIndex(terms),
+    );
+
+    try {
+        return await termMatcherIndexPromise;
+    } catch (err) {
+        termMatcherIndexPromise = null;
+        throw err;
+    }
 }
 
 async function putTermsToDb(terms) {
@@ -195,6 +248,7 @@ export async function ensureTermStoreReady() {
     }
 
     await setMigrationFlag();
+    invalidateTermMatcherIndex();
     return imported;
 }
 
@@ -215,6 +269,7 @@ export async function upsertTerm(term) {
     }
 
     await putTermsToDb([normalized]);
+    invalidateTermMatcherIndex();
     return stripInternalKey(normalized);
 }
 
@@ -236,12 +291,14 @@ export async function deleteTerm(rawTerm) {
     const key = termKey(sourceLang, targetLang, sourceTerm);
 
     await deleteTermByKey(key);
+    invalidateTermMatcherIndex();
     return { ok: true };
 }
 
 export async function clearTerms() {
     await ensureTermStoreReady();
     await clearTermStore();
+    invalidateTermMatcherIndex();
     return { ok: true };
 }
 
@@ -277,6 +334,7 @@ export async function importTerms(rawTerms) {
 
     const next = Array.from(currentMap.values());
     await putTermsToDb(next);
+    invalidateTermMatcherIndex();
 
     return {
         created,
@@ -313,14 +371,15 @@ export async function getMatchedGlossaryTerms(params) {
         return [];
     }
 
-    const terms = await getAllTermsFromDb();
+    const normalizedText = String(text).toLowerCase();
+    const pairKey = langPairKey(from, to);
+    const matcherIndex = await getTermMatcherIndex();
+    const terms = matcherIndex.grouped.get(pairKey) || [];
     const matched = [];
 
     for (const term of terms) {
-        if (term.sourceLang !== from || term.targetLang !== to) {
-            continue;
-        }
-        if (!containsTerm(text, term.sourceTerm)) {
+        const sourceLower = matcherIndex.sourceLowerByKey.get(term.key);
+        if (!sourceLower || !normalizedText.includes(sourceLower)) {
             continue;
         }
 

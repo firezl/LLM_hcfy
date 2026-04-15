@@ -18,6 +18,7 @@ import {
     MESSAGE_TYPE_TERM_IMPORT,
     MESSAGE_TYPE_TERM_LIST,
     MESSAGE_TYPE_TERM_UPSERT,
+    MESSAGE_TYPE_CANCEL,
     MESSAGE_TYPE_WEBLLM_CLEAR_CACHE,
     MESSAGE_TYPE_WEBLLM_GET_MODELS,
     MESSAGE_TYPE_WEBLLM_PRELOAD,
@@ -78,6 +79,20 @@ extensionApi.runtime.onConnect.addListener((port) => {
 
         if (message.type === MESSAGE_TYPE_START) {
             void handleTranslateStart(message, port, state);
+            return;
+        }
+
+        if (message.type === MESSAGE_TYPE_CANCEL) {
+            const requestId = String(message.requestId || "").trim();
+            if (!requestId) {
+                return;
+            }
+
+            const controller = state.controllers.get(requestId);
+            if (controller) {
+                controller.abort();
+                state.controllers.delete(requestId);
+            }
             return;
         }
 

@@ -39,7 +39,15 @@ function isGemini3Model(model) {
     return /^gemini-3/i.test(String(model || ""));
 }
 
+function isLikelyGemmaModel(model) {
+    return /^gemma(?:-|\d|$)/i.test(String(model || "").trim());
+}
+
 function buildGeminiThinkingConfig(model, settings) {
+    if (isLikelyGemmaModel(model)) {
+        return null;
+    }
+
     const showThoughts = !!settings?.gemini_show_thoughts;
     const cfg = {
         includeThoughts: showThoughts,
@@ -61,6 +69,15 @@ function buildGeminiThinkingConfig(model, settings) {
             : -1;
     cfg.thinkingBudget = showThoughts ? budget : 0;
     return cfg;
+}
+
+function isUnsupportedThinkingConfigError(status, errorText) {
+    if (status !== 400) {
+        return false;
+    }
+
+    const message = String(errorText || "");
+    return /thinking\s*budget\s*is\s*not\s*supported/i.test(message);
 }
 
 function resolveGeminiEndpoint(baseUrl, model, apiKey) {
@@ -128,6 +145,14 @@ export async function streamGeminiTranslate(request, port, state) {
         return;
     }
 
+    const thinkingConfig = buildGeminiThinkingConfig(model, settings);
+    const generationConfig = {
+        temperature: 0.2,
+    };
+    if (thinkingConfig && typeof thinkingConfig === "object") {
+        generationConfig.thinkingConfig = thinkingConfig;
+    }
+
     const body = {
         contents: [
             {
@@ -139,24 +164,49 @@ export async function streamGeminiTranslate(request, port, state) {
                 ],
             },
         ],
-        generationConfig: {
-            temperature: 0.2,
-            thinkingConfig: buildGeminiThinkingConfig(model, settings),
-        },
+        generationConfig,
     };
 
     const controller = new AbortController();
     state.controllers.set(requestId, controller);
 
     try {
-        const res = await fetch(endpoint.url, {
+        let requestBody = body;
+        let res = await fetch(endpoint.url, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
             },
-            body: JSON.stringify(body),
+            body: JSON.stringify(requestBody),
             signal: controller.signal,
         });
+
+        if (!res.ok) {
+            const textErr = await res.text();
+
+            if (
+                requestBody?.generationConfig?.thinkingConfig &&
+                isUnsupportedThinkingConfigError(res.status, textErr)
+            ) {
+                const fallbackBody = {
+                    ...requestBody,
+                    generationConfig: {
+                        ...requestBody.generationConfig,
+                    },
+                };
+                delete fallbackBody.generationConfig.thinkingConfig;
+                requestBody = fallbackBody;
+
+                res = await fetch(endpoint.url, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify(requestBody),
+                    signal: controller.signal,
+                });
+            }
+        }
 
         if (!res.ok) {
             const textErr = await res.text();

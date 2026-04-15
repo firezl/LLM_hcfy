@@ -1,6 +1,8 @@
 // options.js
 document.addEventListener("DOMContentLoaded", () => {
     const shared = globalThis.JYT_SHARED || {};
+    const storageModule = globalThis.JYT_OPTION_STORAGE || {};
+    const modelModule = globalThis.JYT_OPTION_MODEL || {};
     const MESSAGE_TYPES = shared.MESSAGE_TYPES || {};
     const DEFAULT_SETTINGS = shared.DEFAULT_SETTINGS || {
         enabled: "on",
@@ -181,6 +183,86 @@ document.addEventListener("DOMContentLoaded", () => {
             defaultModel: "grok-3-latest",
         },
     ];
+    const OPENAI_COMPAT_ENGINE_BY_NAME = Object.fromEntries(
+        OPENAI_COMPAT_MODEL_ENGINES.map((cfg) => [cfg.name, cfg]),
+    );
+    const API_KEY_FIELDS =
+        typeof storageModule.buildApiKeyFields === "function"
+            ? storageModule.buildApiKeyFields(DEFAULT_SETTINGS)
+            : Object.keys(DEFAULT_SETTINGS).filter((key) =>
+                  key.endsWith("_api_key"),
+              );
+    const modelState =
+        typeof modelModule.createModelLoaderState === "function"
+            ? modelModule.createModelLoaderState()
+            : {
+                  loadedSet: new Set(),
+                  debounceByKey(key, task, delayMs = 600) {
+                      setTimeout(task, delayMs);
+                  },
+              };
+    const modelListLoaded = modelState.loadedSet;
+    const debounceByKey = modelState.debounceByKey;
+
+    function getCurrentEffectiveEngine() {
+        const selectedEngine = String(els.engine_select?.value || "auto");
+        if (selectedEngine !== "llm") {
+            return selectedEngine;
+        }
+        return String(els.llm_engine_select?.value || "openai");
+    }
+
+    function extractApiKeyPayload(input) {
+        if (typeof storageModule.extractApiKeyPayload === "function") {
+            return storageModule.extractApiKeyPayload(API_KEY_FIELDS, input);
+        }
+
+        const source = input && typeof input === "object" ? input : {};
+        const payload = {};
+        for (const key of API_KEY_FIELDS) {
+            payload[key] = String(source[key] || "").trim();
+        }
+        return payload;
+    }
+
+    function collectMissingLocalApiKeys(syncItems, localItems) {
+        if (typeof storageModule.collectMissingLocalApiKeys === "function") {
+            return storageModule.collectMissingLocalApiKeys(
+                API_KEY_FIELDS,
+                syncItems,
+                localItems,
+            );
+        }
+
+        const sourceSync =
+            syncItems && typeof syncItems === "object" ? syncItems : {};
+        const sourceLocal =
+            localItems && typeof localItems === "object" ? localItems : {};
+        const missing = {};
+
+        for (const key of API_KEY_FIELDS) {
+            const localValue = String(sourceLocal[key] || "").trim();
+            const syncValue = String(sourceSync[key] || "").trim();
+            if (!localValue && syncValue) {
+                missing[key] = syncValue;
+            }
+        }
+
+        return missing;
+    }
+
+    function stripApiKeyPayload(input) {
+        if (typeof storageModule.stripApiKeyPayload === "function") {
+            return storageModule.stripApiKeyPayload(API_KEY_FIELDS, input);
+        }
+
+        const source = input && typeof input === "object" ? input : {};
+        const next = { ...source };
+        for (const key of API_KEY_FIELDS) {
+            delete next[key];
+        }
+        return next;
+    }
 
     const ids = [
         "enable_select",
@@ -907,11 +989,12 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         if (selectedModel && selectedModel !== "custom") {
-            els.webllm_model_select.value = "custom";
-            if (!els.webllm_custom_model.value) {
-                els.webllm_custom_model.value = selectedModel;
-            }
-            els.webllm_custom_model.disabled = false;
+            const savedOption = document.createElement("option");
+            savedOption.value = selectedModel;
+            savedOption.textContent = `${selectedModel}（已保存）`;
+            els.webllm_model_select.insertBefore(savedOption, customOption);
+            els.webllm_model_select.value = selectedModel;
+            els.webllm_custom_model.disabled = true;
             return;
         }
 
@@ -948,11 +1031,12 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         if (selectedModel && selectedModel !== "custom") {
-            els.ollama_model_select.value = "custom";
-            if (!els.ollama_custom_model.value) {
-                els.ollama_custom_model.value = selectedModel;
-            }
-            els.ollama_custom_model.disabled = false;
+            const savedOption = document.createElement("option");
+            savedOption.value = selectedModel;
+            savedOption.textContent = `${selectedModel}（已保存）`;
+            els.ollama_model_select.insertBefore(savedOption, customOption);
+            els.ollama_model_select.value = selectedModel;
+            els.ollama_custom_model.disabled = true;
             return;
         }
 
@@ -1004,11 +1088,12 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         if (selectedModel && selectedModel !== "custom") {
-            modelSelectEl.value = "custom";
-            if (!customModelEl.value) {
-                customModelEl.value = selectedModel;
-            }
-            customModelEl.disabled = false;
+            const savedOption = document.createElement("option");
+            savedOption.value = selectedModel;
+            savedOption.textContent = `${selectedModel}（已保存）`;
+            modelSelectEl.insertBefore(savedOption, customOption);
+            modelSelectEl.value = selectedModel;
+            customModelEl.disabled = true;
             return;
         }
 
@@ -1084,11 +1169,15 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         if (selectedModel && selectedModel !== "custom") {
-            els.special_translate_model_select.value = "custom";
-            if (!els.special_translate_custom_model.value) {
-                els.special_translate_custom_model.value = selectedModel;
-            }
-            els.special_translate_custom_model.disabled = false;
+            const savedOption = document.createElement("option");
+            savedOption.value = selectedModel;
+            savedOption.textContent = `${selectedModel}（已保存）`;
+            els.special_translate_model_select.insertBefore(
+                savedOption,
+                customOption,
+            );
+            els.special_translate_model_select.value = selectedModel;
+            els.special_translate_custom_model.disabled = true;
             return;
         }
 
@@ -1673,6 +1762,8 @@ document.addEventListener("DOMContentLoaded", () => {
             const showWebLLM = engine === "webllm" && isWebLLMSupportedBrowser;
             webllmSection.classList.toggle("jyt-hidden", !showWebLLM);
         }
+
+        ensureActiveEngineModelListLoaded(engine);
     }
 
     function applyTheme(theme) {
@@ -1818,376 +1909,336 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function load() {
-        chrome.storage.sync.get(DEFAULT_SETTINGS, (items) => {
-            const savedEngine = String(items.engine || "auto").trim();
-            const savedLLMEngine = String(items.llm_engine || "").trim();
-            const migratedLLMEngine = LLM_ENGINES.has(savedEngine)
-                ? savedEngine
-                : "";
-            const llmEngine = LLM_ENGINES.has(savedLLMEngine)
-                ? savedLLMEngine
-                : migratedLLMEngine || "openai";
-            const uiEngine = LLM_ENGINES.has(savedEngine)
-                ? "llm"
-                : savedEngine || "auto";
-
-            els.enable_select.value = items.enabled;
-            els.engine_select.value = uiEngine;
-            if (els.llm_engine_select) {
-                els.llm_engine_select.value = llmEngine;
+        chrome.storage.sync.get(DEFAULT_SETTINGS, (syncItems) => {
+            const syncErr = chrome.runtime.lastError;
+            if (syncErr) {
+                showToast(`读取同步配置失败: ${syncErr.message}`, true);
+                return;
             }
-            els.translate_shortcut.value = normalizeShortcut(
-                items.translate_shortcut,
-            );
-            els.source_lang.value = items.source_lang || "auto";
-            els.target_lang.value = items.target_lang || "auto";
-            els.openai_api_url.value = items.openai_api_url;
-            els.openai_api_key.value = items.openai_api_key;
-            const legacyThinkingModel = String(
-                items.openai_thinking_model || "",
-            ).trim();
-            const unifiedOpenAIModel = String(items.openai_model || "").trim();
-            const savedOpenAIModel =
-                unifiedOpenAIModel || legacyThinkingModel || "gpt-4o-mini";
-            els.openai_custom_model.value = items.openai_custom_model || "";
-            els.openai_custom_prompt.value = items.openai_custom_prompt || "";
-            els.show_thoughts.value = items.show_thoughts ? "true" : "false";
-            els.openai_reasoning_effort.value =
-                items.openai_reasoning_effort || "medium";
-            els.openai_max_completion_tokens.value = Number.isFinite(
-                Number(items.openai_max_completion_tokens),
-            )
-                ? String(Math.floor(Number(items.openai_max_completion_tokens)))
-                : "0";
-            els.custom_openai_api_url.value =
-                items.custom_openai_api_url ||
-                "https://api.openai.com/v1/chat/completions";
-            els.custom_openai_api_key.value = items.custom_openai_api_key || "";
-            const savedCustomOpenAIModel =
-                items.custom_openai_model || "gpt-4o-mini";
-            els.custom_openai_custom_model.value =
-                items.custom_openai_custom_model || "";
-            els.custom_openai_custom_prompt.value =
-                items.custom_openai_custom_prompt || "";
-            els.custom_openai_show_thoughts.value =
-                items.custom_openai_show_thoughts ? "true" : "false";
-            els.custom_openai_reasoning_effort.value =
-                items.custom_openai_reasoning_effort || "medium";
-            els.custom_openai_max_completion_tokens.value = Number.isFinite(
-                Number(items.custom_openai_max_completion_tokens),
-            )
-                ? String(
-                      Math.floor(
-                          Number(items.custom_openai_max_completion_tokens),
-                      ),
-                  )
-                : "0";
-            els.deepseek_api_url.value =
-                items.deepseek_api_url ||
-                "https://api.deepseek.com/chat/completions";
-            els.deepseek_api_key.value = items.deepseek_api_key || "";
-            const savedDeepSeekModel = items.deepseek_model || "deepseek-chat";
-            els.deepseek_custom_model.value = items.deepseek_custom_model || "";
-            els.deepseek_custom_prompt.value =
-                items.deepseek_custom_prompt || "";
-            els.deepseek_show_thoughts.value = items.deepseek_show_thoughts
-                ? "true"
-                : "false";
-            els.qwen_api_url.value =
-                items.qwen_api_url ||
-                "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation";
-            els.qwen_api_key.value = items.qwen_api_key || "";
-            const savedQwenModel = items.qwen_model || "qwen-plus";
-            els.qwen_custom_model.value = items.qwen_custom_model || "";
-            els.qwen_custom_prompt.value = items.qwen_custom_prompt || "";
-            els.qwen_show_thoughts.value = items.qwen_show_thoughts
-                ? "true"
-                : "false";
-            els.qwen_thinking_budget.value = Number.isFinite(
-                Number(items.qwen_thinking_budget),
-            )
-                ? String(Math.floor(Number(items.qwen_thinking_budget)))
-                : "0";
-            els.qwen_preserve_thinking.value = items.qwen_preserve_thinking
-                ? "true"
-                : "false";
-            els.glm_api_url.value =
-                items.glm_api_url ||
-                "https://open.bigmodel.cn/api/paas/v4/chat/completions";
-            els.glm_api_key.value = items.glm_api_key || "";
-            const savedGLMModel = items.glm_model || "glm-5.1";
-            els.glm_custom_model.value = items.glm_custom_model || "";
-            els.glm_custom_prompt.value = items.glm_custom_prompt || "";
-            els.glm_show_thoughts.value = items.glm_show_thoughts
-                ? "true"
-                : "false";
-            els.glm_clear_thinking.value =
-                items.glm_clear_thinking === false ? "false" : "true";
-            els.xiaomi_api_url.value =
-                items.xiaomi_api_url ||
-                "https://api.xiaomimimo.com/v1/chat/completions";
-            els.xiaomi_api_key.value = items.xiaomi_api_key || "";
-            const savedXiaomiModel = items.xiaomi_model || "mimo-v2-pro";
-            els.xiaomi_custom_model.value = items.xiaomi_custom_model || "";
-            els.xiaomi_custom_prompt.value = items.xiaomi_custom_prompt || "";
-            els.xiaomi_show_thoughts.value = items.xiaomi_show_thoughts
-                ? "true"
-                : "false";
-            els.xiaomi_max_completion_tokens.value = Number.isFinite(
-                Number(items.xiaomi_max_completion_tokens),
-            )
-                ? String(Math.floor(Number(items.xiaomi_max_completion_tokens)))
-                : "0";
-            els.grok_api_url.value =
-                items.grok_api_url || "https://api.x.ai/v1/chat/completions";
-            els.grok_api_key.value = items.grok_api_key || "";
-            const savedGrokModel = items.grok_model || "grok-3-latest";
-            els.grok_custom_model.value = items.grok_custom_model || "";
-            els.grok_custom_prompt.value = items.grok_custom_prompt || "";
-            els.grok_show_thoughts.value = items.grok_show_thoughts
-                ? "true"
-                : "false";
-            const openaiCompatSavedModelMap = {
-                openai: savedOpenAIModel,
-                custom_openai: savedCustomOpenAIModel,
-                deepseek: savedDeepSeekModel,
-                qwen: savedQwenModel,
-                glm: savedGLMModel,
-                xiaomi: savedXiaomiModel,
-                grok: savedGrokModel,
-            };
-            OPENAI_COMPAT_MODEL_ENGINES.forEach((cfg) => {
-                const selectEl = els[cfg.modelId];
-                const customEl = els[cfg.customModelId];
-                const apiUrl = els[cfg.apiUrlId]?.value || "";
-                const apiKey = els[cfg.apiKeyId]?.value || "";
-                const savedModel =
-                    openaiCompatSavedModelMap[cfg.name] || cfg.defaultModel;
 
+            chrome.storage.local.get(API_KEY_FIELDS, (localItems) => {
+                const localErr = chrome.runtime.lastError;
+                const migrateKeys = collectMissingLocalApiKeys(
+                    syncItems,
+                    localErr ? null : localItems,
+                );
+                const mergedLocalItems = {
+                    ...(localErr ? {} : localItems || {}),
+                    ...migrateKeys,
+                };
+                const items = {
+                    ...DEFAULT_SETTINGS,
+                    ...(syncItems || {}),
+                    ...mergedLocalItems,
+                };
+
+                if (localErr) {
+                    showToast(`读取本地密钥失败: ${localErr.message}`, true);
+                } else if (Object.keys(migrateKeys).length > 0) {
+                    chrome.storage.local.set(migrateKeys, () => {
+                        const migrateErr = chrome.runtime.lastError;
+                        if (migrateErr) {
+                            showToast(
+                                `迁移本地密钥失败: ${migrateErr.message}`,
+                                true,
+                            );
+                        }
+                    });
+                }
+
+                const savedEngine = String(items.engine || "auto").trim();
+                const savedLLMEngine = String(items.llm_engine || "").trim();
+                const migratedLLMEngine = LLM_ENGINES.has(savedEngine)
+                    ? savedEngine
+                    : "";
+                const llmEngine = LLM_ENGINES.has(savedLLMEngine)
+                    ? savedLLMEngine
+                    : migratedLLMEngine || "openai";
+                const uiEngine = LLM_ENGINES.has(savedEngine)
+                    ? "llm"
+                    : savedEngine || "auto";
+
+                els.enable_select.value = items.enabled;
+                els.engine_select.value = uiEngine;
+                if (els.llm_engine_select) {
+                    els.llm_engine_select.value = llmEngine;
+                }
+                els.translate_shortcut.value = normalizeShortcut(
+                    items.translate_shortcut,
+                );
+                els.source_lang.value = items.source_lang || "auto";
+                els.target_lang.value = items.target_lang || "auto";
+                els.openai_api_url.value = items.openai_api_url;
+                els.openai_api_key.value = items.openai_api_key;
+                const legacyThinkingModel = String(
+                    items.openai_thinking_model || "",
+                ).trim();
+                const unifiedOpenAIModel = String(
+                    items.openai_model || "",
+                ).trim();
+                const savedOpenAIModel =
+                    unifiedOpenAIModel || legacyThinkingModel || "gpt-4o-mini";
+                els.openai_custom_model.value = items.openai_custom_model || "";
+                els.openai_custom_prompt.value =
+                    items.openai_custom_prompt || "";
+                els.show_thoughts.value = items.show_thoughts
+                    ? "true"
+                    : "false";
+                els.openai_reasoning_effort.value =
+                    items.openai_reasoning_effort || "medium";
+                els.openai_max_completion_tokens.value = Number.isFinite(
+                    Number(items.openai_max_completion_tokens),
+                )
+                    ? String(
+                          Math.floor(
+                              Number(items.openai_max_completion_tokens),
+                          ),
+                      )
+                    : "0";
+                els.custom_openai_api_url.value =
+                    items.custom_openai_api_url ||
+                    "https://api.openai.com/v1/chat/completions";
+                els.custom_openai_api_key.value =
+                    items.custom_openai_api_key || "";
+                const savedCustomOpenAIModel =
+                    items.custom_openai_model || "gpt-4o-mini";
+                els.custom_openai_custom_model.value =
+                    items.custom_openai_custom_model || "";
+                els.custom_openai_custom_prompt.value =
+                    items.custom_openai_custom_prompt || "";
+                els.custom_openai_show_thoughts.value =
+                    items.custom_openai_show_thoughts ? "true" : "false";
+                els.custom_openai_reasoning_effort.value =
+                    items.custom_openai_reasoning_effort || "medium";
+                els.custom_openai_max_completion_tokens.value = Number.isFinite(
+                    Number(items.custom_openai_max_completion_tokens),
+                )
+                    ? String(
+                          Math.floor(
+                              Number(items.custom_openai_max_completion_tokens),
+                          ),
+                      )
+                    : "0";
+                els.deepseek_api_url.value =
+                    items.deepseek_api_url ||
+                    "https://api.deepseek.com/chat/completions";
+                els.deepseek_api_key.value = items.deepseek_api_key || "";
+                const savedDeepSeekModel =
+                    items.deepseek_model || "deepseek-chat";
+                els.deepseek_custom_model.value =
+                    items.deepseek_custom_model || "";
+                els.deepseek_custom_prompt.value =
+                    items.deepseek_custom_prompt || "";
+                els.deepseek_show_thoughts.value = items.deepseek_show_thoughts
+                    ? "true"
+                    : "false";
+                els.qwen_api_url.value =
+                    items.qwen_api_url ||
+                    "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation";
+                els.qwen_api_key.value = items.qwen_api_key || "";
+                const savedQwenModel = items.qwen_model || "qwen-plus";
+                els.qwen_custom_model.value = items.qwen_custom_model || "";
+                els.qwen_custom_prompt.value = items.qwen_custom_prompt || "";
+                els.qwen_show_thoughts.value = items.qwen_show_thoughts
+                    ? "true"
+                    : "false";
+                els.qwen_thinking_budget.value = Number.isFinite(
+                    Number(items.qwen_thinking_budget),
+                )
+                    ? String(Math.floor(Number(items.qwen_thinking_budget)))
+                    : "0";
+                els.qwen_preserve_thinking.value = items.qwen_preserve_thinking
+                    ? "true"
+                    : "false";
+                els.glm_api_url.value =
+                    items.glm_api_url ||
+                    "https://open.bigmodel.cn/api/paas/v4/chat/completions";
+                els.glm_api_key.value = items.glm_api_key || "";
+                const savedGLMModel = items.glm_model || "glm-5.1";
+                els.glm_custom_model.value = items.glm_custom_model || "";
+                els.glm_custom_prompt.value = items.glm_custom_prompt || "";
+                els.glm_show_thoughts.value = items.glm_show_thoughts
+                    ? "true"
+                    : "false";
+                els.glm_clear_thinking.value =
+                    items.glm_clear_thinking === false ? "false" : "true";
+                els.xiaomi_api_url.value =
+                    items.xiaomi_api_url ||
+                    "https://api.xiaomimimo.com/v1/chat/completions";
+                els.xiaomi_api_key.value = items.xiaomi_api_key || "";
+                const savedXiaomiModel = items.xiaomi_model || "mimo-v2-pro";
+                els.xiaomi_custom_model.value = items.xiaomi_custom_model || "";
+                els.xiaomi_custom_prompt.value =
+                    items.xiaomi_custom_prompt || "";
+                els.xiaomi_show_thoughts.value = items.xiaomi_show_thoughts
+                    ? "true"
+                    : "false";
+                els.xiaomi_max_completion_tokens.value = Number.isFinite(
+                    Number(items.xiaomi_max_completion_tokens),
+                )
+                    ? String(
+                          Math.floor(
+                              Number(items.xiaomi_max_completion_tokens),
+                          ),
+                      )
+                    : "0";
+                els.grok_api_url.value =
+                    items.grok_api_url ||
+                    "https://api.x.ai/v1/chat/completions";
+                els.grok_api_key.value = items.grok_api_key || "";
+                const savedGrokModel = items.grok_model || "grok-3-latest";
+                els.grok_custom_model.value = items.grok_custom_model || "";
+                els.grok_custom_prompt.value = items.grok_custom_prompt || "";
+                els.grok_show_thoughts.value = items.grok_show_thoughts
+                    ? "true"
+                    : "false";
+                const openaiCompatSavedModelMap = {
+                    openai: savedOpenAIModel,
+                    custom_openai: savedCustomOpenAIModel,
+                    deepseek: savedDeepSeekModel,
+                    qwen: savedQwenModel,
+                    glm: savedGLMModel,
+                    xiaomi: savedXiaomiModel,
+                    grok: savedGrokModel,
+                };
+                OPENAI_COMPAT_MODEL_ENGINES.forEach((cfg) => {
+                    const selectEl = els[cfg.modelId];
+                    const customEl = els[cfg.customModelId];
+                    const savedModel =
+                        openaiCompatSavedModelMap[cfg.name] || cfg.defaultModel;
+
+                    populateOpenAICompatModelSelect(
+                        selectEl,
+                        customEl,
+                        [],
+                        savedModel,
+                    );
+                    modelListLoaded.delete(cfg.name);
+                });
+                els.claude_api_url.value =
+                    items.claude_api_url ||
+                    "https://api.anthropic.com/v1/messages";
+                els.claude_api_key.value = items.claude_api_key || "";
+                const savedClaudeModel =
+                    items.claude_model || "claude-sonnet-4-6";
+                els.claude_custom_model.value = items.claude_custom_model || "";
+                els.claude_custom_prompt.value =
+                    items.claude_custom_prompt || "";
+                els.claude_show_thoughts.value = items.claude_show_thoughts
+                    ? "true"
+                    : "false";
+                els.claude_max_tokens.value = Number.isFinite(
+                    Number(items.claude_max_tokens),
+                )
+                    ? String(Math.floor(Number(items.claude_max_tokens)))
+                    : "4096";
+                els.claude_thinking_mode.value =
+                    items.claude_thinking_mode || "adaptive";
+                els.claude_thinking_budget.value = Number.isFinite(
+                    Number(items.claude_thinking_budget),
+                )
+                    ? String(Math.floor(Number(items.claude_thinking_budget)))
+                    : "2048";
+                els.claude_thinking_effort.value =
+                    items.claude_thinking_effort || "medium";
                 populateOpenAICompatModelSelect(
-                    selectEl,
-                    customEl,
+                    els.claude_model,
+                    els.claude_custom_model,
                     [],
+                    savedClaudeModel,
+                );
+                modelListLoaded.delete("claude");
+                els.gemini_api_url.value =
+                    items.gemini_api_url ||
+                    "https://generativelanguage.googleapis.com/v1beta/models";
+                els.gemini_api_key.value = items.gemini_api_key || "";
+                const savedGeminiModel =
+                    items.gemini_model || "gemini-2.5-flash";
+                els.gemini_custom_model.value = items.gemini_custom_model || "";
+                els.gemini_custom_prompt.value =
+                    items.gemini_custom_prompt || "";
+                els.gemini_show_thoughts.value = items.gemini_show_thoughts
+                    ? "true"
+                    : "false";
+                els.gemini_thinking_level.value =
+                    items.gemini_thinking_level || "high";
+                els.gemini_thinking_budget.value = Number.isFinite(
+                    Number(items.gemini_thinking_budget),
+                )
+                    ? String(Math.floor(Number(items.gemini_thinking_budget)))
+                    : "-1";
+                populateOpenAICompatModelSelect(
+                    els.gemini_model,
+                    els.gemini_custom_model,
+                    [],
+                    savedGeminiModel,
+                );
+                modelListLoaded.delete("gemini");
+                const savedOllamaModel = items.ollama_model || "";
+                els.ollama_api_url.value =
+                    items.ollama_api_url || "http://localhost:11434/api/chat";
+                els.ollama_custom_model.value = items.ollama_custom_model || "";
+                els.ollama_custom_prompt.value =
+                    items.ollama_custom_prompt || "";
+                els.ollama_show_thoughts.value = items.ollama_show_thoughts
+                    ? "true"
+                    : "false";
+                populateOllamaModelSelect([], savedOllamaModel);
+                modelListLoaded.delete("ollama");
+                const specialProvider = normalizeSpecialProvider(
+                    items.special_translate_provider || SPECIAL_PROVIDER_OLLAMA,
+                );
+                const savedSpecialModel =
+                    items.special_translate_model || "translategemma";
+                els.special_translate_provider.value = specialProvider;
+                els.special_translate_api_url.value =
+                    items.special_translate_api_url ||
+                    getSpecialApiDefaultByProvider(specialProvider);
+                els.special_translate_api_key.value =
+                    items.special_translate_api_key || "";
+                els.special_translate_custom_model.value =
+                    items.special_translate_custom_model || "";
+                els.special_translate_custom_prompt.value =
+                    items.special_translate_custom_prompt || "";
+                els.special_translate_show_thoughts.value =
+                    items.special_translate_show_thoughts ? "true" : "false";
+                populateSpecialTranslateModelSelect(
+                    RECOMMENDED_SPECIAL_TRANSLATE_MODELS,
+                    savedSpecialModel,
+                );
+                modelListLoaded.delete("special_translate");
+                const savedModel =
+                    items.webllm_model || "Qwen3-0.6B-q4f16_1-MLC";
+                els.webllm_custom_model.value = items.webllm_custom_model || "";
+                els.webllm_custom_prompt.value =
+                    items.webllm_custom_prompt || "";
+                els.webllm_show_thoughts.value = items.webllm_show_thoughts
+                    ? "true"
+                    : "false";
+                els.webllm_model_mirror.value =
+                    items.webllm_model_mirror || "official";
+                els.webllm_custom_mirror.value =
+                    items.webllm_custom_mirror || "";
+                els.webllm_custom_mirror.disabled =
+                    els.webllm_model_mirror.value !== "custom";
+                populateWebLLMModelSelect(
+                    RECOMMENDED_WEBLLM_MODELS,
                     savedModel,
                 );
-
-                void requestOpenAICompatModelList(apiUrl, apiKey)
-                    .then((res) => {
-                        const modelIds = Array.isArray(res.modelIds)
-                            ? res.modelIds
-                            : [];
-                        populateOpenAICompatModelSelect(
-                            selectEl,
-                            customEl,
-                            modelIds,
-                            savedModel,
-                        );
-                    })
-                    .catch(() => {
-                        populateOpenAICompatModelSelect(
-                            selectEl,
-                            customEl,
-                            [],
-                            savedModel,
-                        );
-                    });
+                modelListLoaded.delete("webllm");
+                els.theme_mode.value = items.theme_mode || "auto";
+                els.font_family.value = items.font_family || "";
+                els.bubble_width_percent.value = clampPercent(
+                    items.bubble_width_percent,
+                    20,
+                );
+                els.bubble_height_percent.value = clampPercent(
+                    items.bubble_height_percent,
+                    40,
+                );
+                updateEngineDependentUI();
+                applyTheme(items.theme_mode || "auto");
             });
-            els.claude_api_url.value =
-                items.claude_api_url || "https://api.anthropic.com/v1/messages";
-            els.claude_api_key.value = items.claude_api_key || "";
-            const savedClaudeModel = items.claude_model || "claude-sonnet-4-6";
-            els.claude_custom_model.value = items.claude_custom_model || "";
-            els.claude_custom_prompt.value = items.claude_custom_prompt || "";
-            els.claude_show_thoughts.value = items.claude_show_thoughts
-                ? "true"
-                : "false";
-            els.claude_max_tokens.value = Number.isFinite(
-                Number(items.claude_max_tokens),
-            )
-                ? String(Math.floor(Number(items.claude_max_tokens)))
-                : "4096";
-            els.claude_thinking_mode.value =
-                items.claude_thinking_mode || "adaptive";
-            els.claude_thinking_budget.value = Number.isFinite(
-                Number(items.claude_thinking_budget),
-            )
-                ? String(Math.floor(Number(items.claude_thinking_budget)))
-                : "2048";
-            els.claude_thinking_effort.value =
-                items.claude_thinking_effort || "medium";
-            populateOpenAICompatModelSelect(
-                els.claude_model,
-                els.claude_custom_model,
-                [],
-                savedClaudeModel,
-            );
-            void requestClaudeModelList(
-                els.claude_api_url.value,
-                els.claude_api_key.value,
-            )
-                .then((res) => {
-                    const modelIds = Array.isArray(res.modelIds)
-                        ? res.modelIds
-                        : [];
-                    populateOpenAICompatModelSelect(
-                        els.claude_model,
-                        els.claude_custom_model,
-                        modelIds,
-                        savedClaudeModel,
-                    );
-                })
-                .catch(() => {
-                    populateOpenAICompatModelSelect(
-                        els.claude_model,
-                        els.claude_custom_model,
-                        [],
-                        savedClaudeModel,
-                    );
-                });
-            els.gemini_api_url.value =
-                items.gemini_api_url ||
-                "https://generativelanguage.googleapis.com/v1beta/models";
-            els.gemini_api_key.value = items.gemini_api_key || "";
-            const savedGeminiModel = items.gemini_model || "gemini-2.5-flash";
-            els.gemini_custom_model.value = items.gemini_custom_model || "";
-            els.gemini_custom_prompt.value = items.gemini_custom_prompt || "";
-            els.gemini_show_thoughts.value = items.gemini_show_thoughts
-                ? "true"
-                : "false";
-            els.gemini_thinking_level.value =
-                items.gemini_thinking_level || "high";
-            els.gemini_thinking_budget.value = Number.isFinite(
-                Number(items.gemini_thinking_budget),
-            )
-                ? String(Math.floor(Number(items.gemini_thinking_budget)))
-                : "-1";
-            populateOpenAICompatModelSelect(
-                els.gemini_model,
-                els.gemini_custom_model,
-                [],
-                savedGeminiModel,
-            );
-            void requestGeminiModelList(
-                els.gemini_api_url.value,
-                els.gemini_api_key.value,
-            )
-                .then((res) => {
-                    const modelIds = Array.isArray(res.modelIds)
-                        ? res.modelIds
-                        : [];
-                    populateOpenAICompatModelSelect(
-                        els.gemini_model,
-                        els.gemini_custom_model,
-                        modelIds,
-                        savedGeminiModel,
-                    );
-                })
-                .catch(() => {
-                    populateOpenAICompatModelSelect(
-                        els.gemini_model,
-                        els.gemini_custom_model,
-                        [],
-                        savedGeminiModel,
-                    );
-                });
-            const savedOllamaModel = items.ollama_model || "";
-            els.ollama_api_url.value =
-                items.ollama_api_url || "http://localhost:11434/api/chat";
-            els.ollama_custom_model.value = items.ollama_custom_model || "";
-            els.ollama_custom_prompt.value = items.ollama_custom_prompt || "";
-            els.ollama_show_thoughts.value = items.ollama_show_thoughts
-                ? "true"
-                : "false";
-            populateOllamaModelSelect([], savedOllamaModel);
-            void requestOllamaModelList(els.ollama_api_url.value)
-                .then((res) => {
-                    const modelIds = Array.isArray(res.modelIds)
-                        ? res.modelIds
-                        : [];
-                    populateOllamaModelSelect(modelIds, savedOllamaModel);
-                })
-                .catch(() => {
-                    populateOllamaModelSelect([], savedOllamaModel);
-                });
-            const specialProvider = normalizeSpecialProvider(
-                items.special_translate_provider || SPECIAL_PROVIDER_OLLAMA,
-            );
-            const savedSpecialModel =
-                items.special_translate_model || "translategemma";
-            els.special_translate_provider.value = specialProvider;
-            els.special_translate_api_url.value =
-                items.special_translate_api_url ||
-                getSpecialApiDefaultByProvider(specialProvider);
-            els.special_translate_api_key.value =
-                items.special_translate_api_key || "";
-            els.special_translate_custom_model.value =
-                items.special_translate_custom_model || "";
-            els.special_translate_custom_prompt.value =
-                items.special_translate_custom_prompt || "";
-            els.special_translate_show_thoughts.value =
-                items.special_translate_show_thoughts ? "true" : "false";
-            populateSpecialTranslateModelSelect(
-                RECOMMENDED_SPECIAL_TRANSLATE_MODELS,
-                savedSpecialModel,
-            );
-            void requestSpecialTranslateModelList(
-                specialProvider,
-                els.special_translate_api_url.value,
-                els.special_translate_api_key.value,
-            )
-                .then((res) => {
-                    const modelIds = Array.isArray(res.modelIds)
-                        ? res.modelIds
-                        : RECOMMENDED_SPECIAL_TRANSLATE_MODELS;
-                    populateSpecialTranslateModelSelect(
-                        modelIds,
-                        savedSpecialModel,
-                    );
-                })
-                .catch(() => {
-                    populateSpecialTranslateModelSelect(
-                        RECOMMENDED_SPECIAL_TRANSLATE_MODELS,
-                        savedSpecialModel,
-                    );
-                });
-            const savedModel = items.webllm_model || "Qwen3-0.6B-q4f16_1-MLC";
-            els.webllm_custom_model.value = items.webllm_custom_model || "";
-            els.webllm_custom_prompt.value = items.webllm_custom_prompt || "";
-            els.webllm_show_thoughts.value = items.webllm_show_thoughts
-                ? "true"
-                : "false";
-            els.webllm_model_mirror.value =
-                items.webllm_model_mirror || "official";
-            els.webllm_custom_mirror.value = items.webllm_custom_mirror || "";
-            els.webllm_custom_mirror.disabled =
-                els.webllm_model_mirror.value !== "custom";
-            populateWebLLMModelSelect(RECOMMENDED_WEBLLM_MODELS, savedModel);
-            if (isWebLLMSupportedBrowser) {
-                void requestWebLLMModelList()
-                    .then((res) => {
-                        const modelIds = Array.isArray(res.modelIds)
-                            ? res.modelIds
-                            : [];
-                        if (modelIds.length > 0) {
-                            populateWebLLMModelSelect(modelIds, savedModel);
-                        }
-                    })
-                    .catch(() => {
-                        // keep fallback options silently
-                    });
-            }
-            els.theme_mode.value = items.theme_mode || "auto";
-            els.font_family.value = items.font_family || "";
-            els.bubble_width_percent.value = clampPercent(
-                items.bubble_width_percent,
-                20,
-            );
-            els.bubble_height_percent.value = clampPercent(
-                items.bubble_height_percent,
-                40,
-            );
-            updateEngineDependentUI();
-            applyTheme(items.theme_mode || "auto");
         });
     }
 
@@ -2536,16 +2587,46 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
 
-        chrome.storage.sync.set(data, () => {
-            applyTheme(data.theme_mode);
-            showToast("已保存");
+        const localApiKeys = extractApiKeyPayload(data);
+        const syncData = stripApiKeyPayload(data);
+
+        chrome.storage.local.set(localApiKeys, () => {
+            const localErr = chrome.runtime.lastError;
+            if (localErr) {
+                showToast(`保存失败: ${localErr.message}`, true);
+                return;
+            }
+
+            chrome.storage.sync.set(syncData, () => {
+                const syncErr = chrome.runtime.lastError;
+                if (syncErr) {
+                    showToast(`保存失败: ${syncErr.message}`, true);
+                    return;
+                }
+                applyTheme(syncData.theme_mode);
+                showToast("已保存");
+            });
         });
     });
 
     document.getElementById("reset").addEventListener("click", () => {
         chrome.storage.sync.clear(() => {
-            load();
-            showToast("已恢复默认");
+            const syncErr = chrome.runtime.lastError;
+            if (syncErr) {
+                showToast(`恢复失败: ${syncErr.message}`, true);
+                return;
+            }
+
+            chrome.storage.local.remove(API_KEY_FIELDS, () => {
+                const localErr = chrome.runtime.lastError;
+                if (localErr) {
+                    showToast(`恢复失败: ${localErr.message}`, true);
+                    return;
+                }
+
+                load();
+                showToast("已恢复默认");
+            });
         });
     });
 
@@ -2592,15 +2673,19 @@ document.addEventListener("DOMContentLoaded", () => {
         els.special_translate_custom_model.disabled = !isCustom;
     });
 
-    function refreshOpenAICompatModels(cfg) {
+    function refreshOpenAICompatModels(cfg, force) {
         const selectEl = els[cfg.modelId];
         const customEl = els[cfg.customModelId];
         if (!selectEl || !customEl) {
-            return;
+            return Promise.resolve();
+        }
+
+        if (!force && modelListLoaded.has(cfg.name)) {
+            return Promise.resolve();
         }
 
         const selectedModel = getSelectedOpenAICompatModel(selectEl, customEl);
-        void requestOpenAICompatModelList(
+        return requestOpenAICompatModelList(
             els[cfg.apiUrlId]?.value,
             els[cfg.apiKeyId]?.value,
         )
@@ -2614,6 +2699,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     modelIds,
                     selectedModel,
                 );
+                modelListLoaded.add(cfg.name);
             })
             .catch(() => {
                 populateOpenAICompatModelSelect(
@@ -2622,7 +2708,194 @@ document.addEventListener("DOMContentLoaded", () => {
                     [],
                     selectedModel,
                 );
+                modelListLoaded.delete(cfg.name);
             });
+    }
+
+    function refreshClaudeModels(force) {
+        if (!force && modelListLoaded.has("claude")) {
+            return Promise.resolve();
+        }
+        const selectedModel = getSelectedOpenAICompatModel(
+            els.claude_model,
+            els.claude_custom_model,
+        );
+        return requestClaudeModelList(
+            els.claude_api_url.value,
+            els.claude_api_key.value,
+        )
+            .then((res) => {
+                const modelIds = Array.isArray(res.modelIds)
+                    ? res.modelIds
+                    : [];
+                populateOpenAICompatModelSelect(
+                    els.claude_model,
+                    els.claude_custom_model,
+                    modelIds,
+                    selectedModel,
+                );
+                modelListLoaded.add("claude");
+            })
+            .catch(() => {
+                populateOpenAICompatModelSelect(
+                    els.claude_model,
+                    els.claude_custom_model,
+                    [],
+                    selectedModel,
+                );
+                modelListLoaded.delete("claude");
+            });
+    }
+
+    function refreshGeminiModels(force) {
+        if (!force && modelListLoaded.has("gemini")) {
+            return Promise.resolve();
+        }
+        const selectedModel = getSelectedOpenAICompatModel(
+            els.gemini_model,
+            els.gemini_custom_model,
+        );
+        return requestGeminiModelList(
+            els.gemini_api_url.value,
+            els.gemini_api_key.value,
+        )
+            .then((res) => {
+                const modelIds = Array.isArray(res.modelIds)
+                    ? res.modelIds
+                    : [];
+                populateOpenAICompatModelSelect(
+                    els.gemini_model,
+                    els.gemini_custom_model,
+                    modelIds,
+                    selectedModel,
+                );
+                modelListLoaded.add("gemini");
+            })
+            .catch(() => {
+                populateOpenAICompatModelSelect(
+                    els.gemini_model,
+                    els.gemini_custom_model,
+                    [],
+                    selectedModel,
+                );
+                modelListLoaded.delete("gemini");
+            });
+    }
+
+    function refreshSpecialTranslateModels(force) {
+        if (!force && modelListLoaded.has("special_translate")) {
+            return Promise.resolve();
+        }
+        const selectedModel =
+            (els.special_translate_model_select?.value || "").trim() ||
+            "translategemma";
+        return requestSpecialTranslateModelList(
+            els.special_translate_provider?.value,
+            els.special_translate_api_url?.value,
+            els.special_translate_api_key?.value,
+        )
+            .then((res) => {
+                const modelIds = Array.isArray(res.modelIds)
+                    ? res.modelIds
+                    : RECOMMENDED_SPECIAL_TRANSLATE_MODELS;
+                populateSpecialTranslateModelSelect(modelIds, selectedModel);
+                modelListLoaded.add("special_translate");
+            })
+            .catch(() => {
+                populateSpecialTranslateModelSelect(
+                    RECOMMENDED_SPECIAL_TRANSLATE_MODELS,
+                    selectedModel,
+                );
+                modelListLoaded.delete("special_translate");
+            });
+    }
+
+    function refreshOllamaModels(force) {
+        if (!force && modelListLoaded.has("ollama")) {
+            return Promise.resolve();
+        }
+        const selectedModel = (els.ollama_model_select?.value || "").trim();
+        return requestOllamaModelList(els.ollama_api_url.value)
+            .then((res) => {
+                const modelIds = Array.isArray(res.modelIds)
+                    ? res.modelIds
+                    : [];
+                populateOllamaModelSelect(modelIds, selectedModel);
+                modelListLoaded.add("ollama");
+            })
+            .catch(() => {
+                populateOllamaModelSelect([], selectedModel);
+                modelListLoaded.delete("ollama");
+            });
+    }
+
+    function refreshWebLLMModels(force) {
+        if (!isWebLLMSupportedBrowser) {
+            return Promise.resolve();
+        }
+        if (!force && modelListLoaded.has("webllm")) {
+            return Promise.resolve();
+        }
+        const selectedModel = getSelectedWebLLMModelId();
+        return requestWebLLMModelList()
+            .then((res) => {
+                const modelIds = Array.isArray(res.modelIds)
+                    ? res.modelIds
+                    : [];
+                if (modelIds.length > 0) {
+                    populateWebLLMModelSelect(modelIds, selectedModel);
+                }
+                modelListLoaded.add("webllm");
+            })
+            .catch(() => {
+                modelListLoaded.delete("webllm");
+            });
+    }
+
+    function ensureActiveEngineModelListLoaded(engine) {
+        const activeEngine = String(
+            engine || getCurrentEffectiveEngine() || "auto",
+        );
+
+        if (OPENAI_COMPAT_ENGINE_BY_NAME[activeEngine]) {
+            void refreshOpenAICompatModels(
+                OPENAI_COMPAT_ENGINE_BY_NAME[activeEngine],
+                false,
+            );
+            return;
+        }
+
+        if (activeEngine === "auto") {
+            void refreshOpenAICompatModels(
+                OPENAI_COMPAT_ENGINE_BY_NAME.openai,
+                false,
+            );
+            return;
+        }
+
+        if (activeEngine === "claude") {
+            void refreshClaudeModels(false);
+            return;
+        }
+
+        if (activeEngine === "gemini") {
+            void refreshGeminiModels(false);
+            return;
+        }
+
+        if (activeEngine === "ollama") {
+            void refreshOllamaModels(false);
+            return;
+        }
+
+        if (activeEngine === "special_translate") {
+            void refreshSpecialTranslateModels(false);
+            return;
+        }
+
+        if (activeEngine === "webllm") {
+            void refreshWebLLMModels(false);
+        }
     }
 
     OPENAI_COMPAT_MODEL_ENGINES.forEach((cfg) => {
@@ -2634,11 +2907,17 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         els[cfg.apiUrlId]?.addEventListener("change", () => {
-            refreshOpenAICompatModels(cfg);
+            modelListLoaded.delete(cfg.name);
+            debounceByKey(`model-${cfg.name}`, () => {
+                void refreshOpenAICompatModels(cfg, true);
+            });
         });
 
         els[cfg.apiKeyId]?.addEventListener("change", () => {
-            refreshOpenAICompatModels(cfg);
+            modelListLoaded.delete(cfg.name);
+            debounceByKey(`model-${cfg.name}`, () => {
+                void refreshOpenAICompatModels(cfg, true);
+            });
         });
     });
 
@@ -2653,147 +2932,32 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     els.claude_api_url?.addEventListener("change", () => {
-        const selectedModel = getSelectedOpenAICompatModel(
-            els.claude_model,
-            els.claude_custom_model,
-        );
-        void requestClaudeModelList(
-            els.claude_api_url.value,
-            els.claude_api_key.value,
-        )
-            .then((res) => {
-                const modelIds = Array.isArray(res.modelIds)
-                    ? res.modelIds
-                    : [];
-                populateOpenAICompatModelSelect(
-                    els.claude_model,
-                    els.claude_custom_model,
-                    modelIds,
-                    selectedModel,
-                );
-            })
-            .catch(() => {
-                populateOpenAICompatModelSelect(
-                    els.claude_model,
-                    els.claude_custom_model,
-                    [],
-                    selectedModel,
-                );
-            });
+        modelListLoaded.delete("claude");
+        debounceByKey("model-claude", () => {
+            void refreshClaudeModels(true);
+        });
     });
 
     els.claude_api_key?.addEventListener("change", () => {
-        const selectedModel = getSelectedOpenAICompatModel(
-            els.claude_model,
-            els.claude_custom_model,
-        );
-        void requestClaudeModelList(
-            els.claude_api_url.value,
-            els.claude_api_key.value,
-        )
-            .then((res) => {
-                const modelIds = Array.isArray(res.modelIds)
-                    ? res.modelIds
-                    : [];
-                populateOpenAICompatModelSelect(
-                    els.claude_model,
-                    els.claude_custom_model,
-                    modelIds,
-                    selectedModel,
-                );
-            })
-            .catch(() => {
-                populateOpenAICompatModelSelect(
-                    els.claude_model,
-                    els.claude_custom_model,
-                    [],
-                    selectedModel,
-                );
-            });
+        modelListLoaded.delete("claude");
+        debounceByKey("model-claude", () => {
+            void refreshClaudeModels(true);
+        });
     });
 
     els.gemini_api_url?.addEventListener("change", () => {
-        const selectedModel = getSelectedOpenAICompatModel(
-            els.gemini_model,
-            els.gemini_custom_model,
-        );
-        void requestGeminiModelList(
-            els.gemini_api_url.value,
-            els.gemini_api_key.value,
-        )
-            .then((res) => {
-                const modelIds = Array.isArray(res.modelIds)
-                    ? res.modelIds
-                    : [];
-                populateOpenAICompatModelSelect(
-                    els.gemini_model,
-                    els.gemini_custom_model,
-                    modelIds,
-                    selectedModel,
-                );
-            })
-            .catch(() => {
-                populateOpenAICompatModelSelect(
-                    els.gemini_model,
-                    els.gemini_custom_model,
-                    [],
-                    selectedModel,
-                );
-            });
+        modelListLoaded.delete("gemini");
+        debounceByKey("model-gemini", () => {
+            void refreshGeminiModels(true);
+        });
     });
 
     els.gemini_api_key?.addEventListener("change", () => {
-        const selectedModel = getSelectedOpenAICompatModel(
-            els.gemini_model,
-            els.gemini_custom_model,
-        );
-        void requestGeminiModelList(
-            els.gemini_api_url.value,
-            els.gemini_api_key.value,
-        )
-            .then((res) => {
-                const modelIds = Array.isArray(res.modelIds)
-                    ? res.modelIds
-                    : [];
-                populateOpenAICompatModelSelect(
-                    els.gemini_model,
-                    els.gemini_custom_model,
-                    modelIds,
-                    selectedModel,
-                );
-            })
-            .catch(() => {
-                populateOpenAICompatModelSelect(
-                    els.gemini_model,
-                    els.gemini_custom_model,
-                    [],
-                    selectedModel,
-                );
-            });
+        modelListLoaded.delete("gemini");
+        debounceByKey("model-gemini", () => {
+            void refreshGeminiModels(true);
+        });
     });
-
-    function refreshSpecialTranslateModels() {
-        const selectedModel =
-            (els.special_translate_model_select?.value || "").trim() ||
-            "translategemma";
-        void requestSpecialTranslateModelList(
-            els.special_translate_provider?.value,
-            els.special_translate_api_url?.value,
-            els.special_translate_api_key?.value,
-        )
-            .then((res) => {
-                const modelIds = Array.isArray(res.modelIds)
-                    ? res.modelIds
-                    : RECOMMENDED_SPECIAL_TRANSLATE_MODELS;
-                populateSpecialTranslateModelSelect(modelIds, selectedModel);
-            })
-            .catch(() => {
-                populateSpecialTranslateModelSelect(
-                    RECOMMENDED_SPECIAL_TRANSLATE_MODELS,
-                    selectedModel,
-                );
-            });
-    }
 
     els.special_translate_provider?.addEventListener("change", () => {
         const provider = normalizeSpecialProvider(
@@ -2803,11 +2967,17 @@ document.addEventListener("DOMContentLoaded", () => {
             els.special_translate_api_url.value =
                 getSpecialApiDefaultByProvider(provider);
         }
-        refreshSpecialTranslateModels();
+        modelListLoaded.delete("special_translate");
+        debounceByKey("model-special", () => {
+            void refreshSpecialTranslateModels(true);
+        });
     });
 
     els.special_translate_api_url?.addEventListener("change", () => {
-        refreshSpecialTranslateModels();
+        modelListLoaded.delete("special_translate");
+        debounceByKey("model-special", () => {
+            void refreshSpecialTranslateModels(true);
+        });
     });
 
     els.special_translate_api_key?.addEventListener("change", () => {
@@ -2815,22 +2985,18 @@ document.addEventListener("DOMContentLoaded", () => {
             normalizeSpecialProvider(els.special_translate_provider?.value) ===
             SPECIAL_PROVIDER_OPENAI
         ) {
-            refreshSpecialTranslateModels();
+            modelListLoaded.delete("special_translate");
+            debounceByKey("model-special", () => {
+                void refreshSpecialTranslateModels(true);
+            });
         }
     });
 
     els.ollama_api_url?.addEventListener("change", () => {
-        const selectedModel = (els.ollama_model_select?.value || "").trim();
-        void requestOllamaModelList(els.ollama_api_url.value)
-            .then((res) => {
-                const modelIds = Array.isArray(res.modelIds)
-                    ? res.modelIds
-                    : [];
-                populateOllamaModelSelect(modelIds, selectedModel);
-            })
-            .catch(() => {
-                populateOllamaModelSelect([], selectedModel);
-            });
+        modelListLoaded.delete("ollama");
+        debounceByKey("model-ollama", () => {
+            void refreshOllamaModels(true);
+        });
     });
 
     els.webllm_model_mirror?.addEventListener("change", () => {
@@ -3200,10 +3366,14 @@ document.addEventListener("DOMContentLoaded", () => {
             const content = await readFileAsText(file);
             const parsed = JSON.parse(content);
             const payload = sanitizeConfigPayload(parsed?.payload || parsed);
+            const localApiKeys = extractApiKeyPayload(payload);
+            const syncPayload = stripApiKeyPayload(payload);
             payload.config_updated_at =
                 Number(parsed?.updated_at) ||
                 Number(payload.config_updated_at) ||
                 Date.now();
+
+            syncPayload.config_updated_at = payload.config_updated_at;
 
             const result = await sendBackgroundMessage(
                 MESSAGE_TYPES.CONFIG_IMPORT || "CONFIG_IMPORT",
@@ -3211,15 +3381,26 @@ document.addEventListener("DOMContentLoaded", () => {
                     payload: {
                         schema: "jyt-config",
                         schema_version: 1,
-                        updated_at: payload.config_updated_at,
+                        updated_at: syncPayload.config_updated_at,
                         exported_at: new Date().toISOString(),
-                        payload,
+                        payload: syncPayload,
                     },
                 },
             );
             if (!result?.ok) {
                 throw new Error(result?.error || "配置导入失败");
             }
+
+            await new Promise((resolve, reject) => {
+                chrome.storage.local.set(localApiKeys, () => {
+                    const err = chrome.runtime.lastError;
+                    if (err) {
+                        reject(new Error(err.message || "导入本地密钥失败"));
+                        return;
+                    }
+                    resolve();
+                });
+            });
 
             load();
             setConfigStatus("配置导入完成", false);

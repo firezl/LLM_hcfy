@@ -18,6 +18,7 @@ $includes = @(
     "styles.css",
     "icons",
     "vendor",
+    "options",
     "README.md"
 )
 

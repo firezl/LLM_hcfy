@@ -14,6 +14,9 @@
     let activeRequest = null;
     let lastTranslateContext = null;
     let runtimeSettings = { ...DEFAULT_SETTINGS };
+    const API_KEY_FIELDS = Object.keys(DEFAULT_SETTINGS || {}).filter((key) =>
+        key.endsWith("_api_key"),
+    );
     let pdfPromptState = null;
     let pdfPromptEl = null;
     let pdfPromptAutoCloseTimer = null;
@@ -719,6 +722,7 @@
         });
 
         bubble.querySelector(".jyt-close").addEventListener("click", () => {
+            cancelActiveTranslateRequest();
             clearTermEditorUI(true);
             bubble.style.display = "none";
             isPinned = false;
@@ -801,9 +805,20 @@
     }
 
     function loadRuntimeSettings() {
-        chrome.storage.sync.get(DEFAULT_SETTINGS, (items) => {
-            runtimeSettings = { ...DEFAULT_SETTINGS, ...items };
-            applyTheme(runtimeSettings.theme_mode || "auto");
+        chrome.storage.sync.get(DEFAULT_SETTINGS, (syncItems) => {
+            const syncErr = chrome.runtime.lastError;
+            const safeSyncItems = syncErr ? {} : syncItems || {};
+
+            chrome.storage.local.get(API_KEY_FIELDS, (localItems) => {
+                const localErr = chrome.runtime.lastError;
+                const safeLocalItems = localErr ? {} : localItems || {};
+                runtimeSettings = {
+                    ...DEFAULT_SETTINGS,
+                    ...safeSyncItems,
+                    ...safeLocalItems,
+                };
+                applyTheme(runtimeSettings.theme_mode || "auto");
+            });
         });
     }
 
@@ -1193,6 +1208,24 @@
         }
     }
 
+    function cancelActiveTranslateRequest() {
+        const currentRequest = activeRequest;
+        activeRequest = null;
+
+        if (!currentRequest || !translatePort) {
+            return;
+        }
+
+        try {
+            translatePort.postMessage({
+                type: MESSAGE_TYPES.TRANSLATE_CANCEL || "TRANSLATE_CANCEL",
+                requestId: currentRequest.requestId,
+            });
+        } catch (err) {
+            // Ignore port send failures when runtime is unavailable.
+        }
+    }
+
     function renderContentAndThought(
         buffer,
         streamEl,
@@ -1536,6 +1569,8 @@
         const text = (selection || "").trim();
         if (!text) return;
 
+        cancelActiveTranslateRequest();
+
         const bubble = createBubble();
         clearTermEditorUI(true);
         bubble.style.display = "block";
@@ -1563,11 +1598,22 @@
         });
 
     chrome.storage.onChanged.addListener((changes, area) => {
-        if (area !== "sync") return;
-        for (const key of Object.keys(changes)) {
-            runtimeSettings[key] = changes[key].newValue;
-            if (key === "theme_mode") {
-                applyTheme(changes[key].newValue);
+        if (area === "sync") {
+            for (const key of Object.keys(changes)) {
+                runtimeSettings[key] = changes[key].newValue;
+                if (key === "theme_mode") {
+                    applyTheme(changes[key].newValue);
+                }
+            }
+            return;
+        }
+
+        if (area === "local") {
+            for (const key of Object.keys(changes)) {
+                if (!API_KEY_FIELDS.includes(key)) {
+                    continue;
+                }
+                runtimeSettings[key] = String(changes[key].newValue || "");
             }
         }
     });
