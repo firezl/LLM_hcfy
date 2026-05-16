@@ -42,6 +42,21 @@ function Copy-IncludesTo($destDir) {
     }
 }
 
+function Optimize-PackageDir($dir) {
+    $pdfjsDir = Join-Path $dir "vendor\pdfjs"
+    if (-not (Test-Path $pdfjsDir)) {
+        return
+    }
+
+    Get-ChildItem -Path $pdfjsDir -Recurse -File -Include "*.map" |
+        Remove-Item -Force
+
+    $samplePdf = Join-Path $pdfjsDir "web\compressed.tracemonkey-pldi-09.pdf"
+    if (Test-Path $samplePdf) {
+        Remove-Item $samplePdf -Force
+    }
+}
+
 function Build-Archive($sourceDir, $archivePath) {
     if (Test-Path $archivePath) {
         Remove-Item $archivePath -Force
@@ -49,17 +64,20 @@ function Build-Archive($sourceDir, $archivePath) {
     Compress-Archive -Path "$sourceDir\*" -DestinationPath $archivePath -CompressionLevel Optimal
 }
 
-Reset-Dir $chromeTempDir
-Reset-Dir $firefoxTempDir
+try {
+    Reset-Dir $chromeTempDir
+    Reset-Dir $firefoxTempDir
 
-Copy-IncludesTo $chromeTempDir
-Copy-IncludesTo $firefoxTempDir
+    Copy-IncludesTo $chromeTempDir
+    Copy-IncludesTo $firefoxTempDir
+    Optimize-PackageDir $chromeTempDir
+    Optimize-PackageDir $firefoxTempDir
 
-# Firefox 提交会对 JS 做解析，单文件超过 5MB 会被拒；
-# 用轻量 stub 覆盖 WebLLM 入口，避免 background 静态 import 解析失败。
-$firefoxWebLLMEntry = Join-Path $firefoxTempDir "vendor\webllm\index.js"
-if (Test-Path $firefoxWebLLMEntry) {
-    @'
+    # Firefox 提交会对 JS 做解析，单文件超过 5MB 会被拒；
+    # 用轻量 stub 覆盖 WebLLM 入口，避免 background 静态 import 解析失败。
+    $firefoxWebLLMEntry = Join-Path $firefoxTempDir "vendor\webllm\index.js"
+    if (Test-Path $firefoxWebLLMEntry) {
+        @'
 export const prebuiltAppConfig = { model_list: [] };
 
 export async function CreateMLCEngine() {
@@ -70,40 +88,45 @@ export async function deleteModelAllInfoInCache() {
     return;
 }
 '@ | Set-Content -Path $firefoxWebLLMEntry -Encoding UTF8
-}
+    }
 
-# Chrome/Edge 包
-Build-Archive $chromeTempDir $zipName
+    # Chrome/Edge 包
+    Build-Archive $chromeTempDir $zipName
 
-# Firefox XPI（Firefox 兼容：background.scripts）
-$firefoxManifestPath = Join-Path $firefoxTempDir "manifest.json"
-$firefoxManifest = Get-Content $firefoxManifestPath -Raw | ConvertFrom-Json
-$firefoxManifest.background = [ordered]@{
-    scripts = @("background.js")
-}
+    # Firefox XPI（Firefox 兼容：background.scripts）
+    $firefoxManifestPath = Join-Path $firefoxTempDir "manifest.json"
+    $firefoxManifest = Get-Content $firefoxManifestPath -Raw | ConvertFrom-Json
+    $firefoxManifest.background = [ordered]@{
+        scripts = @("background.js")
+    }
 
-if ($firefoxManifest.web_accessible_resources) {
-    $filteredWar = @()
-    foreach ($entry in $firefoxManifest.web_accessible_resources) {
-        $resources = @($entry.resources | Where-Object { $_ -ne "vendor/webllm/index.js" })
-        if ($resources.Count -gt 0) {
-            $entry.resources = $resources
-            $filteredWar += $entry
+    if ($firefoxManifest.web_accessible_resources) {
+        $filteredWar = @()
+        foreach ($entry in $firefoxManifest.web_accessible_resources) {
+            $resources = @($entry.resources | Where-Object { $_ -ne "vendor/webllm/index.js" })
+            if ($resources.Count -gt 0) {
+                $entry.resources = $resources
+                $filteredWar += $entry
+            }
+        }
+        if ($filteredWar.Count -gt 0) {
+            $firefoxManifest.web_accessible_resources = $filteredWar
+        } else {
+            $firefoxManifest.PSObject.Properties.Remove("web_accessible_resources")
         }
     }
-    if ($filteredWar.Count -gt 0) {
-        $firefoxManifest.web_accessible_resources = $filteredWar
-    } else {
-        $firefoxManifest.PSObject.Properties.Remove("web_accessible_resources")
+
+    $firefoxManifest | ConvertTo-Json -Depth 100 | Set-Content -Path $firefoxManifestPath -Encoding UTF8
+
+    Build-Archive $firefoxTempDir $xpiName
+} finally {
+    if (Test-Path $chromeTempDir) {
+        Remove-Item $chromeTempDir -Recurse -Force
+    }
+    if (Test-Path $firefoxTempDir) {
+        Remove-Item $firefoxTempDir -Recurse -Force
     }
 }
-
-$firefoxManifest | ConvertTo-Json -Depth 100 | Set-Content -Path $firefoxManifestPath -Encoding UTF8
-
-Build-Archive $firefoxTempDir $xpiName
-
-Remove-Item $chromeTempDir -Recurse -Force
-Remove-Item $firefoxTempDir -Recurse -Force
 
 Write-Host "✅ 打包完成:"
 Write-Host "  - 通用包 (Chrome/Edge): $zipName"

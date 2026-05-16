@@ -573,42 +573,58 @@ document.addEventListener("DOMContentLoaded", () => {
     function renderGlossaryList(terms) {
         if (!glossaryListEl) return;
         const list = Array.isArray(terms) ? terms : [];
+        glossaryListEl.textContent = "";
         if (list.length === 0) {
-            glossaryListEl.innerHTML =
-                '<div class="jyt-glossary-empty">暂无术语，先添加一条吧。</div>';
+            const emptyEl = document.createElement("div");
+            emptyEl.className = "jyt-glossary-empty";
+            emptyEl.textContent = "暂无术语，先添加一条吧。";
+            glossaryListEl.appendChild(emptyEl);
             return;
         }
 
-        const rows = list
-            .map((term, index) => {
-                const pair = `${term.sourceLang} -> ${term.targetLang}`;
-                return `
-                    <tr>
-                        <td>${pair}</td>
-                        <td>${term.sourceTerm}</td>
-                        <td>${term.targetTerm}</td>
-                        <td>
-                            <button class="jyt-glossary-row-edit" data-index="${index}" type="button">编辑</button>
-                            <button class="jyt-glossary-row-delete" data-index="${index}" type="button">删除</button>
-                        </td>
-                    </tr>
-                `;
-            })
-            .join("");
+        const table = document.createElement("table");
+        table.className = "jyt-glossary-table";
 
-        glossaryListEl.innerHTML = `
-            <table class="jyt-glossary-table">
-                <thead>
-                    <tr>
-                        <th>语言对</th>
-                        <th>原文</th>
-                        <th>目标</th>
-                        <th>操作</th>
-                    </tr>
-                </thead>
-                <tbody>${rows}</tbody>
-            </table>
-        `;
+        const thead = document.createElement("thead");
+        const headRow = document.createElement("tr");
+        for (const label of ["语言对", "原文", "目标", "操作"]) {
+            const th = document.createElement("th");
+            th.textContent = label;
+            headRow.appendChild(th);
+        }
+        thead.appendChild(headRow);
+        table.appendChild(thead);
+
+        const tbody = document.createElement("tbody");
+        list.forEach((term, index) => {
+            const row = document.createElement("tr");
+            const pairCell = document.createElement("td");
+            const sourceCell = document.createElement("td");
+            const targetCell = document.createElement("td");
+            const actionCell = document.createElement("td");
+            const editBtn = document.createElement("button");
+            const deleteBtn = document.createElement("button");
+
+            pairCell.textContent = `${term.sourceLang} -> ${term.targetLang}`;
+            sourceCell.textContent = term.sourceTerm || "";
+            targetCell.textContent = term.targetTerm || "";
+
+            editBtn.className = "jyt-glossary-row-edit";
+            editBtn.dataset.index = String(index);
+            editBtn.type = "button";
+            editBtn.textContent = "编辑";
+
+            deleteBtn.className = "jyt-glossary-row-delete";
+            deleteBtn.dataset.index = String(index);
+            deleteBtn.type = "button";
+            deleteBtn.textContent = "删除";
+
+            actionCell.append(editBtn, deleteBtn);
+            row.append(pairCell, sourceCell, targetCell, actionCell);
+            tbody.appendChild(row);
+        });
+        table.appendChild(tbody);
+        glossaryListEl.appendChild(table);
     }
 
     async function refreshGlossaryList() {
@@ -761,6 +777,60 @@ document.addEventListener("DOMContentLoaded", () => {
         URL.revokeObjectURL(url);
     }
 
+    function getOptionalPermissionOrigin(rawUrl) {
+        const trimmed = String(rawUrl || "").trim();
+        if (!trimmed) return "";
+
+        const candidate = /^[a-z][a-z\d+.-]*:\/\//i.test(trimmed)
+            ? trimmed
+            : trimmed.startsWith("//")
+              ? `https:${trimmed}`
+              : `https://${trimmed}`;
+
+        try {
+            const parsed = new URL(candidate);
+            if (!/^https?:$/i.test(parsed.protocol)) {
+                return "";
+            }
+            return `${parsed.protocol}//${parsed.hostname}/*`;
+        } catch (err) {
+            return "";
+        }
+    }
+
+    function collectOptionalPermissionOrigins(urls) {
+        return Array.from(
+            new Set(
+                urls
+                    .map(getOptionalPermissionOrigin)
+                    .filter((origin) => !!origin),
+            ),
+        );
+    }
+
+    function requestOptionalHostPermissions(urls) {
+        const origins = collectOptionalPermissionOrigins(urls);
+        if (
+            origins.length === 0 ||
+            typeof chrome === "undefined" ||
+            !chrome.permissions ||
+            typeof chrome.permissions.request !== "function"
+        ) {
+            return Promise.resolve(true);
+        }
+
+        return new Promise((resolve) => {
+            chrome.permissions.request({ origins }, (granted) => {
+                const err = chrome.runtime.lastError;
+                if (err) {
+                    resolve(false);
+                    return;
+                }
+                resolve(!!granted);
+            });
+        });
+    }
+
     function getWebDavFormData() {
         return {
             baseUrl: String(webdavBaseUrlEl?.value || "").trim(),
@@ -781,6 +851,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function saveWebDavLocalSettings() {
         const payload = getWebDavFormData();
+        const granted = await requestOptionalHostPermissions([payload.baseUrl]);
+        if (!granted) {
+            showToast(
+                "未授予 WebDAV 地址访问权限，后续同步可能需要服务端支持 CORS。",
+                true,
+            );
+        }
+
         if (
             typeof browser !== "undefined" &&
             browser.storage &&
@@ -2242,7 +2320,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    document.getElementById("save").addEventListener("click", () => {
+    document.getElementById("save").addEventListener("click", async () => {
         const selectedEngine = els.engine_select.value;
         const selectedLlmEngine =
             (els.llm_engine_select?.value || "openai").trim() || "openai";
@@ -2585,6 +2663,20 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!ok) {
                 return;
             }
+        }
+
+        const permissionUrls = Object.entries(data)
+            .filter(([key, value]) => key.endsWith("_api_url") && value)
+            .map(([, value]) => value);
+        if (data.webllm_custom_mirror) {
+            permissionUrls.push(data.webllm_custom_mirror);
+        }
+        const granted = await requestOptionalHostPermissions(permissionUrls);
+        if (!granted) {
+            showToast(
+                "未授予部分自定义接口访问权限，若服务端不支持 CORS，翻译可能失败。",
+                true,
+            );
         }
 
         const localApiKeys = extractApiKeyPayload(data);

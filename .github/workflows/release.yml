@@ -1,0 +1,81 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    name: Package extension
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate extension
+        shell: pwsh
+        run: ./scripts/validate-extension.ps1
+
+      - name: Check JavaScript syntax
+        shell: pwsh
+        run: |
+          Get-ChildItem -Recurse -File -Include *.js |
+            Where-Object { $_.FullName -notmatch '\\vendor\\' } |
+            ForEach-Object { node --check $_.FullName }
+
+      - name: Read manifest version
+        id: manifest
+        shell: pwsh
+        run: |
+          $manifest = Get-Content "manifest.json" -Raw | ConvertFrom-Json
+          $version = $manifest.version
+          if ([string]::IsNullOrWhiteSpace($version)) {
+            throw "manifest.json version is empty"
+          }
+          if ($env:GITHUB_REF_TYPE -eq "tag" -and $env:GITHUB_REF_NAME -ne "v$version") {
+            throw "Tag $env:GITHUB_REF_NAME does not match manifest version v$version"
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "zip=LLM-Translator-v$version.zip" >> $env:GITHUB_OUTPUT
+          "xpi=LLM-Translator-v$version.xpi" >> $env:GITHUB_OUTPUT
+
+      - name: Build packages
+        shell: pwsh
+        run: ./pack.ps1
+
+      - name: Verify packages
+        shell: pwsh
+        run: |
+          $zip = "${{ steps.manifest.outputs.zip }}"
+          $xpi = "${{ steps.manifest.outputs.xpi }}"
+          foreach ($file in @($zip, $xpi)) {
+            if (-not (Test-Path $file)) {
+              throw "Missing package: $file"
+            }
+            if ((Get-Item $file).Length -le 0) {
+              throw "Package is empty: $file"
+            }
+          }
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: LLM-Translator-v${{ steps.manifest.outputs.version }}
+          path: |
+            ${{ steps.manifest.outputs.zip }}
+            ${{ steps.manifest.outputs.xpi }}
+
+      - name: Publish GitHub release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            ${{ steps.manifest.outputs.zip }}
+            ${{ steps.manifest.outputs.xpi }}
