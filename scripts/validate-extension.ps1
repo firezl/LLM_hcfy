@@ -23,6 +23,8 @@ $requiredPaths = @(
     "background/index.js",
     "content_script.js",
     "libs/shared-config.js",
+    "options/modules/glossary.js",
+    "options/modules/sync-data.js",
     "options.html",
     "options.js",
     "styles.css",

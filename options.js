@@ -2,7 +2,9 @@
 document.addEventListener("DOMContentLoaded", () => {
     const shared = globalThis.JYT_SHARED || {};
     const storageModule = globalThis.JYT_OPTION_STORAGE || {};
+    const glossaryModule = globalThis.JYT_OPTION_GLOSSARY || {};
     const modelModule = globalThis.JYT_OPTION_MODEL || {};
+    const syncDataModule = globalThis.JYT_OPTION_SYNC_DATA || {};
 
     function requireSharedConfig(name) {
         const value = shared[name];
@@ -341,9 +343,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const claudeModelRequestResolvers = new Map();
     const geminiModelRequestResolvers = new Map();
     const specialModelRequestResolvers = new Map();
-    let glossaryTermsCache = [];
-    let glossaryEditingOriginal = null;
-    let syncBusy = false;
     const LLM_ENGINES = new Set([
         "openai",
         "custom_openai",
@@ -415,137 +414,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    function normalizeGlossaryLang(lang) {
-        const value = String(lang || "")
-            .trim()
-            .toLowerCase();
-        if (!value || value === "auto") return "";
-        return value.split("-")[0];
-    }
-
-    function normalizeGlossaryTermText(text) {
-        return String(text || "").trim();
-    }
-
-    function glossaryTermKey(term) {
-        const sourceLang = normalizeGlossaryLang(term?.sourceLang);
-        const targetLang = normalizeGlossaryLang(term?.targetLang);
-        const sourceTerm = normalizeGlossaryTermText(
-            term?.sourceTerm,
-        ).toLowerCase();
-        return `${sourceLang}::${targetLang}::${sourceTerm}`;
-    }
-
-    function setGlossaryStatus(text, isError) {
-        if (!glossaryStatusEl) return;
-        glossaryStatusEl.textContent = text || "";
-        glossaryStatusEl.classList.toggle("jyt-status-error", !!isError);
-    }
-
-    function getGlossaryFormTerm() {
-        return {
-            sourceLang: normalizeGlossaryLang(glossarySourceLangEl?.value),
-            targetLang: normalizeGlossaryLang(glossaryTargetLangEl?.value),
-            sourceTerm: normalizeGlossaryTermText(glossarySourceTermEl?.value),
-            targetTerm: normalizeGlossaryTermText(glossaryTargetTermEl?.value),
-        };
-    }
-
-    function resetGlossaryEditor() {
-        glossaryEditingOriginal = null;
-        if (glossarySourceLangEl) glossarySourceLangEl.value = "en";
-        if (glossaryTargetLangEl) glossaryTargetLangEl.value = "zh";
-        if (glossarySourceTermEl) glossarySourceTermEl.value = "";
-        if (glossaryTargetTermEl) glossaryTargetTermEl.value = "";
-        if (glossarySaveBtn) glossarySaveBtn.textContent = "新增术语";
-    }
-
-    function populateGlossaryEditor(term) {
-        glossaryEditingOriginal = term || null;
-        if (!term) {
-            resetGlossaryEditor();
-            return;
-        }
-
-        if (glossarySourceLangEl) glossarySourceLangEl.value = term.sourceLang;
-        if (glossaryTargetLangEl) glossaryTargetLangEl.value = term.targetLang;
-        if (glossarySourceTermEl) glossarySourceTermEl.value = term.sourceTerm;
-        if (glossaryTargetTermEl) glossaryTargetTermEl.value = term.targetTerm;
-        if (glossarySaveBtn) glossarySaveBtn.textContent = "更新术语";
-    }
-
-    function renderGlossaryList(terms) {
-        if (!glossaryListEl) return;
-        const list = Array.isArray(terms) ? terms : [];
-        glossaryListEl.textContent = "";
-        if (list.length === 0) {
-            const emptyEl = document.createElement("div");
-            emptyEl.className = "jyt-glossary-empty";
-            emptyEl.textContent = "暂无术语，先添加一条吧。";
-            glossaryListEl.appendChild(emptyEl);
-            return;
-        }
-
-        const table = document.createElement("table");
-        table.className = "jyt-glossary-table";
-
-        const thead = document.createElement("thead");
-        const headRow = document.createElement("tr");
-        for (const label of ["语言对", "原文", "目标", "操作"]) {
-            const th = document.createElement("th");
-            th.textContent = label;
-            headRow.appendChild(th);
-        }
-        thead.appendChild(headRow);
-        table.appendChild(thead);
-
-        const tbody = document.createElement("tbody");
-        list.forEach((term, index) => {
-            const row = document.createElement("tr");
-            const pairCell = document.createElement("td");
-            const sourceCell = document.createElement("td");
-            const targetCell = document.createElement("td");
-            const actionCell = document.createElement("td");
-            const editBtn = document.createElement("button");
-            const deleteBtn = document.createElement("button");
-
-            pairCell.textContent = `${term.sourceLang} -> ${term.targetLang}`;
-            sourceCell.textContent = term.sourceTerm || "";
-            targetCell.textContent = term.targetTerm || "";
-
-            editBtn.className = "jyt-glossary-row-edit";
-            editBtn.dataset.index = String(index);
-            editBtn.type = "button";
-            editBtn.textContent = "编辑";
-
-            deleteBtn.className = "jyt-glossary-row-delete";
-            deleteBtn.dataset.index = String(index);
-            deleteBtn.type = "button";
-            deleteBtn.textContent = "删除";
-
-            actionCell.append(editBtn, deleteBtn);
-            row.append(pairCell, sourceCell, targetCell, actionCell);
-            tbody.appendChild(row);
-        });
-        table.appendChild(tbody);
-        glossaryListEl.appendChild(table);
-    }
-
-    async function refreshGlossaryList() {
-        const result = await sendTermMessage(
-            MESSAGE_TYPES.TERM_LIST || "TERM_LIST",
-        );
-        if (!result?.ok) {
-            throw new Error(result?.error || "术语列表获取失败");
-        }
-
-        const sorted = (Array.isArray(result.terms) ? result.terms : []).sort(
-            (a, b) => Number(b.updatedAt || 0) - Number(a.updatedAt || 0),
-        );
-        glossaryTermsCache = sorted;
-        renderGlossaryList(sorted);
-    }
-
     function readFileAsText(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -553,294 +421,6 @@ document.addEventListener("DOMContentLoaded", () => {
             reader.onerror = () => reject(new Error("读取文件失败"));
             reader.readAsText(file, "utf-8");
         });
-    }
-
-    function sanitizeGlossaryTerms(rawTerms) {
-        const input = Array.isArray(rawTerms) ? rawTerms : [];
-        const map = new Map();
-
-        for (const item of input) {
-            const sourceTerm = normalizeGlossaryTermText(item?.sourceTerm);
-            const targetTerm = normalizeGlossaryTermText(item?.targetTerm);
-            const sourceLang = normalizeGlossaryLang(item?.sourceLang);
-            const targetLang = normalizeGlossaryLang(item?.targetLang);
-            if (!sourceTerm || !targetTerm || !sourceLang || !targetLang) {
-                continue;
-            }
-
-            const now = Date.now();
-            const normalized = {
-                sourceTerm,
-                targetTerm,
-                sourceLang,
-                targetLang,
-                createdAt: Number(item?.createdAt) || now,
-                updatedAt: Number(item?.updatedAt) || now,
-            };
-            map.set(glossaryTermKey(normalized), normalized);
-        }
-
-        return Array.from(map.values());
-    }
-
-    function sanitizeConfigPayload(rawPayload) {
-        const input =
-            rawPayload && typeof rawPayload === "object" ? rawPayload : {};
-        const next = {};
-        const keys = Object.keys(DEFAULT_SETTINGS).filter(
-            (key) => key !== "glossary_terms" && key !== "glossary_version",
-        );
-
-        for (const key of keys) {
-            const fallback = DEFAULT_SETTINGS[key];
-            const value = input[key];
-
-            if (
-                key === "show_thoughts" ||
-                key === "custom_openai_show_thoughts" ||
-                key === "deepseek_show_thoughts" ||
-                key === "qwen_show_thoughts" ||
-                key === "webllm_show_thoughts" ||
-                key === "qwen_preserve_thinking" ||
-                key === "glm_show_thoughts" ||
-                key === "glm_clear_thinking" ||
-                key === "xiaomi_show_thoughts" ||
-                key === "grok_show_thoughts" ||
-                key === "claude_show_thoughts" ||
-                key === "gemini_show_thoughts"
-            ) {
-                next[key] = typeof value === "boolean" ? value : !!fallback;
-                continue;
-            }
-
-            if (
-                key === "openai_max_completion_tokens" ||
-                key === "custom_openai_max_completion_tokens" ||
-                key === "qwen_thinking_budget" ||
-                key === "xiaomi_max_completion_tokens" ||
-                key === "claude_max_tokens" ||
-                key === "claude_thinking_budget" ||
-                key === "gemini_thinking_budget"
-            ) {
-                const numericValue = Number(value);
-                next[key] = Number.isFinite(numericValue)
-                    ? Math.floor(numericValue)
-                    : fallback;
-                continue;
-            }
-
-            if (
-                key === "bubble_width_percent" ||
-                key === "bubble_height_percent"
-            ) {
-                next[key] = clampPercent(value, fallback);
-                continue;
-            }
-
-            if (key === "config_updated_at") {
-                const ts = Number(value);
-                next[key] = Number.isFinite(ts) && ts > 0 ? Math.floor(ts) : 0;
-                continue;
-            }
-
-            if (typeof fallback === "string") {
-                next[key] = String(value == null ? fallback : value).trim();
-                continue;
-            }
-
-            next[key] = value == null ? fallback : value;
-        }
-
-        return next;
-    }
-
-    function setConfigStatus(text, isError) {
-        if (!configStatusEl) return;
-        configStatusEl.textContent = text || "";
-        configStatusEl.classList.toggle("jyt-status-error", !!isError);
-    }
-
-    function setSyncStatus(text, isError) {
-        if (!syncStatusEl) return;
-        syncStatusEl.textContent = text || "";
-        syncStatusEl.classList.toggle("jyt-status-error", !!isError);
-    }
-
-    function downloadJsonFile(payload, filePrefix) {
-        const blob = new Blob([JSON.stringify(payload, null, 2)], {
-            type: "application/json",
-        });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-        a.href = url;
-        a.download = `${filePrefix}-${stamp}.json`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
-    }
-
-    function getOptionalPermissionOrigin(rawUrl) {
-        const trimmed = String(rawUrl || "").trim();
-        if (!trimmed) return "";
-
-        const candidate = /^[a-z][a-z\d+.-]*:\/\//i.test(trimmed)
-            ? trimmed
-            : trimmed.startsWith("//")
-              ? `https:${trimmed}`
-              : `https://${trimmed}`;
-
-        try {
-            const parsed = new URL(candidate);
-            if (!/^https?:$/i.test(parsed.protocol)) {
-                return "";
-            }
-            return `${parsed.protocol}//${parsed.hostname}/*`;
-        } catch (err) {
-            return "";
-        }
-    }
-
-    function collectOptionalPermissionOrigins(urls) {
-        return Array.from(
-            new Set(
-                urls
-                    .map(getOptionalPermissionOrigin)
-                    .filter((origin) => !!origin),
-            ),
-        );
-    }
-
-    function requestOptionalHostPermissions(urls) {
-        const origins = collectOptionalPermissionOrigins(urls);
-        if (
-            origins.length === 0 ||
-            typeof chrome === "undefined" ||
-            !chrome.permissions ||
-            typeof chrome.permissions.request !== "function"
-        ) {
-            return Promise.resolve(true);
-        }
-
-        return new Promise((resolve) => {
-            chrome.permissions.request({ origins }, (granted) => {
-                const err = chrome.runtime.lastError;
-                if (err) {
-                    resolve(false);
-                    return;
-                }
-                resolve(!!granted);
-            });
-        });
-    }
-
-    function getWebDavFormData() {
-        return {
-            baseUrl: String(webdavBaseUrlEl?.value || "").trim(),
-            username: String(webdavUsernameEl?.value || "").trim(),
-            password: String(webdavPasswordEl?.value || ""),
-            remoteDir: String(webdavRemoteDirEl?.value || "/jyt-sync").trim(),
-        };
-    }
-
-    function setWebDavFormData(data) {
-        const value = data && typeof data === "object" ? data : {};
-        if (webdavBaseUrlEl) webdavBaseUrlEl.value = value.baseUrl || "";
-        if (webdavUsernameEl) webdavUsernameEl.value = value.username || "";
-        if (webdavPasswordEl) webdavPasswordEl.value = value.password || "";
-        if (webdavRemoteDirEl)
-            webdavRemoteDirEl.value = value.remoteDir || "/jyt-sync";
-    }
-
-    async function saveWebDavLocalSettings() {
-        const payload = getWebDavFormData();
-        const granted = await requestOptionalHostPermissions([payload.baseUrl]);
-        if (!granted) {
-            showToast(
-                "未授予 WebDAV 地址访问权限，后续同步可能需要服务端支持 CORS。",
-                true,
-            );
-        }
-
-        if (
-            typeof browser !== "undefined" &&
-            browser.storage &&
-            browser.storage.local &&
-            typeof browser.storage.local.set === "function"
-        ) {
-            await browser.storage.local.set({ webdav_sync: payload });
-            return payload;
-        }
-
-        return new Promise((resolve, reject) => {
-            try {
-                chrome.storage.local.set({ webdav_sync: payload }, () => {
-                    const err = chrome.runtime.lastError;
-                    if (err) {
-                        reject(new Error(err.message || "本地保存失败"));
-                        return;
-                    }
-                    resolve(payload);
-                });
-            } catch (err) {
-                reject(err);
-            }
-        });
-    }
-
-    async function loadWebDavLocalSettings() {
-        const fallback = {
-            baseUrl: "",
-            username: "",
-            password: "",
-            remoteDir: "/jyt-sync",
-        };
-
-        if (
-            typeof browser !== "undefined" &&
-            browser.storage &&
-            browser.storage.local &&
-            typeof browser.storage.local.get === "function"
-        ) {
-            const items = await browser.storage.local.get({
-                webdav_sync: fallback,
-            });
-            const value =
-                items?.webdav_sync && typeof items.webdav_sync === "object"
-                    ? items.webdav_sync
-                    : fallback;
-            return value;
-        }
-
-        return new Promise((resolve, reject) => {
-            try {
-                chrome.storage.local.get({ webdav_sync: fallback }, (items) => {
-                    const err = chrome.runtime.lastError;
-                    if (err) {
-                        reject(new Error(err.message || "本地读取失败"));
-                        return;
-                    }
-
-                    const value =
-                        items?.webdav_sync &&
-                        typeof items.webdav_sync === "object"
-                            ? items.webdav_sync
-                            : fallback;
-                    resolve(value);
-                });
-            } catch (err) {
-                reject(err);
-            }
-        });
-    }
-
-    function setSyncButtonsEnabled(enabled) {
-        syncBusy = !enabled;
-        if (syncTestBtn) syncTestBtn.disabled = !enabled;
-        if (syncUploadBtn) syncUploadBtn.disabled = !enabled;
-        if (syncDownloadBtn) syncDownloadBtn.disabled = !enabled;
-        if (syncBidirectionalBtn) syncBidirectionalBtn.disabled = !enabled;
     }
 
     function sendBackgroundMessage(type, payload) {
@@ -877,53 +457,54 @@ document.addEventListener("DOMContentLoaded", () => {
         return sendBackgroundMessage(type, payload);
     }
 
-    async function askConflictPolicy(conflict) {
-        const cfgCount = Array.isArray(conflict?.configFields)
-            ? conflict.configFields.length
-            : 0;
-        const termCount = Number(conflict?.glossaryConflictCount || 0);
-        const answer = window.prompt(
-            `检测到同步冲突：配置字段 ${cfgCount} 项，术语 ${termCount} 项。\n请输入策略编号：\n1=远端覆盖本地\n2=本地覆盖远端\n3=按时间戳合并\n取消=中止同步`,
-            "3",
-        );
-        if (answer == null) return null;
+    const glossaryController = glossaryModule.createGlossaryController({
+        messageTypes: MESSAGE_TYPES,
+        sendTermMessage,
+        readFileAsText,
+        shouldOpenImportInNewTab: () => isFirefoxRuntime && isRunningInPopup(),
+        openImportInNewTab,
+        elements: {
+            sourceLang: glossarySourceLangEl,
+            targetLang: glossaryTargetLangEl,
+            sourceTerm: glossarySourceTermEl,
+            targetTerm: glossaryTargetTermEl,
+            saveButton: glossarySaveBtn,
+            cancelEditButton: glossaryCancelEditBtn,
+            importButton: glossaryImportBtn,
+            exportButton: glossaryExportBtn,
+            clearButton: glossaryClearBtn,
+            importFileInput: glossaryImportFileInput,
+            list: glossaryListEl,
+            status: glossaryStatusEl,
+        },
+    });
 
-        const value = String(answer).trim();
-        if (value === "1") return "remote_wins";
-        if (value === "2") return "local_wins";
-        if (value === "3") return "merge_newest";
-        return null;
-    }
-
-    async function runBidirectionalSync(webdav) {
-        let conflictPolicy = "ask";
-
-        for (let i = 0; i < 3; i += 1) {
-            const result = await sendBackgroundMessage(
-                MESSAGE_TYPES.SYNC_BIDIRECTIONAL || "SYNC_BIDIRECTIONAL",
-                {
-                    webdav,
-                    conflictPolicy,
-                },
-            );
-
-            if (result?.ok) {
-                return result;
-            }
-
-            if (result?.errorCode !== "SYNC_CONFLICT") {
-                throw new Error(result?.error || "双向同步失败");
-            }
-
-            const selected = await askConflictPolicy(result?.conflict || {});
-            if (!selected) {
-                throw new Error("已取消同步");
-            }
-            conflictPolicy = selected;
-        }
-
-        throw new Error("同步冲突处理次数过多，请重试");
-    }
+    const syncDataController = syncDataModule.createSyncDataController({
+        defaultSettings: DEFAULT_SETTINGS,
+        messageTypes: MESSAGE_TYPES,
+        sendBackgroundMessage,
+        readFileAsText,
+        reloadSettings: load,
+        glossary: glossaryController,
+        extractApiKeyPayload,
+        stripApiKeyPayload,
+        elements: {
+            configImportButton: configImportBtn,
+            configExportButton: configExportBtn,
+            configImportFileInput,
+            configStatus: configStatusEl,
+            webdavBaseUrl: webdavBaseUrlEl,
+            webdavUsername: webdavUsernameEl,
+            webdavPassword: webdavPasswordEl,
+            webdavRemoteDir: webdavRemoteDirEl,
+            webdavSaveLocalButton: webdavSaveLocalBtn,
+            syncTestButton: syncTestBtn,
+            syncUploadButton: syncUploadBtn,
+            syncDownloadButton: syncDownloadBtn,
+            syncBidirectionalButton: syncBidirectionalBtn,
+            syncStatus: syncStatusEl,
+        },
+    });
 
     function setWebLLMStatus(text, isError) {
         if (!webllmStatusEl) return;
@@ -2575,7 +2156,10 @@ document.addEventListener("DOMContentLoaded", () => {
         if (data.webllm_custom_mirror) {
             permissionUrls.push(data.webllm_custom_mirror);
         }
-        const granted = await requestOptionalHostPermissions(permissionUrls);
+        const granted =
+            await syncDataController.requestOptionalHostPermissions(
+                permissionUrls,
+            );
         if (!granted) {
             showToast(
                 "未授予部分自定义接口访问权限，若服务端不支持 CORS，翻译可能失败。",
@@ -3107,432 +2691,8 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    glossaryExportBtn?.addEventListener("click", async () => {
-        try {
-            const result = await sendTermMessage(
-                MESSAGE_TYPES.TERM_EXPORT || "TERM_EXPORT",
-            );
-            if (!result?.ok) {
-                throw new Error(result?.error || "导出失败");
-            }
-
-            const payload = result.payload || {
-                glossary_version: 1,
-                glossary_terms: [],
-                exported_at: new Date().toISOString(),
-            };
-            const terms = Array.isArray(payload.glossary_terms)
-                ? payload.glossary_terms
-                : [];
-
-            const blob = new Blob([JSON.stringify(payload, null, 2)], {
-                type: "application/json",
-            });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-            a.href = url;
-            a.download = `jyt-glossary-${stamp}.json`;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            URL.revokeObjectURL(url);
-
-            setGlossaryStatus(`导出完成，共 ${terms.length} 条术语`, false);
-            await refreshGlossaryList();
-        } catch (err) {
-            setGlossaryStatus(
-                `导出失败: ${err && err.message ? err.message : String(err)}`,
-                true,
-            );
-        }
-    });
-
-    glossaryImportBtn?.addEventListener("click", () => {
-        if (!glossaryImportFileInput) return;
-
-        if (isFirefoxRuntime && isRunningInPopup()) {
-            void openImportInNewTab()
-                .then(() => {
-                    setGlossaryStatus(
-                        "Firefox 弹窗模式下已在新标签页打开导入页面",
-                        false,
-                    );
-                })
-                .catch((err) => {
-                    setGlossaryStatus(
-                        `打开导入页面失败: ${err && err.message ? err.message : String(err)}`,
-                        true,
-                    );
-                });
-            return;
-        }
-
-        glossaryImportFileInput.value = "";
-        glossaryImportFileInput.click();
-    });
-
-    glossaryImportFileInput?.addEventListener("change", async () => {
-        const file = glossaryImportFileInput.files?.[0];
-        if (!file) return;
-        if (file.size > 5 * 1024 * 1024) {
-            setGlossaryStatus("导入失败: 文件过大，请控制在 5MB 以内", true);
-            return;
-        }
-
-        try {
-            const content = await readFileAsText(file);
-            const parsed = JSON.parse(content);
-            const importedTerms = sanitizeGlossaryTerms(
-                parsed?.glossary_terms || parsed,
-            );
-
-            const result = await sendTermMessage(
-                MESSAGE_TYPES.TERM_IMPORT || "TERM_IMPORT",
-                { terms: importedTerms },
-            );
-            if (!result?.ok) {
-                throw new Error(result?.error || "导入失败");
-            }
-
-            setGlossaryStatus(
-                `导入完成: 新增 ${result.created || 0}，覆盖 ${result.replaced || 0}，总计 ${result.total || 0}`,
-                false,
-            );
-            await refreshGlossaryList();
-            resetGlossaryEditor();
-        } catch (err) {
-            setGlossaryStatus(
-                `导入失败: ${err && err.message ? err.message : String(err)}`,
-                true,
-            );
-        }
-    });
-
-    glossarySaveBtn?.addEventListener("click", async () => {
-        const term = getGlossaryFormTerm();
-        if (
-            !term.sourceLang ||
-            !term.targetLang ||
-            !term.sourceTerm ||
-            !term.targetTerm
-        ) {
-            setGlossaryStatus("保存失败: 请完整填写术语字段", true);
-            return;
-        }
-
-        try {
-            const nextKey = glossaryTermKey(term);
-            const prevKey = glossaryEditingOriginal
-                ? glossaryTermKey(glossaryEditingOriginal)
-                : "";
-
-            if (glossaryEditingOriginal && prevKey && prevKey !== nextKey) {
-                const delRes = await sendTermMessage(
-                    MESSAGE_TYPES.TERM_DELETE || "TERM_DELETE",
-                    { term: glossaryEditingOriginal },
-                );
-                if (!delRes?.ok) {
-                    throw new Error(delRes?.error || "旧术语删除失败");
-                }
-            }
-
-            const saveRes = await sendTermMessage(
-                MESSAGE_TYPES.TERM_UPSERT || "TERM_UPSERT",
-                { term },
-            );
-            if (!saveRes?.ok) {
-                throw new Error(saveRes?.error || "术语保存失败");
-            }
-
-            setGlossaryStatus("术语已保存", false);
-            await refreshGlossaryList();
-            resetGlossaryEditor();
-        } catch (err) {
-            setGlossaryStatus(
-                `保存失败: ${err && err.message ? err.message : String(err)}`,
-                true,
-            );
-        }
-    });
-
-    glossaryCancelEditBtn?.addEventListener("click", () => {
-        resetGlossaryEditor();
-        setGlossaryStatus("", false);
-    });
-
-    glossaryClearBtn?.addEventListener("click", async () => {
-        const ok = window.confirm("确定清空术语库吗？该操作不可撤销。");
-        if (!ok) return;
-
-        try {
-            const result = await sendTermMessage(
-                MESSAGE_TYPES.TERM_CLEAR || "TERM_CLEAR",
-            );
-            if (!result?.ok) {
-                throw new Error(result?.error || "清空失败");
-            }
-            await refreshGlossaryList();
-            resetGlossaryEditor();
-            setGlossaryStatus("术语库已清空", false);
-        } catch (err) {
-            setGlossaryStatus(
-                `清空失败: ${err && err.message ? err.message : String(err)}`,
-                true,
-            );
-        }
-    });
-
-    glossaryListEl?.addEventListener("click", async (e) => {
-        const editBtn = e.target.closest(".jyt-glossary-row-edit");
-        const deleteBtn = e.target.closest(".jyt-glossary-row-delete");
-        if (!editBtn && !deleteBtn) return;
-
-        const index = Number((editBtn || deleteBtn).getAttribute("data-index"));
-        if (!Number.isInteger(index) || index < 0) return;
-        const term = glossaryTermsCache[index];
-        if (!term) return;
-
-        if (editBtn) {
-            populateGlossaryEditor(term);
-            setGlossaryStatus("已载入术语，编辑后点击更新", false);
-            return;
-        }
-
-        try {
-            const result = await sendTermMessage(
-                MESSAGE_TYPES.TERM_DELETE || "TERM_DELETE",
-                { term },
-            );
-            if (!result?.ok) {
-                throw new Error(result?.error || "删除失败");
-            }
-
-            await refreshGlossaryList();
-            if (
-                glossaryEditingOriginal &&
-                glossaryTermKey(glossaryEditingOriginal) ===
-                    glossaryTermKey(term)
-            ) {
-                resetGlossaryEditor();
-            }
-            setGlossaryStatus("术语已删除", false);
-        } catch (err) {
-            setGlossaryStatus(
-                `删除失败: ${err && err.message ? err.message : String(err)}`,
-                true,
-            );
-        }
-    });
-
-    configExportBtn?.addEventListener("click", async () => {
-        try {
-            const result = await sendBackgroundMessage(
-                MESSAGE_TYPES.CONFIG_EXPORT || "CONFIG_EXPORT",
-            );
-            if (!result?.ok) {
-                throw new Error(result?.error || "配置导出失败");
-            }
-
-            downloadJsonFile(result.payload || {}, "jyt-config");
-            setConfigStatus("配置导出完成", false);
-        } catch (err) {
-            setConfigStatus(
-                `配置导出失败: ${err && err.message ? err.message : String(err)}`,
-                true,
-            );
-        }
-    });
-
-    configImportBtn?.addEventListener("click", () => {
-        if (!configImportFileInput) return;
-        configImportFileInput.value = "";
-        configImportFileInput.click();
-    });
-
-    configImportFileInput?.addEventListener("change", async () => {
-        const file = configImportFileInput.files?.[0];
-        if (!file) return;
-        if (file.size > 5 * 1024 * 1024) {
-            setConfigStatus("配置导入失败: 文件过大，请控制在 5MB 以内", true);
-            return;
-        }
-
-        try {
-            const content = await readFileAsText(file);
-            const parsed = JSON.parse(content);
-            const payload = sanitizeConfigPayload(parsed?.payload || parsed);
-            const localApiKeys = extractApiKeyPayload(payload);
-            const syncPayload = stripApiKeyPayload(payload);
-            payload.config_updated_at =
-                Number(parsed?.updated_at) ||
-                Number(payload.config_updated_at) ||
-                Date.now();
-
-            syncPayload.config_updated_at = payload.config_updated_at;
-
-            const result = await sendBackgroundMessage(
-                MESSAGE_TYPES.CONFIG_IMPORT || "CONFIG_IMPORT",
-                {
-                    payload: {
-                        schema: "jyt-config",
-                        schema_version: 1,
-                        updated_at: syncPayload.config_updated_at,
-                        exported_at: new Date().toISOString(),
-                        payload: syncPayload,
-                    },
-                },
-            );
-            if (!result?.ok) {
-                throw new Error(result?.error || "配置导入失败");
-            }
-
-            await new Promise((resolve, reject) => {
-                chrome.storage.local.set(localApiKeys, () => {
-                    const err = chrome.runtime.lastError;
-                    if (err) {
-                        reject(new Error(err.message || "导入本地密钥失败"));
-                        return;
-                    }
-                    resolve();
-                });
-            });
-
-            load();
-            setConfigStatus("配置导入完成", false);
-        } catch (err) {
-            setConfigStatus(
-                `配置导入失败: ${err && err.message ? err.message : String(err)}`,
-                true,
-            );
-        }
-    });
-
-    webdavSaveLocalBtn?.addEventListener("click", async () => {
-        try {
-            await saveWebDavLocalSettings();
-            setSyncStatus("WebDAV 配置已保存到本地", false);
-        } catch (err) {
-            setSyncStatus(
-                `保存失败: ${err && err.message ? err.message : String(err)}`,
-                true,
-            );
-        }
-    });
-
-    syncTestBtn?.addEventListener("click", async () => {
-        if (syncBusy) return;
-        setSyncButtonsEnabled(false);
-        setSyncStatus("正在测试 WebDAV 连接...", false);
-        try {
-            const webdav = getWebDavFormData();
-            await saveWebDavLocalSettings();
-            const result = await sendBackgroundMessage(
-                MESSAGE_TYPES.SYNC_TEST || "SYNC_TEST",
-                { webdav },
-            );
-            if (!result?.ok) {
-                throw new Error(result?.error || "连接测试失败");
-            }
-            setSyncStatus(
-                `连接成功: config(${result.configStatus}) glossary(${result.glossaryStatus})`,
-                false,
-            );
-        } catch (err) {
-            setSyncStatus(
-                `连接测试失败: ${err && err.message ? err.message : String(err)}`,
-                true,
-            );
-        } finally {
-            setSyncButtonsEnabled(true);
-        }
-    });
-
-    syncUploadBtn?.addEventListener("click", async () => {
-        if (syncBusy) return;
-        setSyncButtonsEnabled(false);
-        setSyncStatus("正在上传配置与术语到 WebDAV...", false);
-        try {
-            const webdav = getWebDavFormData();
-            await saveWebDavLocalSettings();
-            const result = await sendBackgroundMessage(
-                MESSAGE_TYPES.SYNC_UPLOAD || "SYNC_UPLOAD",
-                { webdav },
-            );
-            if (!result?.ok) {
-                throw new Error(result?.error || "上传失败");
-            }
-            setSyncStatus(
-                `上传完成: 术语 ${result.summary?.glossaryCount || 0} 条`,
-                false,
-            );
-        } catch (err) {
-            setSyncStatus(
-                `上传失败: ${err && err.message ? err.message : String(err)}`,
-                true,
-            );
-        } finally {
-            setSyncButtonsEnabled(true);
-        }
-    });
-
-    syncDownloadBtn?.addEventListener("click", async () => {
-        if (syncBusy) return;
-        setSyncButtonsEnabled(false);
-        setSyncStatus("正在从 WebDAV 下载配置与术语...", false);
-        try {
-            const webdav = getWebDavFormData();
-            await saveWebDavLocalSettings();
-            const result = await sendBackgroundMessage(
-                MESSAGE_TYPES.SYNC_DOWNLOAD || "SYNC_DOWNLOAD",
-                { webdav },
-            );
-            if (!result?.ok) {
-                throw new Error(result?.error || "下载失败");
-            }
-
-            load();
-            await refreshGlossaryList();
-            resetGlossaryEditor();
-            setSyncStatus(
-                `下载完成: 术语 ${result.summary?.glossaryCount || 0} 条`,
-                false,
-            );
-        } catch (err) {
-            setSyncStatus(
-                `下载失败: ${err && err.message ? err.message : String(err)}`,
-                true,
-            );
-        } finally {
-            setSyncButtonsEnabled(true);
-        }
-    });
-
-    syncBidirectionalBtn?.addEventListener("click", async () => {
-        if (syncBusy) return;
-        setSyncButtonsEnabled(false);
-        setSyncStatus("正在执行双向同步...", false);
-        try {
-            const webdav = getWebDavFormData();
-            await saveWebDavLocalSettings();
-            const result = await runBidirectionalSync(webdav);
-
-            load();
-            await refreshGlossaryList();
-            resetGlossaryEditor();
-            setSyncStatus(
-                `双向同步完成: 术语 ${result.summary?.glossaryCount || 0} 条`,
-                false,
-            );
-        } catch (err) {
-            setSyncStatus(
-                `双向同步失败: ${err && err.message ? err.message : String(err)}`,
-                true,
-            );
-        } finally {
-            setSyncButtonsEnabled(true);
-        }
-    });
+    glossaryController.bindEvents();
+    syncDataController.bindEvents();
 
     // Listen for system theme changes
     window
@@ -3545,21 +2705,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     load();
     void refreshActivePdfContext();
-    setConfigStatus("", false);
-    setSyncStatus("", false);
-    void loadWebDavLocalSettings()
-        .then((value) => {
-            setWebDavFormData(value);
-        })
-        .catch((err) => {
-            setSyncStatus(
-                `本地同步配置读取失败: ${err && err.message ? err.message : String(err)}`,
-                true,
-            );
-        });
-    resetGlossaryEditor();
-    void refreshGlossaryList().catch((err) => {
-        setGlossaryStatus(
+    syncDataController.init();
+    glossaryController.resetEditor();
+    void glossaryController.refreshList().catch((err) => {
+        glossaryController.setStatus(
             `术语列表加载失败: ${err && err.message ? err.message : String(err)}`,
             true,
         );
