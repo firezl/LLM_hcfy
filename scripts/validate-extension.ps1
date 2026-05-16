@@ -36,9 +36,22 @@ foreach ($path in $requiredPaths) {
     Assert-PathExists $path
 }
 
+$nodeCommand = Get-Command node -ErrorAction SilentlyContinue
+Assert-True ($null -ne $nodeCommand) "缺少 node，无法执行共享配置校验"
+node scripts/validate-shared-config.mjs
+
 $contentScript = @($manifest.content_scripts)[0]
 Assert-True ($contentScript.matches -contains "<all_urls>") "content_scripts 需要覆盖 <all_urls>"
 Assert-True ($contentScript.js[0] -eq "libs/shared-config.js") "libs/shared-config.js 必须先于 content_script.js 加载"
+
+$optionsHtml = Get-Content "options.html" -Raw
+$optionsScriptMatches = [regex]::Matches($optionsHtml, '<script\s+src="([^"]+)"')
+$optionsScripts = @($optionsScriptMatches | ForEach-Object { $_.Groups[1].Value })
+$sharedConfigIndex = [array]::IndexOf($optionsScripts, "libs/shared-config.js")
+$optionsIndex = [array]::IndexOf($optionsScripts, "options.js")
+Assert-True ($sharedConfigIndex -ge 0) "options.html 必须加载 libs/shared-config.js"
+Assert-True ($optionsIndex -ge 0) "options.html 必须加载 options.js"
+Assert-True ($sharedConfigIndex -lt $optionsIndex) "libs/shared-config.js 必须先于 options.js 加载"
 
 $permissions = @($manifest.permissions)
 Assert-True ($permissions -contains "storage") "缺少 storage 权限"

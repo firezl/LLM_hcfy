@@ -3,121 +3,25 @@ document.addEventListener("DOMContentLoaded", () => {
     const shared = globalThis.JYT_SHARED || {};
     const storageModule = globalThis.JYT_OPTION_STORAGE || {};
     const modelModule = globalThis.JYT_OPTION_MODEL || {};
-    const MESSAGE_TYPES = shared.MESSAGE_TYPES || {};
-    const DEFAULT_SETTINGS = shared.DEFAULT_SETTINGS || {
-        enabled: "on",
-        engine: "auto",
-        llm_engine: "openai",
-        translate_shortcut: "",
-        source_lang: "auto",
-        target_lang: "auto",
-        openai_api_url: "",
-        openai_api_key: "",
-        openai_model: "gpt-4o-mini",
-        openai_custom_model: "",
-        openai_custom_prompt: "",
-        openai_thinking_model: "gpt-5-thinking",
-        show_thoughts: false,
-        openai_reasoning_effort: "medium",
-        openai_max_completion_tokens: 0,
-        custom_openai_api_url: "https://api.openai.com/v1/chat/completions",
-        custom_openai_api_key: "",
-        custom_openai_model: "gpt-4o-mini",
-        custom_openai_custom_model: "",
-        custom_openai_custom_prompt: "",
-        custom_openai_show_thoughts: false,
-        custom_openai_reasoning_effort: "medium",
-        custom_openai_max_completion_tokens: 0,
-        deepseek_api_url: "https://api.deepseek.com/chat/completions",
-        deepseek_api_key: "",
-        deepseek_model: "deepseek-chat",
-        deepseek_custom_model: "",
-        deepseek_custom_prompt: "",
-        deepseek_show_thoughts: false,
-        qwen_api_url:
-            "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation",
-        qwen_api_key: "",
-        qwen_model: "qwen-plus",
-        qwen_custom_model: "",
-        qwen_custom_prompt: "",
-        qwen_show_thoughts: false,
-        qwen_thinking_budget: 0,
-        qwen_preserve_thinking: false,
-        glm_api_url: "https://open.bigmodel.cn/api/paas/v4/chat/completions",
-        glm_api_key: "",
-        glm_model: "glm-5.1",
-        glm_custom_model: "",
-        glm_custom_prompt: "",
-        glm_show_thoughts: false,
-        glm_clear_thinking: true,
-        xiaomi_api_url: "https://api.xiaomimimo.com/v1/chat/completions",
-        xiaomi_api_key: "",
-        xiaomi_model: "mimo-v2-pro",
-        xiaomi_custom_model: "",
-        xiaomi_custom_prompt: "",
-        xiaomi_show_thoughts: false,
-        xiaomi_max_completion_tokens: 0,
-        grok_api_url: "https://api.x.ai/v1/chat/completions",
-        grok_api_key: "",
-        grok_model: "grok-3-latest",
-        grok_custom_model: "",
-        grok_custom_prompt: "",
-        grok_show_thoughts: false,
-        claude_api_url: "https://api.anthropic.com/v1/messages",
-        claude_api_key: "",
-        claude_model: "claude-sonnet-4-6",
-        claude_custom_model: "",
-        claude_custom_prompt: "",
-        claude_show_thoughts: false,
-        claude_max_tokens: 4096,
-        claude_thinking_mode: "adaptive",
-        claude_thinking_budget: 2048,
-        claude_thinking_effort: "medium",
-        gemini_api_url:
-            "https://generativelanguage.googleapis.com/v1beta/models",
-        gemini_api_key: "",
-        gemini_model: "gemini-2.5-flash",
-        gemini_custom_model: "",
-        gemini_custom_prompt: "",
-        gemini_show_thoughts: false,
-        gemini_thinking_level: "high",
-        gemini_thinking_budget: -1,
-        ollama_api_url: "http://localhost:11434/api/chat",
-        ollama_model: "",
-        ollama_custom_model: "",
-        ollama_custom_prompt: "",
-        ollama_show_thoughts: false,
-        special_translate_provider: "ollama",
-        special_translate_api_url: "http://localhost:11434/api/chat",
-        special_translate_api_key: "",
-        special_translate_model: "translategemma",
-        special_translate_custom_model: "",
-        special_translate_custom_prompt: "",
-        special_translate_show_thoughts: false,
-        webllm_model: "Qwen3-0.6B-q4f16_1-MLC",
-        webllm_custom_model: "",
-        webllm_custom_prompt: "",
-        webllm_show_thoughts: false,
-        webllm_model_mirror: "official",
-        webllm_custom_mirror: "",
-        theme_mode: "auto",
-        font_family: "",
-        bubble_width_percent: 20,
-        bubble_height_percent: 40,
-        glossary_enabled: true,
-        glossary_terms: [],
-        glossary_version: 1,
-        config_updated_at: 0,
-    };
+
+    function requireSharedConfig(name) {
+        const value = shared[name];
+        if (!value) {
+            throw new Error(`缺少共享配置: ${name}`);
+        }
+        return value;
+    }
+
+    const MESSAGE_TYPES = requireSharedConfig("MESSAGE_TYPES");
+    const DEFAULT_SETTINGS = requireSharedConfig("DEFAULT_SETTINGS");
     const runtimeBaseUrl = chrome.runtime.getURL("");
     const isFirefoxRuntime = runtimeBaseUrl.startsWith("moz-extension://");
     const isWebLLMSupportedBrowser = !isFirefoxRuntime;
     const WEBLLM_WEAK_MEMORY_GB = 4;
     const WEBLLM_WEAK_CPU_CORES = 4;
-    const RECOMMENDED_WEBLLM_MODELS = shared.RECOMMENDED_WEBLLM_MODELS || [
-        "Qwen3-0.6B-q4f16_1-MLC",
-        "Llama-3.2-1B-Instruct-q4f16_1-MLC",
-    ];
+    const RECOMMENDED_WEBLLM_MODELS = requireSharedConfig(
+        "RECOMMENDED_WEBLLM_MODELS",
+    );
     const RECOMMENDED_SPECIAL_TRANSLATE_MODELS = ["translategemma"];
     const SPECIAL_PROVIDER_OLLAMA = "ollama";
     const SPECIAL_PROVIDER_OPENAI = "openai_compatible";

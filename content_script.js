@@ -553,23 +553,39 @@
 
         const editor = document.createElement("div");
         editor.className = "jyt-term-editor";
-        editor.innerHTML = `
-            <div class="jyt-term-editor-title">添加术语（${sourceLang} -> ${targetLang}）</div>
-            <label>原文术语</label>
-            <textarea class="jyt-term-source"></textarea>
-            <label>目标术语</label>
-            <textarea class="jyt-term-target"></textarea>
-            <div class="jyt-term-actions">
-                <button class="jyt-term-confirm" type="button">确认保存</button>
-                <button class="jyt-term-cancel" type="button">取消</button>
-            </div>
-        `;
-        contentEl.appendChild(editor);
+        const titleEl = document.createElement("div");
+        const sourceLabelEl = document.createElement("label");
+        const sourceInputEl = document.createElement("textarea");
+        const targetLabelEl = document.createElement("label");
+        const targetInputEl = document.createElement("textarea");
+        const actionsEl = document.createElement("div");
+        const confirmBtn = document.createElement("button");
+        const cancelBtn = document.createElement("button");
 
-        const sourceInputEl = editor.querySelector(".jyt-term-source");
-        const targetInputEl = editor.querySelector(".jyt-term-target");
-        const confirmBtn = editor.querySelector(".jyt-term-confirm");
-        const cancelBtn = editor.querySelector(".jyt-term-cancel");
+        titleEl.className = "jyt-term-editor-title";
+        titleEl.textContent = `添加术语（${sourceLang} -> ${targetLang}）`;
+        sourceLabelEl.textContent = "原文术语";
+        sourceInputEl.className = "jyt-term-source";
+        targetLabelEl.textContent = "目标术语";
+        targetInputEl.className = "jyt-term-target";
+        actionsEl.className = "jyt-term-actions";
+        confirmBtn.className = "jyt-term-confirm";
+        confirmBtn.type = "button";
+        confirmBtn.textContent = "确认保存";
+        cancelBtn.className = "jyt-term-cancel";
+        cancelBtn.type = "button";
+        cancelBtn.textContent = "取消";
+
+        actionsEl.append(confirmBtn, cancelBtn);
+        editor.append(
+            titleEl,
+            sourceLabelEl,
+            sourceInputEl,
+            targetLabelEl,
+            targetInputEl,
+            actionsEl,
+        );
+        contentEl.appendChild(editor);
 
         sourceInputEl.value = sourceTerm;
         targetInputEl.value = targetTerm;

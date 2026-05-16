@@ -24,10 +24,7 @@ jobs:
 
       - name: Check JavaScript syntax
         shell: pwsh
-        run: |
-          Get-ChildItem -Recurse -File -Include *.js |
-            Where-Object { $_.FullName -notmatch '\\vendor\\' } |
-            ForEach-Object { node --check $_.FullName }
+        run: ./scripts/check-js-syntax.ps1
 
       - name: Read manifest version
         id: manifest
