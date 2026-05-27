@@ -150,6 +150,11 @@ function normalizeTermEntries(rawTerms) {
             targetTerm,
             sourceLang,
             targetLang,
+            caseSensitive: item?.caseSensitive === true,
+            wholeWord:
+                item?.wholeWord === true || item?.wholeWord === false
+                    ? item.wholeWord
+                    : "auto",
             createdAt: Number(item?.createdAt) || now,
             updatedAt: Number(item?.updatedAt) || now,
         };
@@ -285,10 +290,13 @@ function detectGlossaryConflicts(localFile, remoteFile) {
         const sameTarget =
             normalizeTermText(localTerm.targetTerm) ===
             normalizeTermText(term.targetTerm);
+        const sameMatching =
+            localTerm.caseSensitive === term.caseSensitive &&
+            localTerm.wholeWord === term.wholeWord;
         const sameUpdatedAt =
             Number(localTerm.updatedAt || 0) === Number(term.updatedAt || 0);
 
-        if (!sameTarget || !sameUpdatedAt) {
+        if (!sameTarget || !sameMatching || !sameUpdatedAt) {
             conflicts.push(key);
         }
     }

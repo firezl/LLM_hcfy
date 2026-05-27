@@ -1,6 +1,11 @@
 import {
     MESSAGE_TYPE_CONFIG_EXPORT,
     MESSAGE_TYPE_CONFIG_IMPORT,
+    MESSAGE_TYPE_HISTORY_ADD,
+    MESSAGE_TYPE_HISTORY_CLEAR,
+    MESSAGE_TYPE_HISTORY_DELETE,
+    MESSAGE_TYPE_HISTORY_LIST,
+    MESSAGE_TYPE_HISTORY_UPDATE_FAVORITE,
     MESSAGE_TYPE_TERM_CLEAR,
     MESSAGE_TYPE_TERM_DELETE,
     MESSAGE_TYPE_START,
@@ -42,6 +47,7 @@ import {
     handleTermMessage as handleBackgroundTermMessage,
 } from "./term.js";
 import { extensionApi } from "./extension-api.js";
+import { handleHistoryMessage } from "./history.js";
 import { handleSyncMessage } from "./sync-manager.js";
 
 void ensureTermStoreReady();
@@ -148,8 +154,14 @@ extensionApi.runtime.onMessage.addListener((message, sender, sendResponse) => {
         type === MESSAGE_TYPE_SYNC_UPLOAD ||
         type === MESSAGE_TYPE_SYNC_DOWNLOAD ||
         type === MESSAGE_TYPE_SYNC_BIDIRECTIONAL;
+    const isHistoryMessage =
+        type === MESSAGE_TYPE_HISTORY_ADD ||
+        type === MESSAGE_TYPE_HISTORY_LIST ||
+        type === MESSAGE_TYPE_HISTORY_UPDATE_FAVORITE ||
+        type === MESSAGE_TYPE_HISTORY_DELETE ||
+        type === MESSAGE_TYPE_HISTORY_CLEAR;
 
-    if (!isPdfMessage && !isTermMessage && !isSyncMessage) {
+    if (!isPdfMessage && !isTermMessage && !isSyncMessage && !isHistoryMessage) {
         return false;
     }
 
@@ -157,7 +169,9 @@ extensionApi.runtime.onMessage.addListener((message, sender, sendResponse) => {
         ? (payload) => handlePdfRuntimeMessage(payload, sender)
         : isTermMessage
           ? handleBackgroundTermMessage
-          : handleSyncMessage;
+          : isHistoryMessage
+            ? handleHistoryMessage
+            : handleSyncMessage;
 
     void handler(message)
         .then((result) => {

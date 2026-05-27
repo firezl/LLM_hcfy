@@ -9,15 +9,50 @@
         <div class="jyt-form">
             <div class="jyt-options-heading">
                 <h2>LLM划词翻译 设置</h2>
-                <a class="jyt-help-link" href="help.html" target="_blank"
-                    >快速上手</a
-                >
+                <div class="jyt-heading-actions">
+                    <button id="setup_wizard_toggle" type="button">
+                        配置向导
+                    </button>
+                    <a class="jyt-help-link" href="help.html" target="_blank"
+                        >快速上手</a
+                    >
+                </div>
+            </div>
+
+            <div
+                id="setup_wizard_panel"
+                class="jyt-setup-wizard jyt-hidden"
+            >
+                <div class="jyt-section-title">模型配置向导</div>
+                <div class="jyt-hint">
+                    选择一个使用场景，向导会填入推荐的引擎、接口和模型。需要密钥的方案请补全 API Key 后保存。
+                </div>
+                <div class="jyt-wizard-grid">
+                    <button type="button" data-preset="cloud">
+                        <strong>云端高质量</strong>
+                        <span>OpenAI 兼容模型，适合稳定高质量翻译。</span>
+                    </button>
+                    <button type="button" data-preset="local">
+                        <strong>本地隐私</strong>
+                        <span>Ollama 本地服务，文本不离开本机。</span>
+                    </button>
+                    <button type="button" data-preset="free">
+                        <strong>免费保底</strong>
+                        <span>OpenRouter 免费路由，适合轻量试用。</span>
+                    </button>
+                    <button type="button" data-preset="special">
+                        <strong>专用翻译模型</strong>
+                        <span>Translationgemma 等专用翻译模型。</span>
+                    </button>
+                </div>
+                <div id="setup_wizard_status" class="jyt-current-pdf-status"></div>
             </div>
 
             <div class="jyt-tabs" id="options_tabs">
                 <div class="jyt-tab active" data-tab="tab_general">通用</div>
                 <div class="jyt-tab" data-tab="tab_engine">引擎</div>
                 <div class="jyt-tab" data-tab="tab_glossary">术语</div>
+                <div class="jyt-tab" data-tab="tab_history">历史</div>
                 <div class="jyt-tab" data-tab="tab_sync">同步与数据</div>
             </div>
 
@@ -781,6 +816,23 @@
                         <input id="glossary_source_term" type="text" />
                         <label>译文</label>
                         <input id="glossary_target_term" type="text" />
+                        <div class="jyt-glossary-options">
+                            <div>
+                                <label>大小写敏感</label>
+                                <select id="glossary_case_sensitive">
+                                    <option value="false">否</option>
+                                    <option value="true">是</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label>整词匹配</label>
+                                <select id="glossary_whole_word">
+                                    <option value="auto">自动</option>
+                                    <option value="true">是</option>
+                                    <option value="false">否</option>
+                                </select>
+                            </div>
+                        </div>
                         <div class="jyt-btn-group jyt-btn-group-secondary">
                             <button id="glossary_save" type="button">
                                 保存
@@ -804,6 +856,32 @@
                     />
                     <div
                         id="glossary_status"
+                        class="jyt-current-pdf-status"
+                    ></div>
+                </div>
+            </div>
+
+            <div class="jyt-tab-content" id="tab_history">
+                <div class="jyt-section" id="history_section">
+                    <div class="jyt-section-title">翻译历史</div>
+                    <div class="jyt-history-toolbar">
+                        <input
+                            id="history_search"
+                            type="text"
+                            placeholder="搜索原文、译文、标题或网址"
+                        />
+                        <select id="history_filter">
+                            <option value="all">全部</option>
+                            <option value="favorite">仅收藏</option>
+                        </select>
+                    </div>
+                    <div class="jyt-btn-group jyt-btn-group-secondary">
+                        <button id="history_refresh" type="button">刷新</button>
+                        <button id="history_clear" type="button">清空历史</button>
+                    </div>
+                    <div id="history_list" class="jyt-history-list"></div>
+                    <div
+                        id="history_status"
                         class="jyt-current-pdf-status"
                     ></div>
                 </div>
@@ -873,17 +951,13 @@
             </div>
 
             <div
-                class="jyt-btn-group"
-                style="
-                    padding-top: 12px;
-                    border-top: 1px solid var(--jyt-border);
-                "
+                class="jyt-btn-group jyt-options-actions"
             >
                 <button id="save">保存所有设置</button>
                 <button id="reset">恢复默认</button>
             </div>
 
-            <div class="jyt-btn-group jyt-btn-group-secondary">
+            <div class="jyt-btn-group jyt-btn-group-secondary jyt-pdf-actions">
                 <button id="open_local_pdf" type="button">打开本地 PDF</button>
             </div>
             <div id="current_pdf_status" class="jyt-current-pdf-status"></div>
@@ -894,6 +968,7 @@
         <script src="libs/shared-config.js"></script>
         <script src="options/modules/config-storage.js"></script>
         <script src="options/modules/glossary.js"></script>
+        <script src="options/modules/history.js"></script>
         <script src="options/modules/model-state.js"></script>
         <script src="options/modules/sync-data.js"></script>
         <script src="options.js"></script>

@@ -3,6 +3,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const shared = globalThis.JYT_SHARED || {};
     const storageModule = globalThis.JYT_OPTION_STORAGE || {};
     const glossaryModule = globalThis.JYT_OPTION_GLOSSARY || {};
+    const historyModule = globalThis.JYT_OPTION_HISTORY || {};
     const modelModule = globalThis.JYT_OPTION_MODEL || {};
     const syncDataModule = globalThis.JYT_OPTION_SYNC_DATA || {};
 
@@ -311,6 +312,21 @@ document.addEventListener("DOMContentLoaded", () => {
     const glossaryTargetTermEl = document.getElementById(
         "glossary_target_term",
     );
+    const glossaryCaseSensitiveEl = document.getElementById(
+        "glossary_case_sensitive",
+    );
+    const glossaryWholeWordEl = document.getElementById("glossary_whole_word");
+    const historySearchEl = document.getElementById("history_search");
+    const historyFilterEl = document.getElementById("history_filter");
+    const historyRefreshBtn = document.getElementById("history_refresh");
+    const historyClearBtn = document.getElementById("history_clear");
+    const historyListEl = document.getElementById("history_list");
+    const historyStatusEl = document.getElementById("history_status");
+    const setupWizardToggleBtn = document.getElementById(
+        "setup_wizard_toggle",
+    );
+    const setupWizardPanelEl = document.getElementById("setup_wizard_panel");
+    const setupWizardStatusEl = document.getElementById("setup_wizard_status");
     const configExportBtn = document.getElementById("config_export");
     const configImportBtn = document.getElementById("config_import");
     const configImportFileInput = document.getElementById("config_import_file");
@@ -360,6 +376,14 @@ document.addEventListener("DOMContentLoaded", () => {
             const targetId = tab.dataset.tab;
             if (targetId)
                 document.getElementById(targetId).classList.add("active");
+            if (targetId === "tab_history" && historyController) {
+                void historyController.refreshList().catch((err) => {
+                    historyController.setStatus(
+                        `历史记录加载失败: ${err && err.message ? err.message : String(err)}`,
+                        true,
+                    );
+                });
+            }
         });
     });
 
@@ -460,6 +484,8 @@ document.addEventListener("DOMContentLoaded", () => {
             targetLang: glossaryTargetLangEl,
             sourceTerm: glossarySourceTermEl,
             targetTerm: glossaryTargetTermEl,
+            caseSensitive: glossaryCaseSensitiveEl,
+            wholeWord: glossaryWholeWordEl,
             saveButton: glossarySaveBtn,
             cancelEditButton: glossaryCancelEditBtn,
             importButton: glossaryImportBtn,
@@ -470,6 +496,23 @@ document.addEventListener("DOMContentLoaded", () => {
             status: glossaryStatusEl,
         },
     });
+
+    const historyController =
+        typeof historyModule.createHistoryController === "function"
+            ? historyModule.createHistoryController({
+                  messageTypes: MESSAGE_TYPES,
+                  sendBackgroundMessage,
+                  showToast,
+                  elements: {
+                      search: historySearchEl,
+                      filter: historyFilterEl,
+                      refreshButton: historyRefreshBtn,
+                      clearButton: historyClearBtn,
+                      list: historyListEl,
+                      status: historyStatusEl,
+                  },
+              })
+            : null;
 
     const syncDataController = syncDataModule.createSyncDataController({
         defaultSettings: DEFAULT_SETTINGS,
@@ -497,6 +540,71 @@ document.addEventListener("DOMContentLoaded", () => {
             syncStatus: syncStatusEl,
         },
     });
+
+    function activateOptionsTab(tabId) {
+        tabs.forEach((tab) => {
+            tab.classList.toggle("active", tab.dataset.tab === tabId);
+        });
+        contents.forEach((content) => {
+            content.classList.toggle("active", content.id === tabId);
+        });
+    }
+
+    function setWizardStatus(text, isError) {
+        if (!setupWizardStatusEl) return;
+        setupWizardStatusEl.textContent = text || "";
+        setupWizardStatusEl.classList.toggle("jyt-status-error", !!isError);
+    }
+
+    function applyWizardPreset(preset) {
+        const value = String(preset || "");
+        if (value === "cloud") {
+            els.engine_select.value = "llm";
+            els.llm_engine_select.value = "openai";
+            els.openai_api_url.value =
+                els.openai_api_url.value ||
+                "https://api.openai.com/v1/chat/completions";
+            populateOpenAICompatModelSelect(
+                els.openai_model,
+                els.openai_custom_model,
+                [],
+                els.openai_model.value || "gpt-5.4-mini",
+            );
+            els.show_thoughts.value = "false";
+            setWizardStatus("已套用云端高质量方案，请补全 API Key 后保存。", false);
+        } else if (value === "local") {
+            els.engine_select.value = "llm";
+            els.llm_engine_select.value = "ollama";
+            els.ollama_api_url.value =
+                els.ollama_api_url.value || "http://localhost:11434/api/chat";
+            populateOllamaModelSelect([], els.ollama_model_select.value || "qwen3.5:latest");
+            els.ollama_show_thoughts.value = "false";
+            setWizardStatus("已套用本地隐私方案，请确认 Ollama 正在运行后保存。", false);
+        } else if (value === "free") {
+            els.engine_select.value = "llm";
+            els.llm_engine_select.value = "openrouter";
+            els.openrouter_api_url.value =
+                els.openrouter_api_url.value || DEFAULT_OPENROUTER_API_URL;
+            populateOpenRouterModelSelect([], DEFAULT_OPENROUTER_FREE_MODEL);
+            els.openrouter_show_thoughts.value = "false";
+            setWizardStatus("已套用免费保底方案，请填写 OpenRouter API Key 后保存。", false);
+        } else if (value === "special") {
+            els.engine_select.value = "special_translate";
+            els.special_translate_provider.value = SPECIAL_PROVIDER_OLLAMA;
+            els.special_translate_api_url.value =
+                els.special_translate_api_url.value ||
+                SPECIAL_DEFAULT_URL_BY_PROVIDER[SPECIAL_PROVIDER_OLLAMA];
+            populateSpecialTranslateModelSelect(
+                RECOMMENDED_SPECIAL_TRANSLATE_MODELS,
+                "translategemma",
+            );
+            els.special_translate_show_thoughts.value = "false";
+            setWizardStatus("已套用专用翻译模型方案，请确认模型可用后保存。", false);
+        }
+
+        updateEngineDependentUI();
+        activateOptionsTab("tab_engine");
+    }
 
     function populateOllamaModelSelect(modelIds, selectedModel) {
         if (!els.ollama_model_select) return;
@@ -2587,7 +2695,18 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     glossaryController.bindEvents();
+    historyController?.bindEvents();
     syncDataController.bindEvents();
+
+    setupWizardToggleBtn?.addEventListener("click", () => {
+        setupWizardPanelEl?.classList.toggle("jyt-hidden");
+    });
+
+    setupWizardPanelEl?.addEventListener("click", (event) => {
+        const button = event.target.closest("button[data-preset]");
+        if (!button) return;
+        applyWizardPreset(button.dataset.preset);
+    });
 
     // Listen for system theme changes
     window

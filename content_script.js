@@ -13,6 +13,7 @@
     let translatePort = null;
     let activeRequest = null;
     let lastTranslateContext = null;
+    let copyStatusTimer = null;
     let runtimeSettings = { ...DEFAULT_SETTINGS };
     const API_KEY_FIELDS = Object.keys(DEFAULT_SETTINGS || {}).filter((key) =>
         key.endsWith("_api_key"),
@@ -493,6 +494,125 @@
         );
     }
 
+    function getEffectiveEngine(settings) {
+        const selectedEngine = String(settings?.engine || "auto").trim();
+        if (selectedEngine === "llm") {
+            return String(settings?.llm_engine || "openai").trim() || "openai";
+        }
+        return selectedEngine || "auto";
+    }
+
+    function getEffectiveModel(settings, engine) {
+        const keyByEngine = {
+            auto: "openai_model",
+            openai: "openai_model",
+            custom_openai: "custom_openai_model",
+            openrouter: "openrouter_model",
+            deepseek: "deepseek_model",
+            qwen: "qwen_model",
+            glm: "glm_model",
+            xiaomi: "xiaomi_model",
+            grok: "grok_model",
+            claude: "claude_model",
+            gemini: "gemini_model",
+            ollama: "ollama_model",
+            special_translate: "special_translate_model",
+        };
+        const customKeyByEngine = {
+            openai: "openai_custom_model",
+            custom_openai: "custom_openai_custom_model",
+            openrouter: "openrouter_custom_model",
+            deepseek: "deepseek_custom_model",
+            qwen: "qwen_custom_model",
+            glm: "glm_custom_model",
+            xiaomi: "xiaomi_custom_model",
+            grok: "grok_custom_model",
+            claude: "claude_custom_model",
+            gemini: "gemini_custom_model",
+            ollama: "ollama_custom_model",
+            special_translate: "special_translate_custom_model",
+        };
+        const modelKey = keyByEngine[engine] || keyByEngine.auto;
+        const customKey = customKeyByEngine[engine];
+        const model = String(settings?.[modelKey] || "").trim();
+        if (model === "custom" && customKey) {
+            return String(settings?.[customKey] || "").trim();
+        }
+        return model;
+    }
+
+    function setBubbleState(bubble, state) {
+        if (!bubble) return;
+        bubble.dataset.state = state || "";
+    }
+
+    function setCopyButtonStatus(bubble, text, isError) {
+        const button = bubble?.querySelector(".jyt-copy");
+        if (!button) return;
+        if (copyStatusTimer) {
+            window.clearTimeout(copyStatusTimer);
+            copyStatusTimer = null;
+        }
+        button.classList.toggle("jyt-copy-error", !!isError);
+        button.setAttribute("data-status", text || "");
+        if (text) {
+            copyStatusTimer = window.setTimeout(() => {
+                button.removeAttribute("data-status");
+                button.classList.remove("jyt-copy-error");
+            }, 1600);
+        }
+    }
+
+    async function copyTranslatedText(bubble) {
+        const text = getCleanTranslatedText();
+        if (!text) {
+            setCopyButtonStatus(bubble, "无译文", true);
+            return;
+        }
+
+        try {
+            if (navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(text);
+            } else {
+                const textarea = document.createElement("textarea");
+                textarea.value = text;
+                textarea.style.position = "fixed";
+                textarea.style.opacity = "0";
+                document.body.appendChild(textarea);
+                textarea.focus();
+                textarea.select();
+                document.execCommand("copy");
+                textarea.remove();
+            }
+            setCopyButtonStatus(bubble, "已复制", false);
+        } catch (err) {
+            setCopyButtonStatus(bubble, "复制失败", true);
+        }
+    }
+
+    function saveTranslationHistory(context) {
+        const sourceText = String(context?.sourceText || "").trim();
+        const translatedText = String(context?.translatedText || "").trim();
+        if (!sourceText || !translatedText) return;
+
+        void sendTermMessage(MESSAGE_TYPES.HISTORY_ADD || "HISTORY_ADD", {
+            item: {
+                sourceText,
+                translatedText,
+                sourceLang: context?.sourceLang || "",
+                targetLang: context?.targetLang || "",
+                engine: context?.engine || "",
+                model: context?.model || "",
+                pageUrl: window.location.href,
+                pageTitle: document.title || "",
+                createdAt: Date.now(),
+                favorite: false,
+            },
+        }).catch(() => {
+            // History is best-effort; translation should never fail because of it.
+        });
+    }
+
     function setTermTip(message, isError) {
         const bubble = document.getElementById(BUBBLE_ID);
         if (!bubble) return;
@@ -688,7 +808,10 @@
       <div class="jyt-header">
         <span class="jyt-title">翻译</span>
         <div class="jyt-controls">
-                    <button class="jyt-add-term" title="添加术语">术</button>
+          <button class="jyt-copy" title="复制译文" type="button">
+            <svg viewBox="0 0 24 24"><path d="M16 1H4C2.9 1 2 1.9 2 3V17H4V3H16V1ZM19 5H8C6.9 5 6 5.9 6 7V21C6 22.1 6.9 23 8 23H19C20.1 23 21 22.1 21 21V7C21 5.9 20.1 5 19 5ZM19 21H8V7H19V21Z" /></svg>
+          </button>
+          <button class="jyt-add-term" title="添加术语" type="button">术</button>
           <button class="jyt-pin" title="固定窗口">
             <svg viewBox="0 0 24 24"><path d="M16,12V4H17V2H7V4H8V12L6,14V16H11.2V22H12.8V16H18V14L16,12Z" /></svg>
           </button>
@@ -751,6 +874,11 @@
             e.stopPropagation();
         });
 
+        bubble.querySelector(".jyt-copy").addEventListener("click", (e) => {
+            e.stopPropagation();
+            void copyTranslatedText(bubble);
+        });
+
         bubble.querySelector(".jyt-add-term").addEventListener("click", (e) => {
             e.stopPropagation();
             const contextSourceLang =
@@ -797,6 +925,7 @@
     }
 
     function setBubbleLoading(bubble, loading) {
+        setBubbleState(bubble, loading ? "loading" : "");
         bubble.querySelector("#jyt-stream").innerText = loading
             ? "加载中..."
             : "";
@@ -1080,12 +1209,12 @@
                 streamEl.innerText = trimEdgeBlankLines(output);
                 streamEl.scrollTop = streamEl.scrollHeight;
             }
-            return;
+            return trimEdgeBlankLines(output);
         }
 
-        streamEl.innerText = trimEdgeBlankLines(
-            await translator.translate(text),
-        );
+        const output = trimEdgeBlankLines(await translator.translate(text));
+        streamEl.innerText = output;
+        return output;
     }
 
     function ensureTranslatePort() {
@@ -1138,6 +1267,7 @@
             if (message.type === "TRANSLATE_ERROR") {
                 const currentRequest = activeRequest;
                 const errorText = message.error || "未知错误";
+                setBubbleState(streamEl?.closest(".jyt-bubble"), "error");
 
                 if (
                     currentRequest.allowBrowserFallback &&
@@ -1145,6 +1275,7 @@
                 ) {
                     currentRequest.browserFallbackTried = true;
                     streamEl.innerText = "OpenAI 不可用，正在回退浏览器 AI...";
+                    setBubbleState(streamEl?.closest(".jyt-bubble"), "loading");
 
                     translateWithBrowserAPI(
                         currentRequest.text,
@@ -1152,8 +1283,28 @@
                         currentRequest.to,
                         streamEl,
                     )
-                        .then(() => {
+                        .then((translatedText) => {
                             if (activeRequest === currentRequest) {
+                                const output =
+                                    translatedText || getCleanTranslatedText();
+                                saveTranslationHistory({
+                                    sourceText: currentRequest.text,
+                                    translatedText: output,
+                                    sourceLang: currentRequest.from,
+                                    targetLang: currentRequest.to,
+                                    engine: "browser",
+                                    model: "browser-translation-api",
+                                });
+                                lastTranslateContext = {
+                                    text: currentRequest.text,
+                                    translatedText: output,
+                                    from: currentRequest.from,
+                                    to: currentRequest.to,
+                                };
+                                setBubbleState(
+                                    streamEl?.closest(".jyt-bubble"),
+                                    "done",
+                                );
                                 activeRequest = null;
                             }
                         })
@@ -1164,6 +1315,10 @@
                                     ? fallbackErr.message
                                     : String(fallbackErr || "未知错误");
                             streamEl.innerText = `翻译失败: OpenAI 与浏览器 AI 均不可用（OpenAI: ${errorText}；浏览器: ${browserErr}）`;
+                            setBubbleState(
+                                streamEl?.closest(".jyt-bubble"),
+                                "error",
+                            );
                             activeRequest = null;
                         });
                     return;
@@ -1175,11 +1330,22 @@
             }
 
             if (message.type === "TRANSLATE_DONE") {
+                const translatedText = getCleanTranslatedText();
                 lastTranslateContext = {
                     text: activeRequest?.text || lastSelection || "",
+                    translatedText,
                     from: activeRequest?.from || "",
                     to: activeRequest?.to || "",
                 };
+                saveTranslationHistory({
+                    sourceText: activeRequest?.text || lastSelection || "",
+                    translatedText,
+                    sourceLang: activeRequest?.from || "",
+                    targetLang: activeRequest?.to || "",
+                    engine: activeRequest?.engine || "",
+                    model: activeRequest?.model || "",
+                });
+                setBubbleState(streamEl?.closest(".jyt-bubble"), "done");
                 activeRequest = null;
             }
         });
@@ -1302,6 +1468,8 @@
             typeof extraOptions.isThinking === "boolean"
                 ? extraOptions.isThinking
                 : !!settings.show_thoughts;
+        const engine = extraOptions.engine || getEffectiveEngine(settings);
+        const model = extraOptions.model || getEffectiveModel(settings, engine);
 
         activeRequest = {
             requestId,
@@ -1313,6 +1481,8 @@
             text,
             from: preferredFrom,
             to: preferredTo,
+            engine,
+            model,
             allowBrowserFallback: !!extraOptions.allowBrowserFallback,
             browserFallbackTried: false,
         };
@@ -1335,6 +1505,7 @@
         if (!sent) {
             streamEl.innerText =
                 "翻译失败: 无法连接扩展后台（请刷新页面或重载扩展）";
+            setBubbleState(streamEl?.closest(".jyt-bubble"), "error");
             activeRequest = null;
         }
     }
@@ -1361,6 +1532,7 @@
         streamEl.innerText = "";
         thoughtEl.innerText = "";
         activeRequest = null;
+        setBubbleState(bubble, "loading");
 
         if (!from) from = await detectLangByLanguageDetector(text, streamEl);
         if (!from) from = await detectTextLangByChromeI18n(text);
@@ -1374,10 +1546,32 @@
         if (engine === "browser") {
             try {
                 lastTranslateContext = { text, from, to };
-                await translateWithBrowserAPI(text, from, to, streamEl);
+                const translatedText = await translateWithBrowserAPI(
+                    text,
+                    from,
+                    to,
+                    streamEl,
+                );
+                const output = translatedText || getCleanTranslatedText();
+                lastTranslateContext = {
+                    text,
+                    translatedText: output,
+                    from,
+                    to,
+                };
+                saveTranslationHistory({
+                    sourceText: text,
+                    translatedText: output,
+                    sourceLang: from,
+                    targetLang: to,
+                    engine: "browser",
+                    model: "browser-translation-api",
+                });
+                setBubbleState(bubble, "done");
                 return;
             } catch (err) {
                 streamEl.innerText = "翻译失败: " + err.message;
+                setBubbleState(bubble, "error");
                 return;
             }
         }
@@ -1542,13 +1736,35 @@
                 try {
                     streamEl.innerText =
                         "未配置 OpenAI，正在使用浏览器 AI 翻译...";
-                    await translateWithBrowserAPI(text, from, to, streamEl);
+                    const translatedText = await translateWithBrowserAPI(
+                        text,
+                        from,
+                        to,
+                        streamEl,
+                    );
+                    const output = translatedText || getCleanTranslatedText();
+                    lastTranslateContext = {
+                        text,
+                        translatedText: output,
+                        from,
+                        to,
+                    };
+                    saveTranslationHistory({
+                        sourceText: text,
+                        translatedText: output,
+                        sourceLang: from,
+                        targetLang: to,
+                        engine: "browser",
+                        model: "browser-translation-api",
+                    });
+                    setBubbleState(bubble, "done");
                     return;
                 } catch (err) {
                     streamEl.innerText =
                         "翻译失败: 未配置 OpenAI，且浏览器 AI 不可用（" +
                         (err && err.message ? err.message : String(err)) +
                         "）";
+                    setBubbleState(bubble, "error");
                     return;
                 }
             }

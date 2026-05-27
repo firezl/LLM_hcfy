@@ -13,6 +13,10 @@ jobs:
   package:
     name: Package extension
     runs-on: windows-latest
+    env:
+      HAS_CHROME_WEBSTORE_SECRETS: ${{ secrets.CHROME_PUBLISHER_ID != '' && secrets.CHROME_EXTENSION_ID != '' && secrets.CHROME_CLIENT_ID != '' && secrets.CHROME_CLIENT_SECRET != '' && secrets.CHROME_REFRESH_TOKEN != '' }}
+      HAS_EDGE_ADDONS_SECRETS: ${{ secrets.EDGE_PRODUCT_ID != '' && secrets.EDGE_CLIENT_ID != '' && secrets.EDGE_API_KEY != '' }}
+      HAS_FIREFOX_AMO_SECRETS: ${{ secrets.AMO_JWT_ISSUER != '' && secrets.AMO_JWT_SECRET != '' }}
 
     steps:
       - name: Checkout
@@ -76,3 +80,74 @@ jobs:
           files: |
             ${{ steps.manifest.outputs.zip }}
             ${{ steps.manifest.outputs.xpi }}
+
+      - name: Publish to Chrome Web Store
+        if: >-
+          startsWith(github.ref, 'refs/tags/') &&
+          env.HAS_CHROME_WEBSTORE_SECRETS == 'true'
+        shell: pwsh
+        env:
+          CHROME_PUBLISHER_ID: ${{ secrets.CHROME_PUBLISHER_ID }}
+          CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+          CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+          CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+          CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+          CHROME_PUBLISH_TYPE: ${{ secrets.CHROME_PUBLISH_TYPE }}
+        run: |
+          $publishType = if ([string]::IsNullOrWhiteSpace($env:CHROME_PUBLISH_TYPE)) { "DEFAULT_PUBLISH" } else { $env:CHROME_PUBLISH_TYPE }
+          ./scripts/publish-chrome-webstore.ps1 `
+            -PackagePath "${{ steps.manifest.outputs.zip }}" `
+            -PublisherId $env:CHROME_PUBLISHER_ID `
+            -ExtensionId $env:CHROME_EXTENSION_ID `
+            -ClientId $env:CHROME_CLIENT_ID `
+            -ClientSecret $env:CHROME_CLIENT_SECRET `
+            -RefreshToken $env:CHROME_REFRESH_TOKEN `
+            -PublishType $publishType
+
+      - name: Publish to Microsoft Edge Add-ons
+        if: >-
+          startsWith(github.ref, 'refs/tags/') &&
+          env.HAS_EDGE_ADDONS_SECRETS == 'true'
+        shell: pwsh
+        env:
+          EDGE_PRODUCT_ID: ${{ secrets.EDGE_PRODUCT_ID }}
+          EDGE_CLIENT_ID: ${{ secrets.EDGE_CLIENT_ID }}
+          EDGE_API_KEY: ${{ secrets.EDGE_API_KEY }}
+          EDGE_PUBLISH_NOTES: ${{ secrets.EDGE_PUBLISH_NOTES }}
+        run: |
+          $notes = if ([string]::IsNullOrWhiteSpace($env:EDGE_PUBLISH_NOTES)) { "Automated package update from GitHub Actions." } else { $env:EDGE_PUBLISH_NOTES }
+          ./scripts/publish-edge-addons.ps1 `
+            -PackagePath "${{ steps.manifest.outputs.zip }}" `
+            -ProductId $env:EDGE_PRODUCT_ID `
+            -ClientId $env:EDGE_CLIENT_ID `
+            -ApiKey $env:EDGE_API_KEY `
+            -Notes $notes
+
+      - name: Publish to Firefox AMO
+        if: >-
+          startsWith(github.ref, 'refs/tags/') &&
+          env.HAS_FIREFOX_AMO_SECRETS == 'true'
+        shell: pwsh
+        env:
+          WEB_EXT_API_KEY: ${{ secrets.AMO_JWT_ISSUER }}
+          WEB_EXT_API_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+          AMO_CHANNEL: ${{ secrets.AMO_CHANNEL }}
+        run: |
+          $channel = if ([string]::IsNullOrWhiteSpace($env:AMO_CHANNEL)) { "listed" } else { $env:AMO_CHANNEL }
+          $sourceDir = "dist/firefox-source"
+          $artifactsDir = "dist/firefox-signed"
+          New-Item -ItemType Directory -Force -Path $sourceDir, $artifactsDir | Out-Null
+          Expand-Archive -Path "${{ steps.manifest.outputs.xpi }}" -DestinationPath $sourceDir -Force
+
+          $metadataArgs = @()
+          if (Test-Path "store/firefox-amo-metadata.json") {
+            $metadataArgs = @("--amo-metadata", "store/firefox-amo-metadata.json")
+          }
+
+          npx --yes web-ext@latest sign `
+            --source-dir $sourceDir `
+            --artifacts-dir $artifactsDir `
+            --channel $channel `
+            --approval-timeout 0 `
+            --no-input `
+            @metadataArgs

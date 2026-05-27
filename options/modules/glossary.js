@@ -18,6 +18,23 @@
         return `${sourceLang}::${targetLang}::${sourceTerm}`;
     }
 
+    function normalizeWholeWord(value) {
+        const normalized = String(value == null ? "auto" : value)
+            .trim()
+            .toLowerCase();
+        if (normalized === "true" || normalized === "yes" || normalized === "1") {
+            return true;
+        }
+        if (
+            normalized === "false" ||
+            normalized === "no" ||
+            normalized === "0"
+        ) {
+            return false;
+        }
+        return "auto";
+    }
+
     function sanitizeTerms(rawTerms) {
         const input = Array.isArray(rawTerms) ? rawTerms : [];
         const map = new Map();
@@ -37,6 +54,8 @@
                 targetTerm,
                 sourceLang,
                 targetLang,
+                caseSensitive: item?.caseSensitive === true,
+                wholeWord: normalizeWholeWord(item?.wholeWord),
                 createdAt: Number(item?.createdAt) || now,
                 updatedAt: Number(item?.updatedAt) || now,
             };
@@ -73,6 +92,9 @@
                 targetLang: normalizeLang(elements.targetLang?.value),
                 sourceTerm: normalizeTermText(elements.sourceTerm?.value),
                 targetTerm: normalizeTermText(elements.targetTerm?.value),
+                caseSensitive:
+                    String(elements.caseSensitive?.value || "false") === "true",
+                wholeWord: normalizeWholeWord(elements.wholeWord?.value),
             };
         }
 
@@ -82,6 +104,8 @@
             if (elements.targetLang) elements.targetLang.value = "zh";
             if (elements.sourceTerm) elements.sourceTerm.value = "";
             if (elements.targetTerm) elements.targetTerm.value = "";
+            if (elements.caseSensitive) elements.caseSensitive.value = "false";
+            if (elements.wholeWord) elements.wholeWord.value = "auto";
             if (elements.saveButton) elements.saveButton.textContent = "新增术语";
         }
 
@@ -96,6 +120,20 @@
             if (elements.targetLang) elements.targetLang.value = term.targetLang;
             if (elements.sourceTerm) elements.sourceTerm.value = term.sourceTerm;
             if (elements.targetTerm) elements.targetTerm.value = term.targetTerm;
+            if (elements.caseSensitive) {
+                elements.caseSensitive.value = term.caseSensitive
+                    ? "true"
+                    : "false";
+            }
+            if (elements.wholeWord) {
+                const wholeWord = normalizeWholeWord(term.wholeWord);
+                elements.wholeWord.value =
+                    wholeWord === true
+                        ? "true"
+                        : wholeWord === false
+                          ? "false"
+                          : "auto";
+            }
             if (elements.saveButton) elements.saveButton.textContent = "更新术语";
         }
 
@@ -116,7 +154,7 @@
 
             const thead = document.createElement("thead");
             const headRow = document.createElement("tr");
-            for (const label of ["语言对", "原文", "目标", "操作"]) {
+            for (const label of ["语言对", "原文", "目标", "匹配", "操作"]) {
                 const th = document.createElement("th");
                 th.textContent = label;
                 headRow.appendChild(th);
@@ -130,6 +168,7 @@
                 const pairCell = document.createElement("td");
                 const sourceCell = document.createElement("td");
                 const targetCell = document.createElement("td");
+                const matchCell = document.createElement("td");
                 const actionCell = document.createElement("td");
                 const editBtn = document.createElement("button");
                 const deleteBtn = document.createElement("button");
@@ -137,6 +176,16 @@
                 pairCell.textContent = `${term.sourceLang} -> ${term.targetLang}`;
                 sourceCell.textContent = term.sourceTerm || "";
                 targetCell.textContent = term.targetTerm || "";
+                matchCell.textContent = [
+                    term.caseSensitive ? "大小写" : "",
+                    normalizeWholeWord(term.wholeWord) === "auto"
+                        ? "整词自动"
+                        : normalizeWholeWord(term.wholeWord)
+                          ? "整词"
+                          : "包含",
+                ]
+                    .filter(Boolean)
+                    .join(" / ");
 
                 editBtn.className = "jyt-glossary-row-edit";
                 editBtn.dataset.index = String(index);
@@ -149,7 +198,13 @@
                 deleteBtn.textContent = "删除";
 
                 actionCell.append(editBtn, deleteBtn);
-                row.append(pairCell, sourceCell, targetCell, actionCell);
+                row.append(
+                    pairCell,
+                    sourceCell,
+                    targetCell,
+                    matchCell,
+                    actionCell,
+                );
                 tbody.appendChild(row);
             });
             table.appendChild(tbody);

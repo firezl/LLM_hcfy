@@ -21,11 +21,65 @@ function normalizeText(value) {
     return String(value || "").trim();
 }
 
-function containsTerm(text, sourceTerm) {
-    if (!text || !sourceTerm) return false;
-    return String(text)
-        .toLowerCase()
-        .includes(String(sourceTerm).toLowerCase());
+function normalizeBoolean(value, fallback) {
+    if (typeof value === "boolean") return value;
+    if (value === "true") return true;
+    if (value === "false") return false;
+    return fallback;
+}
+
+function normalizeWholeWord(value) {
+    const normalized = String(value ?? "auto")
+        .trim()
+        .toLowerCase();
+    if (normalized === "true" || normalized === "yes" || normalized === "1") {
+        return true;
+    }
+    if (normalized === "false" || normalized === "no" || normalized === "0") {
+        return false;
+    }
+    return "auto";
+}
+
+function hasAsciiWordChar(value) {
+    return /[A-Za-z0-9_]/.test(String(value || ""));
+}
+
+function isAsciiWordChar(ch) {
+    return !!ch && /[A-Za-z0-9_]/.test(ch);
+}
+
+function shouldUseWholeWord(term) {
+    if (term.wholeWord === true || term.wholeWord === false) {
+        return term.wholeWord;
+    }
+    return hasAsciiWordChar(term.sourceTerm);
+}
+
+function findTermIndex(text, sourceTerm, options = {}) {
+    if (!text || !sourceTerm) return -1;
+
+    const haystack = options.caseSensitive
+        ? String(text)
+        : String(text).toLowerCase();
+    const needle = options.caseSensitive
+        ? String(sourceTerm)
+        : String(sourceTerm).toLowerCase();
+    const wholeWord = !!options.wholeWord;
+    let index = haystack.indexOf(needle);
+
+    while (index !== -1) {
+        if (!wholeWord) return index;
+
+        const before = haystack[index - 1] || "";
+        const after = haystack[index + needle.length] || "";
+        if (!isAsciiWordChar(before) && !isAsciiWordChar(after)) {
+            return index;
+        }
+        index = haystack.indexOf(needle, index + needle.length);
+    }
+
+    return -1;
 }
 
 function termKey(sourceLang, targetLang, sourceTerm) {
@@ -56,6 +110,8 @@ function normalizeTermEntry(raw, now) {
         targetTerm,
         sourceLang,
         targetLang,
+        caseSensitive: normalizeBoolean(raw?.caseSensitive, false),
+        wholeWord: normalizeWholeWord(raw?.wholeWord),
         createdAt,
         updatedAt,
     };
@@ -112,7 +168,6 @@ function invalidateTermMatcherIndex() {
 
 function buildTermMatcherIndex(terms) {
     const grouped = new Map();
-    const sourceLowerByKey = new Map();
 
     for (const term of terms) {
         const pairKey = langPairKey(term?.sourceLang, term?.targetLang);
@@ -125,15 +180,20 @@ function buildTermMatcherIndex(terms) {
         }
 
         grouped.get(pairKey).push(term);
-        sourceLowerByKey.set(
-            term.key,
-            String(term.sourceTerm || "").toLowerCase(),
-        );
+    }
+
+    for (const list of grouped.values()) {
+        list.sort((a, b) => {
+            const lengthDelta =
+                String(b?.sourceTerm || "").length -
+                String(a?.sourceTerm || "").length;
+            if (lengthDelta !== 0) return lengthDelta;
+            return Number(b?.updatedAt || 0) - Number(a?.updatedAt || 0);
+        });
     }
 
     return {
         grouped,
-        sourceLowerByKey,
     };
 }
 
@@ -202,6 +262,10 @@ function stripInternalKey(term) {
         targetTerm: term.targetTerm,
         sourceLang: term.sourceLang,
         targetLang: term.targetLang,
+        caseSensitive: !!term.caseSensitive,
+        wholeWord: term.wholeWord === true || term.wholeWord === false
+            ? term.wholeWord
+            : "auto",
         createdAt: term.createdAt,
         updatedAt: term.updatedAt,
     };
@@ -371,18 +435,27 @@ export async function getMatchedGlossaryTerms(params) {
         return [];
     }
 
-    const normalizedText = String(text).toLowerCase();
     const pairKey = langPairKey(from, to);
     const matcherIndex = await getTermMatcherIndex();
     const terms = matcherIndex.grouped.get(pairKey) || [];
     const matched = [];
+    const seen = new Set();
 
     for (const term of terms) {
-        const sourceLower = matcherIndex.sourceLowerByKey.get(term.key);
-        if (!sourceLower || !normalizedText.includes(sourceLower)) {
+        const key = term.key || termKey(term.sourceLang, term.targetLang, term.sourceTerm);
+        if (seen.has(key)) {
             continue;
         }
 
+        const matchIndex = findTermIndex(text, term.sourceTerm, {
+            caseSensitive: !!term.caseSensitive,
+            wholeWord: shouldUseWholeWord(term),
+        });
+        if (matchIndex === -1) {
+            continue;
+        }
+
+        seen.add(key);
         matched.push(stripInternalKey(term));
         if (matched.length >= maxTerms) {
             break;

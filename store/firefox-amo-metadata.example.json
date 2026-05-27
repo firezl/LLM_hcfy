@@ -1,0 +1,18 @@
+{
+  "summary": {
+    "en-US": "Translate selected text with configurable LLM and machine translation engines.",
+    "zh-CN": "使用可配置的大模型和机器翻译引擎翻译网页划词内容。"
+  },
+  "categories": [
+    "other"
+  ],
+  "version": {
+    "license": "MIT"
+  },
+  "homepage": {
+    "en-US": "https://github.com/OWNER/REPO"
+  },
+  "support_email": {
+    "en-US": "you@example.com"
+  }
+}
