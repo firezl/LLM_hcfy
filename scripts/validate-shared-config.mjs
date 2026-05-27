@@ -70,18 +70,4 @@ assertEqual(
     backgroundConfig.DEFAULT_SETTINGS,
 );
 
-assertEqual(
-    "RECOMMENDED_WEBLLM_MODELS",
-    shared.RECOMMENDED_WEBLLM_MODELS,
-    backgroundConstants.RECOMMENDED_WEBLLM_MODELS,
-);
-
-if (
-    shared.DEFAULT_SETTINGS.webllm_model !== backgroundConstants.DEFAULT_WEBLLM_MODEL
-) {
-    throw new Error(
-        `DEFAULT_WEBLLM_MODEL mismatch: shared=${shared.DEFAULT_SETTINGS.webllm_model}, background=${backgroundConstants.DEFAULT_WEBLLM_MODEL}`,
-    );
-}
-
 console.log("Shared config validation passed");

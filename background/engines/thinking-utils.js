@@ -60,9 +60,6 @@ export function getThinkingEnabledByEngine(engine, settings) {
     if (engine === "ollama") {
         return !!settings?.ollama_show_thoughts;
     }
-    if (engine === "webllm") {
-        return !!settings?.webllm_show_thoughts;
-    }
     if (engine === "claude") {
         return !!settings?.claude_show_thoughts;
     }
@@ -86,6 +83,9 @@ export function getThinkingEnabledByEngine(engine, settings) {
     }
     if (engine === "custom_openai") {
         return !!settings?.custom_openai_show_thoughts;
+    }
+    if (engine === "openrouter") {
+        return !!settings?.openrouter_show_thoughts;
     }
     return !!settings?.show_thoughts;
 }

@@ -8,7 +8,7 @@ import { getThinkingEnabledByEngine } from "./thinking-utils.js";
 import { normalizeOpenAICompatEndpoint } from "./url-utils.js";
 
 const DEFAULT_GROK_API_URL = "https://api.x.ai/v1/chat/completions";
-const DEFAULT_GROK_MODEL = "grok-3-latest";
+const DEFAULT_GROK_MODEL = "grok-4.3";
 
 export async function streamGrokTranslate(request, port, state) {
     const { requestId, text, settings } = request;

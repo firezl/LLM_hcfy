@@ -18,12 +18,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const DEFAULT_SETTINGS = requireSharedConfig("DEFAULT_SETTINGS");
     const runtimeBaseUrl = chrome.runtime.getURL("");
     const isFirefoxRuntime = runtimeBaseUrl.startsWith("moz-extension://");
-    const isWebLLMSupportedBrowser = !isFirefoxRuntime;
-    const WEBLLM_WEAK_MEMORY_GB = 4;
-    const WEBLLM_WEAK_CPU_CORES = 4;
-    const RECOMMENDED_WEBLLM_MODELS = requireSharedConfig(
-        "RECOMMENDED_WEBLLM_MODELS",
-    );
     const RECOMMENDED_SPECIAL_TRANSLATE_MODELS = ["translategemma"];
     const SPECIAL_PROVIDER_OLLAMA = "ollama";
     const SPECIAL_PROVIDER_OPENAI = "openai_compatible";
@@ -31,6 +25,9 @@ document.addEventListener("DOMContentLoaded", () => {
         [SPECIAL_PROVIDER_OLLAMA]: "http://localhost:11434/api/chat",
         [SPECIAL_PROVIDER_OPENAI]: "https://api.openai.com/v1/chat/completions",
     };
+    const DEFAULT_OPENROUTER_API_URL =
+        "https://openrouter.ai/api/v1/chat/completions";
+    const DEFAULT_OPENROUTER_FREE_MODEL = "openrouter/free";
     const OPENAI_COMPAT_MODEL_ENGINES = [
         {
             name: "openai",
@@ -38,7 +35,7 @@ document.addEventListener("DOMContentLoaded", () => {
             apiKeyId: "openai_api_key",
             modelId: "openai_model",
             customModelId: "openai_custom_model",
-            defaultModel: "gpt-4o-mini",
+            defaultModel: "gpt-5.4-mini",
         },
         {
             name: "custom_openai",
@@ -54,7 +51,7 @@ document.addEventListener("DOMContentLoaded", () => {
             apiKeyId: "deepseek_api_key",
             modelId: "deepseek_model",
             customModelId: "deepseek_custom_model",
-            defaultModel: "deepseek-chat",
+            defaultModel: "deepseek-v4-flash",
         },
         {
             name: "qwen",
@@ -62,7 +59,7 @@ document.addEventListener("DOMContentLoaded", () => {
             apiKeyId: "qwen_api_key",
             modelId: "qwen_model",
             customModelId: "qwen_custom_model",
-            defaultModel: "qwen-plus",
+            defaultModel: "qwen3.5-plus",
         },
         {
             name: "glm",
@@ -78,7 +75,7 @@ document.addEventListener("DOMContentLoaded", () => {
             apiKeyId: "xiaomi_api_key",
             modelId: "xiaomi_model",
             customModelId: "xiaomi_custom_model",
-            defaultModel: "mimo-v2-pro",
+            defaultModel: "mimo-v2.5",
         },
         {
             name: "grok",
@@ -86,7 +83,7 @@ document.addEventListener("DOMContentLoaded", () => {
             apiKeyId: "grok_api_key",
             modelId: "grok_model",
             customModelId: "grok_custom_model",
-            defaultModel: "grok-3-latest",
+            defaultModel: "grok-4.3",
         },
     ];
     const OPENAI_COMPAT_ENGINE_BY_NAME = Object.fromEntries(
@@ -193,6 +190,14 @@ document.addEventListener("DOMContentLoaded", () => {
         "custom_openai_show_thoughts",
         "custom_openai_reasoning_effort",
         "custom_openai_max_completion_tokens",
+        "openrouter_api_url",
+        "openrouter_api_key",
+        "openrouter_model",
+        "openrouter_custom_model",
+        "openrouter_custom_prompt",
+        "openrouter_show_thoughts",
+        "openrouter_reasoning_effort",
+        "openrouter_max_completion_tokens",
         "deepseek_api_url",
         "deepseek_api_key",
         "deepseek_model",
@@ -257,12 +262,6 @@ document.addEventListener("DOMContentLoaded", () => {
         "special_translate_custom_model",
         "special_translate_custom_prompt",
         "special_translate_show_thoughts",
-        "webllm_model_select",
-        "webllm_custom_model",
-        "webllm_custom_prompt",
-        "webllm_show_thoughts",
-        "webllm_model_mirror",
-        "webllm_custom_mirror",
         "theme_mode",
         "font_family",
         "bubble_width_percent",
@@ -274,6 +273,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const customOpenAISection = document.getElementById(
         "custom_openai_section",
     );
+    const openrouterSection = document.getElementById("openrouter_section");
     const deepseekSection = document.getElementById("deepseek_section");
     const qwenSection = document.getElementById("qwen_section");
     const glmSection = document.getElementById("glm_section");
@@ -285,13 +285,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const specialTranslateSection = document.getElementById(
         "special_translate_section",
     );
-    const webllmSection = document.getElementById("webllm_section");
-    const webllmPerformanceNote = document.getElementById(
-        "webllm_performance_note",
-    );
-    const webllmStatusEl = document.getElementById("webllm_status");
-    const webllmDownloadBtn = document.getElementById("webllm_download");
-    const webllmClearCacheBtn = document.getElementById("webllm_clear_cache");
     const openLocalPdfBtn = document.getElementById("open_local_pdf");
     const currentPdfStatusEl = document.getElementById("current_pdf_status");
     const glossaryExportBtn = document.getElementById("glossary_export");
@@ -335,17 +328,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let cachedActiveTab = null;
     let cachedCurrentPdfUrl = "";
-    let webllmPort = null;
-    let webllmPerfProfile = null;
-    const webllmModelRequestResolvers = new Map();
+    let backgroundPort = null;
     const ollamaModelRequestResolvers = new Map();
     const openaiCompatModelRequestResolvers = new Map();
+    const openrouterModelRequestResolvers = new Map();
     const claudeModelRequestResolvers = new Map();
     const geminiModelRequestResolvers = new Map();
     const specialModelRequestResolvers = new Map();
     const LLM_ENGINES = new Set([
         "openai",
         "custom_openai",
+        "openrouter",
         "gemini",
         "claude",
         "qwen",
@@ -354,7 +347,6 @@ document.addEventListener("DOMContentLoaded", () => {
         "xiaomi",
         "grok",
         "ollama",
-        "webllm",
     ]);
 
     // --- Added: UI Tab Logic & Toast ---
@@ -506,67 +498,6 @@ document.addEventListener("DOMContentLoaded", () => {
         },
     });
 
-    function setWebLLMStatus(text, isError) {
-        if (!webllmStatusEl) return;
-        webllmStatusEl.textContent = text || "";
-        webllmStatusEl.classList.toggle("jyt-status-error", !!isError);
-    }
-
-    function setWebLLMButtonsEnabled(enabled) {
-        if (webllmDownloadBtn) webllmDownloadBtn.disabled = !enabled;
-        if (webllmClearCacheBtn) webllmClearCacheBtn.disabled = !enabled;
-    }
-
-    function populateWebLLMModelSelect(modelIds, selectedModel) {
-        if (!els.webllm_model_select) return;
-
-        const uniqueIds = Array.from(
-            new Set((modelIds || []).map((id) => String(id || "").trim())),
-        ).filter(Boolean);
-
-        const recommended = RECOMMENDED_WEBLLM_MODELS.filter((id) =>
-            uniqueIds.includes(id),
-        );
-        const others = uniqueIds.filter((id) => !recommended.includes(id));
-        const orderedIds = [...recommended, ...others];
-
-        els.webllm_model_select.innerHTML = "";
-        orderedIds.forEach((id) => {
-            const option = document.createElement("option");
-            option.value = id;
-            option.textContent = RECOMMENDED_WEBLLM_MODELS.includes(id)
-                ? `${id}（推荐）`
-                : id;
-            els.webllm_model_select.appendChild(option);
-        });
-
-        const customOption = document.createElement("option");
-        customOption.value = "custom";
-        customOption.textContent = "自定义模型 ID";
-        els.webllm_model_select.appendChild(customOption);
-
-        if (selectedModel && orderedIds.includes(selectedModel)) {
-            els.webllm_model_select.value = selectedModel;
-            els.webllm_custom_model.disabled = true;
-            return;
-        }
-
-        if (selectedModel && selectedModel !== "custom") {
-            const savedOption = document.createElement("option");
-            savedOption.value = selectedModel;
-            savedOption.textContent = `${selectedModel}（已保存）`;
-            els.webllm_model_select.insertBefore(savedOption, customOption);
-            els.webllm_model_select.value = selectedModel;
-            els.webllm_custom_model.disabled = true;
-            return;
-        }
-
-        if (orderedIds.length > 0) {
-            els.webllm_model_select.value = orderedIds[0];
-            els.webllm_custom_model.disabled = true;
-        }
-    }
-
     function populateOllamaModelSelect(modelIds, selectedModel) {
         if (!els.ollama_model_select) return;
 
@@ -684,6 +615,113 @@ document.addEventListener("DOMContentLoaded", () => {
         return selected;
     }
 
+    function normalizeOpenRouterModelItems(modelItems) {
+        const seen = new Set();
+        return (Array.isArray(modelItems) ? modelItems : [])
+            .map((item) => ({
+                id: String(item?.id || "").trim(),
+                name: String(item?.name || item?.id || "").trim(),
+                isFree: !!item?.isFree,
+                contextLength: Number(item?.contextLength || 0),
+                maxCompletionTokens: Number(item?.maxCompletionTokens || 0),
+                supportedParameters: Array.isArray(item?.supportedParameters)
+                    ? item.supportedParameters
+                    : [],
+                pricing:
+                    item?.pricing && typeof item.pricing === "object"
+                        ? item.pricing
+                        : {},
+            }))
+            .filter((item) => {
+                if (!item.id || seen.has(item.id)) {
+                    return false;
+                }
+                seen.add(item.id);
+                return true;
+            });
+    }
+
+    function populateOpenRouterModelSelect(modelItems, selectedModel) {
+        if (!els.openrouter_model || !els.openrouter_custom_model) return;
+
+        const normalizedItems = normalizeOpenRouterModelItems(modelItems);
+        const freeItems = normalizedItems.filter(
+            (item) =>
+                item.isFree &&
+                item.id.toLowerCase() !== DEFAULT_OPENROUTER_FREE_MODEL,
+        );
+        const paidItems = normalizedItems.filter(
+            (item) =>
+                !item.isFree &&
+                item.id.toLowerCase() !== DEFAULT_OPENROUTER_FREE_MODEL,
+        );
+        const orderedItems = [...freeItems, ...paidItems];
+
+        els.openrouter_model.innerHTML = "";
+
+        const freeRouterOption = document.createElement("option");
+        freeRouterOption.value = DEFAULT_OPENROUTER_FREE_MODEL;
+        freeRouterOption.textContent =
+            "openrouter/free（自动免费模型）";
+        els.openrouter_model.appendChild(freeRouterOption);
+
+        orderedItems.forEach((item) => {
+            const option = document.createElement("option");
+            option.value = item.id;
+            option.textContent = item.isFree
+                ? `${item.id}（免费）`
+                : item.name && item.name !== item.id
+                  ? `${item.name} (${item.id})`
+                  : item.id;
+            els.openrouter_model.appendChild(option);
+        });
+
+        const customOption = document.createElement("option");
+        customOption.value = "custom";
+        customOption.textContent = "自定义模型名";
+        els.openrouter_model.appendChild(customOption);
+
+        const orderedIds = [
+            DEFAULT_OPENROUTER_FREE_MODEL,
+            ...orderedItems.map((item) => item.id),
+        ];
+        if (selectedModel && orderedIds.includes(selectedModel)) {
+            els.openrouter_model.value = selectedModel;
+            els.openrouter_custom_model.disabled = true;
+            return;
+        }
+
+        if (selectedModel && selectedModel !== "custom") {
+            const savedOption = document.createElement("option");
+            savedOption.value = selectedModel;
+            savedOption.textContent = `${selectedModel}（已保存）`;
+            const firstPaidIndex = 1 + freeItems.length;
+            const firstPaidOption =
+                els.openrouter_model.options[firstPaidIndex] || customOption;
+            els.openrouter_model.insertBefore(savedOption, firstPaidOption);
+            els.openrouter_model.value = selectedModel;
+            els.openrouter_custom_model.disabled = true;
+            return;
+        }
+
+        if (selectedModel === "custom") {
+            els.openrouter_model.value = "custom";
+            els.openrouter_custom_model.disabled = false;
+            return;
+        }
+
+        els.openrouter_model.value = DEFAULT_OPENROUTER_FREE_MODEL;
+        els.openrouter_custom_model.disabled = true;
+    }
+
+    function getSelectedOpenRouterModel() {
+        const selected = String(els.openrouter_model?.value || "").trim();
+        if (selected === "custom") {
+            return String(els.openrouter_custom_model?.value || "").trim();
+        }
+        return selected;
+    }
+
     function normalizeSpecialProvider(provider) {
         const normalized = String(provider || "")
             .trim()
@@ -760,34 +798,6 @@ document.addEventListener("DOMContentLoaded", () => {
         els.special_translate_custom_model.disabled = false;
     }
 
-    async function requestWebLLMModelList() {
-        return new Promise((resolve, reject) => {
-            const requestId = `webllm-models-${Date.now()}-${Math.random()}`;
-            const timer = setTimeout(() => {
-                webllmModelRequestResolvers.delete(requestId);
-                reject(new Error("请求模型列表超时"));
-            }, 8000);
-
-            webllmModelRequestResolvers.set(requestId, (payload) => {
-                clearTimeout(timer);
-                resolve(payload || {});
-            });
-
-            try {
-                const port = ensureWebLLMPort();
-                port.postMessage({
-                    type:
-                        MESSAGE_TYPES.WEBLLM_GET_MODELS || "WEBLLM_GET_MODELS",
-                    requestId,
-                });
-            } catch (err) {
-                clearTimeout(timer);
-                webllmModelRequestResolvers.delete(requestId);
-                reject(err);
-            }
-        });
-    }
-
     async function requestOllamaModelList(apiUrl) {
         return new Promise((resolve, reject) => {
             const requestId = `ollama-models-${Date.now()}-${Math.random()}`;
@@ -802,7 +812,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
 
             try {
-                const port = ensureWebLLMPort();
+                const port = ensureBackgroundPort();
                 port.postMessage({
                     type:
                         MESSAGE_TYPES.OLLAMA_GET_MODELS || "OLLAMA_GET_MODELS",
@@ -831,7 +841,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
 
             try {
-                const port = ensureWebLLMPort();
+                const port = ensureBackgroundPort();
                 port.postMessage({
                     type:
                         MESSAGE_TYPES.OPENAI_COMPAT_GET_MODELS ||
@@ -843,6 +853,37 @@ document.addEventListener("DOMContentLoaded", () => {
             } catch (err) {
                 clearTimeout(timer);
                 openaiCompatModelRequestResolvers.delete(requestId);
+                reject(err);
+            }
+        });
+    }
+
+    async function requestOpenRouterModelList(apiUrl, apiKey) {
+        return new Promise((resolve, reject) => {
+            const requestId = `openrouter-models-${Date.now()}-${Math.random()}`;
+            const timer = setTimeout(() => {
+                openrouterModelRequestResolvers.delete(requestId);
+                reject(new Error("请求 OpenRouter 模型列表超时"));
+            }, 8000);
+
+            openrouterModelRequestResolvers.set(requestId, (payload) => {
+                clearTimeout(timer);
+                resolve(payload || {});
+            });
+
+            try {
+                const port = ensureBackgroundPort();
+                port.postMessage({
+                    type:
+                        MESSAGE_TYPES.OPENROUTER_GET_MODELS ||
+                        "OPENROUTER_GET_MODELS",
+                    requestId,
+                    apiUrl: String(apiUrl || "").trim(),
+                    apiKey: String(apiKey || "").trim(),
+                });
+            } catch (err) {
+                clearTimeout(timer);
+                openrouterModelRequestResolvers.delete(requestId);
                 reject(err);
             }
         });
@@ -862,7 +903,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
 
             try {
-                const port = ensureWebLLMPort();
+                const port = ensureBackgroundPort();
                 port.postMessage({
                     type:
                         MESSAGE_TYPES.CLAUDE_GET_MODELS || "CLAUDE_GET_MODELS",
@@ -892,7 +933,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
 
             try {
-                const port = ensureWebLLMPort();
+                const port = ensureBackgroundPort();
                 port.postMessage({
                     type:
                         MESSAGE_TYPES.GEMINI_GET_MODELS || "GEMINI_GET_MODELS",
@@ -922,7 +963,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
 
             try {
-                const port = ensureWebLLMPort();
+                const port = ensureBackgroundPort();
                 port.postMessage({
                     type:
                         MESSAGE_TYPES.SPECIAL_TRANSLATE_GET_MODELS ||
@@ -940,85 +981,12 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    function getSelectedWebLLMModelId() {
-        const selected = (els.webllm_model_select?.value || "").trim();
-        if (selected === "custom") {
-            return (els.webllm_custom_model?.value || "").trim();
-        }
-        return selected;
-    }
+    function ensureBackgroundPort() {
+        if (backgroundPort) return backgroundPort;
 
-    function getSelectedWebLLMMirrorBase() {
-        const selected = (els.webllm_model_mirror?.value || "official").trim();
-        if (selected === "hf-mirror") {
-            return "https://hf-mirror.com";
-        }
-        if (selected === "custom") {
-            return (els.webllm_custom_mirror?.value || "").trim();
-        }
-        return "https://huggingface.co";
-    }
-
-    function ensureWebLLMPort() {
-        if (webllmPort) return webllmPort;
-
-        webllmPort = chrome.runtime.connect({ name: "jyt-translate" });
-        webllmPort.onMessage.addListener((message) => {
+        backgroundPort = chrome.runtime.connect({ name: "jyt-translate" });
+        backgroundPort.onMessage.addListener((message) => {
             if (!message) return;
-
-            if (message.type === "WEBLLM_MODEL_PROGRESS") {
-                const percent = Number.isFinite(message.progress)
-                    ? Math.max(0, Math.min(100, Math.round(message.progress)))
-                    : null;
-                const percentText = percent === null ? "" : ` (${percent}%)`;
-                setWebLLMStatus(
-                    `${message.text || "模型加载中"}${percentText}`,
-                    false,
-                );
-                return;
-            }
-
-            if (message.type === "WEBLLM_PRELOAD_DONE") {
-                setWebLLMStatus("模型已加载完成，可直接用于划词翻译", false);
-                setWebLLMButtonsEnabled(true);
-                return;
-            }
-
-            if (message.type === "WEBLLM_CLEAR_DONE") {
-                setWebLLMStatus("模型缓存已清理", false);
-                setWebLLMButtonsEnabled(true);
-                return;
-            }
-
-            if (message.type === "WEBLLM_OP_ERROR") {
-                setWebLLMStatus(
-                    `操作失败: ${message.error || "未知错误"}`,
-                    true,
-                );
-                setWebLLMButtonsEnabled(true);
-                const resolvePending = webllmModelRequestResolvers.get(
-                    message.requestId,
-                );
-                if (resolvePending) {
-                    webllmModelRequestResolvers.delete(message.requestId);
-                    resolvePending({
-                        modelIds: [],
-                        recommendedModelIds: RECOMMENDED_WEBLLM_MODELS,
-                    });
-                }
-                return;
-            }
-
-            if (message.type === "WEBLLM_MODELS_RESPONSE") {
-                const resolvePending = webllmModelRequestResolvers.get(
-                    message.requestId,
-                );
-                if (resolvePending) {
-                    webllmModelRequestResolvers.delete(message.requestId);
-                    resolvePending(message);
-                }
-                return;
-            }
 
             if (message.type === "OLLAMA_OP_ERROR") {
                 const resolvePending = ollamaModelRequestResolvers.get(
@@ -1059,6 +1027,28 @@ document.addEventListener("DOMContentLoaded", () => {
                 );
                 if (resolvePending) {
                     openaiCompatModelRequestResolvers.delete(message.requestId);
+                    resolvePending(message);
+                }
+                return;
+            }
+
+            if (message.type === "OPENROUTER_OP_ERROR") {
+                const resolvePending = openrouterModelRequestResolvers.get(
+                    message.requestId,
+                );
+                if (resolvePending) {
+                    openrouterModelRequestResolvers.delete(message.requestId);
+                    resolvePending({ modelItems: [] });
+                }
+                return;
+            }
+
+            if (message.type === "OPENROUTER_MODELS_RESPONSE") {
+                const resolvePending = openrouterModelRequestResolvers.get(
+                    message.requestId,
+                );
+                if (resolvePending) {
+                    openrouterModelRequestResolvers.delete(message.requestId);
                     resolvePending(message);
                 }
                 return;
@@ -1130,61 +1120,11 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
 
-        webllmPort.onDisconnect.addListener(() => {
-            webllmPort = null;
-            setWebLLMButtonsEnabled(true);
+        backgroundPort.onDisconnect.addListener(() => {
+            backgroundPort = null;
         });
 
-        return webllmPort;
-    }
-
-    async function evaluateWebLLMPerformance() {
-        const hasWebGPU = !!navigator.gpu;
-        const memoryGB = Number(navigator.deviceMemory || 0);
-        const cpuCores = Number(navigator.hardwareConcurrency || 0);
-        const reasons = [];
-
-        if (!hasWebGPU) {
-            reasons.push("当前浏览器不可用 WebGPU");
-        }
-        if (memoryGB > 0 && memoryGB <= WEBLLM_WEAK_MEMORY_GB) {
-            reasons.push(`设备内存约 ${memoryGB}GB`);
-        }
-        if (cpuCores > 0 && cpuCores <= WEBLLM_WEAK_CPU_CORES) {
-            reasons.push(`CPU 逻辑核心数约 ${cpuCores}`);
-        }
-
-        return {
-            hasWebGPU,
-            memoryGB,
-            cpuCores,
-            isWeak: reasons.length > 0,
-            reasons,
-        };
-    }
-
-    function renderWebLLMPerformance(profile) {
-        if (!webllmPerformanceNote) return;
-
-        if (!isWebLLMSupportedBrowser) {
-            webllmPerformanceNote.textContent =
-                "当前浏览器不支持 WebLLM（仅 Chrome/Edge 可用）";
-            webllmPerformanceNote.className = "jyt-perf-note jyt-perf-warning";
-            return;
-        }
-
-        if (!profile || !profile.isWeak) {
-            webllmPerformanceNote.textContent =
-                "设备检测通过，可尝试使用本地模型翻译。";
-            webllmPerformanceNote.className = "jyt-perf-note jyt-perf-ok";
-            return;
-        }
-
-        webllmPerformanceNote.textContent =
-            "设备性能偏弱，不建议开启 WebLLM: " +
-            profile.reasons.join("；") +
-            "。";
-        webllmPerformanceNote.className = "jyt-perf-note jyt-perf-warning";
+        return backgroundPort;
     }
 
     function clampPercent(value, fallback) {
@@ -1258,6 +1198,7 @@ document.addEventListener("DOMContentLoaded", () => {
             engine === "ollama" ||
             engine === "special_translate" ||
             engine === "custom_openai" ||
+            engine === "openrouter" ||
             engine === "deepseek" ||
             engine === "qwen" ||
             engine === "glm" ||
@@ -1265,7 +1206,6 @@ document.addEventListener("DOMContentLoaded", () => {
             engine === "grok" ||
             engine === "claude" ||
             engine === "gemini" ||
-            engine === "webllm" ||
             engine === "google" ||
             engine === "bing";
         openaiSection.classList.toggle("jyt-hidden", hideOpenAI);
@@ -1274,6 +1214,13 @@ document.addEventListener("DOMContentLoaded", () => {
             customOpenAISection.classList.toggle(
                 "jyt-hidden",
                 engine !== "custom_openai",
+            );
+        }
+
+        if (openrouterSection) {
+            openrouterSection.classList.toggle(
+                "jyt-hidden",
+                engine !== "openrouter",
             );
         }
 
@@ -1319,11 +1266,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 "jyt-hidden",
                 !showSpecialTranslate,
             );
-        }
-
-        if (webllmSection) {
-            const showWebLLM = engine === "webllm" && isWebLLMSupportedBrowser;
-            webllmSection.classList.toggle("jyt-hidden", !showWebLLM);
         }
 
         ensureActiveEngineModelListLoaded(engine);
@@ -1516,7 +1458,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     : "";
                 const llmEngine = LLM_ENGINES.has(savedLLMEngine)
                     ? savedLLMEngine
-                    : migratedLLMEngine || "openai";
+                    : migratedLLMEngine || "openrouter";
                 const uiEngine = LLM_ENGINES.has(savedEngine)
                     ? "llm"
                     : savedEngine || "auto";
@@ -1540,7 +1482,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     items.openai_model || "",
                 ).trim();
                 const savedOpenAIModel =
-                    unifiedOpenAIModel || legacyThinkingModel || "gpt-4o-mini";
+                    unifiedOpenAIModel || legacyThinkingModel || "gpt-5.4-mini";
                 els.openai_custom_model.value = items.openai_custom_model || "";
                 els.openai_custom_prompt.value =
                     items.openai_custom_prompt || "";
@@ -1582,12 +1524,36 @@ document.addEventListener("DOMContentLoaded", () => {
                           ),
                       )
                     : "0";
+                els.openrouter_api_url.value =
+                    items.openrouter_api_url || DEFAULT_OPENROUTER_API_URL;
+                els.openrouter_api_key.value = items.openrouter_api_key || "";
+                const savedOpenRouterModel =
+                    items.openrouter_model || DEFAULT_OPENROUTER_FREE_MODEL;
+                els.openrouter_custom_model.value =
+                    items.openrouter_custom_model || "";
+                els.openrouter_custom_prompt.value =
+                    items.openrouter_custom_prompt || "";
+                els.openrouter_show_thoughts.value =
+                    items.openrouter_show_thoughts ? "true" : "false";
+                els.openrouter_reasoning_effort.value =
+                    items.openrouter_reasoning_effort || "medium";
+                els.openrouter_max_completion_tokens.value = Number.isFinite(
+                    Number(items.openrouter_max_completion_tokens),
+                )
+                    ? String(
+                          Math.floor(
+                              Number(items.openrouter_max_completion_tokens),
+                          ),
+                      )
+                    : "0";
+                populateOpenRouterModelSelect([], savedOpenRouterModel);
+                modelListLoaded.delete("openrouter");
                 els.deepseek_api_url.value =
                     items.deepseek_api_url ||
                     "https://api.deepseek.com/chat/completions";
                 els.deepseek_api_key.value = items.deepseek_api_key || "";
                 const savedDeepSeekModel =
-                    items.deepseek_model || "deepseek-chat";
+                    items.deepseek_model || "deepseek-v4-flash";
                 els.deepseek_custom_model.value =
                     items.deepseek_custom_model || "";
                 els.deepseek_custom_prompt.value =
@@ -1599,7 +1565,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     items.qwen_api_url ||
                     "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation";
                 els.qwen_api_key.value = items.qwen_api_key || "";
-                const savedQwenModel = items.qwen_model || "qwen-plus";
+                const savedQwenModel = items.qwen_model || "qwen3.5-plus";
                 els.qwen_custom_model.value = items.qwen_custom_model || "";
                 els.qwen_custom_prompt.value = items.qwen_custom_prompt || "";
                 els.qwen_show_thoughts.value = items.qwen_show_thoughts
@@ -1629,7 +1595,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     items.xiaomi_api_url ||
                     "https://api.xiaomimimo.com/v1/chat/completions";
                 els.xiaomi_api_key.value = items.xiaomi_api_key || "";
-                const savedXiaomiModel = items.xiaomi_model || "mimo-v2-pro";
+                const savedXiaomiModel = items.xiaomi_model || "mimo-v2.5";
                 els.xiaomi_custom_model.value = items.xiaomi_custom_model || "";
                 els.xiaomi_custom_prompt.value =
                     items.xiaomi_custom_prompt || "";
@@ -1649,7 +1615,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     items.grok_api_url ||
                     "https://api.x.ai/v1/chat/completions";
                 els.grok_api_key.value = items.grok_api_key || "";
-                const savedGrokModel = items.grok_model || "grok-3-latest";
+                const savedGrokModel = items.grok_model || "grok-4.3";
                 els.grok_custom_model.value = items.grok_custom_model || "";
                 els.grok_custom_prompt.value = items.grok_custom_prompt || "";
                 els.grok_show_thoughts.value = items.grok_show_thoughts
@@ -1716,7 +1682,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     "https://generativelanguage.googleapis.com/v1beta/models";
                 els.gemini_api_key.value = items.gemini_api_key || "";
                 const savedGeminiModel =
-                    items.gemini_model || "gemini-2.5-flash";
+                    items.gemini_model || "gemini-flash-latest";
                 els.gemini_custom_model.value = items.gemini_custom_model || "";
                 els.gemini_custom_prompt.value =
                     items.gemini_custom_prompt || "";
@@ -1737,7 +1703,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     savedGeminiModel,
                 );
                 modelListLoaded.delete("gemini");
-                const savedOllamaModel = items.ollama_model || "";
+                const savedOllamaModel =
+                    items.ollama_model || "qwen3.5:latest";
                 els.ollama_api_url.value =
                     items.ollama_api_url || "http://localhost:11434/api/chat";
                 els.ollama_custom_model.value = items.ollama_custom_model || "";
@@ -1770,25 +1737,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     savedSpecialModel,
                 );
                 modelListLoaded.delete("special_translate");
-                const savedModel =
-                    items.webllm_model || "Qwen3-0.6B-q4f16_1-MLC";
-                els.webllm_custom_model.value = items.webllm_custom_model || "";
-                els.webllm_custom_prompt.value =
-                    items.webllm_custom_prompt || "";
-                els.webllm_show_thoughts.value = items.webllm_show_thoughts
-                    ? "true"
-                    : "false";
-                els.webllm_model_mirror.value =
-                    items.webllm_model_mirror || "official";
-                els.webllm_custom_mirror.value =
-                    items.webllm_custom_mirror || "";
-                els.webllm_custom_mirror.disabled =
-                    els.webllm_model_mirror.value !== "custom";
-                populateWebLLMModelSelect(
-                    RECOMMENDED_WEBLLM_MODELS,
-                    savedModel,
-                );
-                modelListLoaded.delete("webllm");
                 els.theme_mode.value = items.theme_mode || "auto";
                 els.font_family.value = items.font_family || "";
                 els.bubble_width_percent.value = clampPercent(
@@ -1819,6 +1767,7 @@ document.addEventListener("DOMContentLoaded", () => {
             els.custom_openai_model,
             els.custom_openai_custom_model,
         );
+        const selectedOpenRouterModel = getSelectedOpenRouterModel();
         const selectedDeepSeekModel = getSelectedOpenAICompatModel(
             els.deepseek_model,
             els.deepseek_custom_model,
@@ -1880,6 +1829,20 @@ document.addEventListener("DOMContentLoaded", () => {
                 els.custom_openai_reasoning_effort.value,
             custom_openai_max_completion_tokens: Number(
                 els.custom_openai_max_completion_tokens.value || 0,
+            ),
+            openrouter_api_url: (els.openrouter_api_url.value || "").trim(),
+            openrouter_api_key: els.openrouter_api_key.value,
+            openrouter_model: selectedOpenRouterModel,
+            openrouter_custom_model: (
+                els.openrouter_custom_model.value || ""
+            ).trim(),
+            openrouter_custom_prompt: els.openrouter_custom_prompt.value || "",
+            openrouter_show_thoughts:
+                els.openrouter_show_thoughts.value === "true",
+            openrouter_reasoning_effort:
+                els.openrouter_reasoning_effort.value,
+            openrouter_max_completion_tokens: Number(
+                els.openrouter_max_completion_tokens.value || 0,
             ),
             deepseek_api_url: (els.deepseek_api_url.value || "").trim(),
             deepseek_api_key: els.deepseek_api_key.value,
@@ -1961,12 +1924,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 els.special_translate_custom_prompt.value || "",
             special_translate_show_thoughts:
                 els.special_translate_show_thoughts.value === "true",
-            webllm_model: els.webllm_model_select.value,
-            webllm_custom_model: (els.webllm_custom_model.value || "").trim(),
-            webllm_custom_prompt: els.webllm_custom_prompt.value || "",
-            webllm_show_thoughts: els.webllm_show_thoughts.value === "true",
-            webllm_model_mirror: els.webllm_model_mirror.value,
-            webllm_custom_mirror: (els.webllm_custom_mirror.value || "").trim(),
             theme_mode: els.theme_mode.value,
             font_family: els.font_family.value,
             bubble_width_percent: clampPercent(
@@ -1979,11 +1936,6 @@ document.addEventListener("DOMContentLoaded", () => {
             ),
             config_updated_at: Date.now(),
         };
-        if (effectiveEngine === "webllm" && !isWebLLMSupportedBrowser) {
-            showToast("当前浏览器不支持 WebLLM，请切换到 Chrome/Edge。");
-            return;
-        }
-
         if (effectiveEngine === "custom_openai") {
             if (!data.custom_openai_api_key) {
                 showToast("请先填写自定义 OpenAI 兼容 API Key。", true);
@@ -1996,6 +1948,20 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!data.custom_openai_api_url) {
                 data.custom_openai_api_url =
                     "https://api.openai.com/v1/chat/completions";
+            }
+        }
+
+        if (effectiveEngine === "openrouter") {
+            if (!data.openrouter_api_key) {
+                showToast("请先填写 OpenRouter API Key。", true);
+                return;
+            }
+            if (!data.openrouter_model) {
+                showToast("请先选择 OpenRouter 模型或填写自定义模型名。", true);
+                return;
+            }
+            if (!data.openrouter_api_url) {
+                data.openrouter_api_url = DEFAULT_OPENROUTER_API_URL;
             }
         }
 
@@ -2137,25 +2103,9 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
 
-        if (
-            effectiveEngine === "webllm" &&
-            webllmPerfProfile &&
-            webllmPerfProfile.isWeak
-        ) {
-            const ok = window.confirm(
-                "设备性能偏弱，继续启用 WebLLM 可能导致卡顿或加载失败，确定继续吗？",
-            );
-            if (!ok) {
-                return;
-            }
-        }
-
         const permissionUrls = Object.entries(data)
             .filter(([key, value]) => key.endsWith("_api_url") && value)
             .map(([, value]) => value);
-        if (data.webllm_custom_mirror) {
-            permissionUrls.push(data.webllm_custom_mirror);
-        }
         const granted =
             await syncDataController.requestOptionalHostPermissions(
                 permissionUrls,
@@ -2238,11 +2188,6 @@ document.addEventListener("DOMContentLoaded", () => {
         applyTheme(els.theme_mode.value);
     });
 
-    els.webllm_model_select?.addEventListener("change", () => {
-        const isCustom = els.webllm_model_select.value === "custom";
-        els.webllm_custom_model.disabled = !isCustom;
-    });
-
     els.ollama_model_select?.addEventListener("change", () => {
         const isCustom = els.ollama_model_select.value === "custom";
         els.ollama_custom_model.disabled = !isCustom;
@@ -2289,6 +2234,28 @@ document.addEventListener("DOMContentLoaded", () => {
                     selectedModel,
                 );
                 modelListLoaded.delete(cfg.name);
+            });
+    }
+
+    function refreshOpenRouterModels(force) {
+        if (!force && modelListLoaded.has("openrouter")) {
+            return Promise.resolve();
+        }
+        const selectedModel = getSelectedOpenRouterModel();
+        return requestOpenRouterModelList(
+            els.openrouter_api_url.value,
+            els.openrouter_api_key.value,
+        )
+            .then((res) => {
+                const modelItems = Array.isArray(res.modelItems)
+                    ? res.modelItems
+                    : [];
+                populateOpenRouterModelSelect(modelItems, selectedModel);
+                modelListLoaded.add("openrouter");
+            })
+            .catch(() => {
+                populateOpenRouterModelSelect([], selectedModel);
+                modelListLoaded.delete("openrouter");
             });
     }
 
@@ -2409,29 +2376,6 @@ document.addEventListener("DOMContentLoaded", () => {
             });
     }
 
-    function refreshWebLLMModels(force) {
-        if (!isWebLLMSupportedBrowser) {
-            return Promise.resolve();
-        }
-        if (!force && modelListLoaded.has("webllm")) {
-            return Promise.resolve();
-        }
-        const selectedModel = getSelectedWebLLMModelId();
-        return requestWebLLMModelList()
-            .then((res) => {
-                const modelIds = Array.isArray(res.modelIds)
-                    ? res.modelIds
-                    : [];
-                if (modelIds.length > 0) {
-                    populateWebLLMModelSelect(modelIds, selectedModel);
-                }
-                modelListLoaded.add("webllm");
-            })
-            .catch(() => {
-                modelListLoaded.delete("webllm");
-            });
-    }
-
     function ensureActiveEngineModelListLoaded(engine) {
         const activeEngine = String(
             engine || getCurrentEffectiveEngine() || "auto",
@@ -2450,6 +2394,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 OPENAI_COMPAT_ENGINE_BY_NAME.openai,
                 false,
             );
+            return;
+        }
+
+        if (activeEngine === "openrouter") {
+            void refreshOpenRouterModels(false);
             return;
         }
 
@@ -2473,9 +2422,6 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        if (activeEngine === "webllm") {
-            void refreshWebLLMModels(false);
-        }
     }
 
     OPENAI_COMPAT_MODEL_ENGINES.forEach((cfg) => {
@@ -2498,6 +2444,25 @@ document.addEventListener("DOMContentLoaded", () => {
             debounceByKey(`model-${cfg.name}`, () => {
                 void refreshOpenAICompatModels(cfg, true);
             });
+        });
+    });
+
+    els.openrouter_model?.addEventListener("change", () => {
+        const isCustom = els.openrouter_model.value === "custom";
+        els.openrouter_custom_model.disabled = !isCustom;
+    });
+
+    els.openrouter_api_url?.addEventListener("change", () => {
+        modelListLoaded.delete("openrouter");
+        debounceByKey("model-openrouter", () => {
+            void refreshOpenRouterModels(true);
+        });
+    });
+
+    els.openrouter_api_key?.addEventListener("change", () => {
+        modelListLoaded.delete("openrouter");
+        debounceByKey("model-openrouter", () => {
+            void refreshOpenRouterModels(true);
         });
     });
 
@@ -2579,76 +2544,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    els.webllm_model_mirror?.addEventListener("change", () => {
-        const isCustom = els.webllm_model_mirror.value === "custom";
-        els.webllm_custom_mirror.disabled = !isCustom;
-    });
-
-    webllmDownloadBtn?.addEventListener("click", () => {
-        if (!isWebLLMSupportedBrowser) {
-            setWebLLMStatus("当前浏览器不支持 WebLLM", true);
-            return;
-        }
-
-        const modelId = getSelectedWebLLMModelId();
-        if (!modelId) {
-            setWebLLMStatus("请先选择或输入模型 ID", true);
-            return;
-        }
-
-        const requestId = `webllm-preload-${Date.now()}`;
-        setWebLLMButtonsEnabled(false);
-        setWebLLMStatus("开始下载/加载模型...", false);
-
-        try {
-            const port = ensureWebLLMPort();
-            port.postMessage({
-                type: MESSAGE_TYPES.WEBLLM_PRELOAD || "WEBLLM_PRELOAD",
-                requestId,
-                modelId,
-                settings: {
-                    webllm_model_mirror: els.webllm_model_mirror.value,
-                    webllm_custom_mirror: (
-                        els.webllm_custom_mirror.value || ""
-                    ).trim(),
-                },
-            });
-        } catch (err) {
-            setWebLLMButtonsEnabled(true);
-            setWebLLMStatus("无法连接后台服务，请重试", true);
-        }
-    });
-
-    webllmClearCacheBtn?.addEventListener("click", () => {
-        const modelId = getSelectedWebLLMModelId();
-        if (!modelId) {
-            setWebLLMStatus("请先选择或输入模型 ID", true);
-            return;
-        }
-
-        const requestId = `webllm-clear-${Date.now()}`;
-        setWebLLMButtonsEnabled(false);
-        setWebLLMStatus("正在清理模型缓存...", false);
-
-        try {
-            const port = ensureWebLLMPort();
-            port.postMessage({
-                type: MESSAGE_TYPES.WEBLLM_CLEAR_CACHE || "WEBLLM_CLEAR_CACHE",
-                requestId,
-                modelId,
-                settings: {
-                    webllm_model_mirror: els.webllm_model_mirror.value,
-                    webllm_custom_mirror: (
-                        els.webllm_custom_mirror.value || ""
-                    ).trim(),
-                },
-            });
-        } catch (err) {
-            setWebLLMButtonsEnabled(true);
-            setWebLLMStatus("无法连接后台服务，请重试", true);
-        }
-    });
-
     openLocalPdfBtn?.addEventListener("click", async () => {
         const runtimeBaseUrl = chrome.runtime.getURL("");
         const isFirefoxRuntime = runtimeBaseUrl.startsWith("moz-extension://");
@@ -2726,19 +2621,4 @@ document.addEventListener("DOMContentLoaded", () => {
         }, 60);
     }
 
-    if (!isWebLLMSupportedBrowser) {
-        const webllmOption = els.llm_engine_select?.querySelector(
-            'option[value="webllm"]',
-        );
-        webllmOption?.remove();
-        if (els.llm_engine_select?.value === "webllm") {
-            els.llm_engine_select.value = "openai";
-        }
-        updateEngineDependentUI();
-    }
-
-    void evaluateWebLLMPerformance().then((profile) => {
-        webllmPerfProfile = profile;
-        renderWebLLMPerformance(profile);
-    });
 });

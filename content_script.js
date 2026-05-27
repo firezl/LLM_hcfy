@@ -1127,15 +1127,6 @@
                 return;
             }
 
-            if (message.type === "WEBLLM_MODEL_PROGRESS") {
-                const percent = Number.isFinite(message.progress)
-                    ? Math.max(0, Math.min(100, Math.round(message.progress)))
-                    : null;
-                const suffix = percent === null ? "" : ` (${percent}%)`;
-                streamEl.innerText = `${message.text || "模型加载中"}${suffix}`;
-                return;
-            }
-
             if (message.type === "TRANSLATE_THOUGHT") {
                 thoughtEl.textContent =
                     (thoughtEl.textContent || "") + (message.content || "");
@@ -1391,23 +1382,6 @@
             }
         }
 
-        if (engine === "webllm") {
-            startBackgroundTranslate(
-                text,
-                from,
-                to,
-                settings,
-                streamEl,
-                thoughtEl,
-                thoughtDetails,
-                {
-                    allowBrowserFallback: false,
-                    isThinking: !!settings.webllm_show_thoughts,
-                },
-            );
-            return;
-        }
-
         if (engine === "ollama") {
             startBackgroundTranslate(
                 text,
@@ -1539,6 +1513,23 @@
                 {
                     allowBrowserFallback: false,
                     isThinking: !!settings.custom_openai_show_thoughts,
+                },
+            );
+            return;
+        }
+
+        if (engine === "openrouter") {
+            startBackgroundTranslate(
+                text,
+                from,
+                to,
+                settings,
+                streamEl,
+                thoughtEl,
+                thoughtDetails,
+                {
+                    allowBrowserFallback: false,
+                    isThinking: !!settings.openrouter_show_thoughts,
                 },
             );
             return;

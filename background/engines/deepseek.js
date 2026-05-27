@@ -8,7 +8,7 @@ import { getThinkingEnabledByEngine } from "./thinking-utils.js";
 import { normalizeOpenAICompatEndpoint } from "./url-utils.js";
 
 const DEFAULT_DEEPSEEK_API_URL = "https://api.deepseek.com/chat/completions";
-const DEFAULT_DEEPSEEK_MODEL = "deepseek-chat";
+const DEFAULT_DEEPSEEK_MODEL = "deepseek-v4-flash";
 
 export async function streamDeepSeekTranslate(request, port, state) {
     const { requestId, text, settings } = request;

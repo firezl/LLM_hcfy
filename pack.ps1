@@ -73,23 +73,6 @@ try {
     Optimize-PackageDir $chromeTempDir
     Optimize-PackageDir $firefoxTempDir
 
-    # Firefox 提交会对 JS 做解析，单文件超过 5MB 会被拒；
-    # 用轻量 stub 覆盖 WebLLM 入口，避免 background 静态 import 解析失败。
-    $firefoxWebLLMEntry = Join-Path $firefoxTempDir "vendor\webllm\index.js"
-    if (Test-Path $firefoxWebLLMEntry) {
-        @'
-export const prebuiltAppConfig = { model_list: [] };
-
-export async function CreateMLCEngine() {
-    throw new Error("WebLLM is disabled in Firefox package");
-}
-
-export async function deleteModelAllInfoInCache() {
-    return;
-}
-'@ | Set-Content -Path $firefoxWebLLMEntry -Encoding UTF8
-    }
-
     # Chrome/Edge 包
     Build-Archive $chromeTempDir $zipName
 
@@ -98,22 +81,6 @@ export async function deleteModelAllInfoInCache() {
     $firefoxManifest = Get-Content $firefoxManifestPath -Raw | ConvertFrom-Json
     $firefoxManifest.background = [ordered]@{
         scripts = @("background.js")
-    }
-
-    if ($firefoxManifest.web_accessible_resources) {
-        $filteredWar = @()
-        foreach ($entry in $firefoxManifest.web_accessible_resources) {
-            $resources = @($entry.resources | Where-Object { $_ -ne "vendor/webllm/index.js" })
-            if ($resources.Count -gt 0) {
-                $entry.resources = $resources
-                $filteredWar += $entry
-            }
-        }
-        if ($filteredWar.Count -gt 0) {
-            $firefoxManifest.web_accessible_resources = $filteredWar
-        } else {
-            $firefoxManifest.PSObject.Properties.Remove("web_accessible_resources")
-        }
     }
 
     $firefoxManifest | ConvertTo-Json -Depth 100 | Set-Content -Path $firefoxManifestPath -Encoding UTF8

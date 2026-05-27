@@ -7,7 +7,7 @@ import { normalizeFixedHttpEndpoint } from "./url-utils.js";
 
 const DEFAULT_GEMINI_BASE_URL =
     "https://generativelanguage.googleapis.com/v1beta/models";
-const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
+const DEFAULT_GEMINI_MODEL = "gemini-flash-latest";
 
 function parseGeminiSSELine(line) {
     const trimmed = String(line || "").trim();

@@ -168,18 +168,3 @@ export function buildTranslationgemmaPrompt(text, from, to, options) {
     return instruction;
 }
 
-export function buildWebLLMPrompt(text, to, options) {
-    const targetLang = getLanguageDisplayName(to);
-    const glossaryBlock = buildGlossaryConstraint(options?.glossaryTerms);
-    return `${glossaryBlock}\n请把以下文本翻译为${targetLang}，不要有多余的输出。输入:\n${text}`;
-}
-
-export function buildWebLLMPromptWithUserTemplate(text, to, options) {
-    return buildPromptWithTemplate(
-        options?.customPromptTemplate,
-        text,
-        to,
-        options,
-        buildWebLLMPrompt,
-    );
-}

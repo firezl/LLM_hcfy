@@ -19,11 +19,9 @@ import {
     MESSAGE_TYPE_TERM_LIST,
     MESSAGE_TYPE_TERM_UPSERT,
     MESSAGE_TYPE_CANCEL,
-    MESSAGE_TYPE_WEBLLM_CLEAR_CACHE,
-    MESSAGE_TYPE_WEBLLM_GET_MODELS,
-    MESSAGE_TYPE_WEBLLM_PRELOAD,
     PORT_NAME,
     MESSAGE_TYPE_OPENAI_COMPAT_GET_MODELS,
+    MESSAGE_TYPE_OPENROUTER_GET_MODELS,
     MESSAGE_TYPE_CLAUDE_GET_MODELS,
     MESSAGE_TYPE_GEMINI_GET_MODELS,
 } from "./constants.js";
@@ -35,15 +33,10 @@ import {
 import { handleTranslateStart } from "./translate-router.js";
 import { handleOllamaGetModels } from "./engines/ollama.js";
 import { handleOpenAICompatGetModels } from "./engines/openai-compat-models.js";
+import { handleOpenRouterGetModels } from "./engines/openrouter.js";
 import { handleClaudeGetModels } from "./engines/claude-models.js";
 import { handleGeminiGetModels } from "./engines/gemini-models.js";
 import { handleSpecialTranslateGetModels } from "./engines/special-translate.js";
-import {
-    handleWebLLMClearCache,
-    handleWebLLMGetModels,
-    handleWebLLMPreload,
-    startWebLLMIdleMonitor,
-} from "./engines/webllm.js";
 import {
     ensureTermStoreReady,
     handleTermMessage as handleBackgroundTermMessage,
@@ -51,7 +44,6 @@ import {
 import { extensionApi } from "./extension-api.js";
 import { handleSyncMessage } from "./sync-manager.js";
 
-startWebLLMIdleMonitor();
 void ensureTermStoreReady();
 
 extensionApi.runtime.onConnect.addListener((port) => {
@@ -96,21 +88,6 @@ extensionApi.runtime.onConnect.addListener((port) => {
             return;
         }
 
-        if (message.type === MESSAGE_TYPE_WEBLLM_PRELOAD) {
-            void handleWebLLMPreload(message, port, state);
-            return;
-        }
-
-        if (message.type === MESSAGE_TYPE_WEBLLM_CLEAR_CACHE) {
-            void handleWebLLMClearCache(message, port, state);
-            return;
-        }
-
-        if (message.type === MESSAGE_TYPE_WEBLLM_GET_MODELS) {
-            void handleWebLLMGetModels(message, port, state);
-            return;
-        }
-
         if (message.type === MESSAGE_TYPE_OLLAMA_GET_MODELS) {
             void handleOllamaGetModels(message, port, state);
             return;
@@ -118,6 +95,11 @@ extensionApi.runtime.onConnect.addListener((port) => {
 
         if (message.type === MESSAGE_TYPE_OPENAI_COMPAT_GET_MODELS) {
             void handleOpenAICompatGetModels(message, port, state);
+            return;
+        }
+
+        if (message.type === MESSAGE_TYPE_OPENROUTER_GET_MODELS) {
+            void handleOpenRouterGetModels(message, port, state);
             return;
         }
 

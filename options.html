@@ -7,7 +7,12 @@
     </head>
     <body id="jyt-options-body">
         <div class="jyt-form">
-            <h2>LLM划词翻译 设置</h2>
+            <div class="jyt-options-heading">
+                <h2>LLM划词翻译 设置</h2>
+                <a class="jyt-help-link" href="help.html" target="_blank"
+                    >快速上手</a
+                >
+            </div>
 
             <div class="jyt-tabs" id="options_tabs">
                 <div class="jyt-tab active" data-tab="tab_general">通用</div>
@@ -47,7 +52,7 @@
                         <option value="browser">浏览器AI（实验）</option>
                     </select>
                     <div class="jyt-hint">
-                        实验功能目前只支持最新的Chrome内核浏览器，并且可能会下载模型
+                        实验功能目前支持最新版 Edge 和 Chrome，不支持 Firefox，并且可能会下载模型
                     </div>
 
                     <label>源语言</label>
@@ -124,6 +129,7 @@
                         <option value="custom_openai">
                             自定义 OpenAI 兼容
                         </option>
+                        <option value="openrouter">OpenRouter</option>
                         <option value="gemini">Gemini</option>
                         <option value="claude">Claude</option>
                         <option value="qwen">Qwen</option>
@@ -132,7 +138,6 @@
                         <option value="xiaomi">Xiaomi Mimo</option>
                         <option value="grok">xAI Grok</option>
                         <option value="ollama">Ollama 本地服务</option>
-                        <option value="webllm">WebLLM 本地模型（实验）</option>
                     </select>
                     <div class="jyt-hint">
                         先在“通用”里选择“大模型翻译”，再在这里选择具体模型来源。
@@ -249,6 +254,68 @@
                     />
                 </div>
 
+                <div class="jyt-section jyt-hidden" id="openrouter_section">
+                    <div class="jyt-section-title">OpenRouter 配置</div>
+                    <label>API 地址</label>
+                    <input
+                        id="openrouter_api_url"
+                        type="text"
+                        placeholder="https://openrouter.ai/api/v1/chat/completions"
+                    />
+                    <label>API Key</label>
+                    <input
+                        id="openrouter_api_key"
+                        type="password"
+                        placeholder="sk-or-v1-..."
+                    />
+                    <label>模型</label>
+                    <select id="openrouter_model">
+                        <option value="openrouter/free">
+                            openrouter/free（自动免费模型）
+                        </option>
+                        <option value="custom">自定义模型名</option>
+                    </select>
+                    <label>自定义模型名</label>
+                    <input
+                        id="openrouter_custom_model"
+                        type="text"
+                        placeholder="例如: qwen/qwen3-14b:free"
+                    />
+                    <label>自定义翻译 Prompt（仅 OpenRouter 生效）</label>
+                    <textarea
+                        id="openrouter_custom_prompt"
+                        rows="4"
+                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 
+示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。"
+                    ></textarea>
+                    <label>显示思考过程</label>
+                    <select id="openrouter_show_thoughts">
+                        <option value="false">否</option>
+                        <option value="true">是</option>
+                    </select>
+                    <label>推理强度</label>
+                    <select id="openrouter_reasoning_effort">
+                        <option value="none">none</option>
+                        <option value="minimal">minimal</option>
+                        <option value="low">low</option>
+                        <option value="medium">medium</option>
+                        <option value="high">high</option>
+                        <option value="xhigh">xhigh</option>
+                    </select>
+                    <label>最大输出 Token（0=自动）</label>
+                    <input
+                        id="openrouter_max_completion_tokens"
+                        type="number"
+                        min="0"
+                        step="1"
+                        placeholder="0"
+                    />
+                    <div class="jyt-hint">
+                        默认使用 openrouter/free 自动路由；模型列表会优先显示 OpenRouter
+                        标记或定价为免费的模型。
+                    </div>
+                </div>
+
                 <div class="jyt-section jyt-hidden" id="deepseek_section">
                     <div class="jyt-section-title">DeepSeek 配置</div>
                     <label>API 地址</label>
@@ -272,7 +339,7 @@
                     <input
                         id="deepseek_custom_model"
                         type="text"
-                        placeholder="例如: deepseek-chat"
+                        placeholder="例如: deepseek-v4-flash"
                     />
                     <label>自定义翻译 Prompt（仅 DeepSeek 生效）</label>
                     <textarea
@@ -310,7 +377,7 @@
                     <input
                         id="qwen_custom_model"
                         type="text"
-                        placeholder="例如: qwen-plus"
+                        placeholder="例如: qwen3.5-plus"
                     />
                     <label>自定义翻译 Prompt（仅 Qwen 生效）</label>
                     <textarea
@@ -404,7 +471,7 @@
                     <input
                         id="xiaomi_custom_model"
                         type="text"
-                        placeholder="例如: mimo-v2-pro"
+                        placeholder="例如: mimo-v2.5"
                     />
                     <label>自定义翻译 Prompt（仅 Xiaomi 生效）</label>
                     <textarea
@@ -450,7 +517,7 @@
                     <input
                         id="grok_custom_model"
                         type="text"
-                        placeholder="例如: grok-3-latest"
+                        placeholder="例如: grok-4.3"
                     />
                     <label>自定义翻译 Prompt（仅 Grok 生效）</label>
                     <textarea
@@ -553,7 +620,7 @@
                     <input
                         id="gemini_custom_model"
                         type="text"
-                        placeholder="例如: gemini-2.5-flash"
+                        placeholder="例如: gemini-flash-latest"
                     />
                     <label>自定义翻译 Prompt（仅 Gemini 生效）</label>
                     <textarea
@@ -603,7 +670,7 @@
                     <input
                         id="ollama_custom_model"
                         type="text"
-                        placeholder="例如: qwen3:8b"
+                        placeholder="例如: qwen3.5:latest"
                     />
                     <label>自定义翻译 Prompt（仅 Ollama 生效）</label>
                     <textarea
@@ -619,68 +686,6 @@
                     <div class="jyt-hint">
                         自动检测模型来自 /api/tags 的 models[].name。
                     </div>
-                </div>
-
-                <div class="jyt-section jyt-hidden" id="webllm_section">
-                    <div class="jyt-section-title">WebLLM 本地模型配置</div>
-                    <div
-                        id="webllm_performance_note"
-                        class="jyt-perf-note"
-                    ></div>
-                    <label>推荐模型</label>
-                    <select id="webllm_model_select">
-                        <option value="Qwen3-0.6B-q4f16_1-MLC">
-                            Qwen3 0.6B (推荐)
-                        </option>
-                        <option value="SmolLM2-360M-Instruct-q4f16_1-MLC">
-                            SmolLM2 360M (更轻量)
-                        </option>
-                        <option value="Llama-3.2-1B-Instruct-q4f16_1-MLC">
-                            Llama 3.2 1B (效果更好)
-                        </option>
-                        <option value="custom">自定义模型 ID</option>
-                    </select>
-                    <label>自定义模型 ID</label>
-                    <input
-                        id="webllm_custom_model"
-                        type="text"
-                        placeholder="例如: Qwen3-0.6B-q4f16_1-MLC"
-                    />
-                    <label>自定义翻译 Prompt（仅 WebLLM 生效）</label>
-                    <textarea
-                        id="webllm_custom_prompt"
-                        rows="4"
-                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。"
-                    ></textarea>
-                    <label>显示思考过程</label>
-                    <select id="webllm_show_thoughts">
-                        <option value="false">否</option>
-                        <option value="true">是</option>
-                    </select>
-                    <label>下载镜像</label>
-                    <select id="webllm_model_mirror">
-                        <option value="official">官方 HuggingFace</option>
-                        <option value="hf-mirror">hf-mirror（中国推荐）</option>
-                        <option value="custom">自定义镜像</option>
-                    </select>
-                    <label>自定义镜像地址</label>
-                    <input
-                        id="webllm_custom_mirror"
-                        type="text"
-                        placeholder="https://hf-mirror.com"
-                    />
-                    <div class="jyt-btn-group jyt-btn-group-secondary">
-                        <button id="webllm_download" type="button">
-                            下载/缓存模型
-                        </button>
-                        <button id="webllm_clear_cache" type="button">
-                            清理缓存
-                        </button>
-                    </div>
-                    <div
-                        id="webllm_status"
-                        class="jyt-current-pdf-status"
-                    ></div>
                 </div>
 
                 <div

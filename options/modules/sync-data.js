@@ -49,9 +49,9 @@
                 if (
                     key === "show_thoughts" ||
                     key === "custom_openai_show_thoughts" ||
+                    key === "openrouter_show_thoughts" ||
                     key === "deepseek_show_thoughts" ||
                     key === "qwen_show_thoughts" ||
-                    key === "webllm_show_thoughts" ||
                     key === "qwen_preserve_thinking" ||
                     key === "glm_show_thoughts" ||
                     key === "glm_clear_thinking" ||
@@ -67,6 +67,7 @@
                 if (
                     key === "openai_max_completion_tokens" ||
                     key === "custom_openai_max_completion_tokens" ||
+                    key === "openrouter_max_completion_tokens" ||
                     key === "qwen_thinking_budget" ||
                     key === "xiaomi_max_completion_tokens" ||
                     key === "claude_max_tokens" ||

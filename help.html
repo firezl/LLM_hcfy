@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>LLM划词翻译 - 快速上手</title>
+        <link rel="stylesheet" href="styles.css" />
+    </head>
+    <body id="jyt-help-body">
+        <main class="jyt-help-shell">
+            <header class="jyt-help-hero">
+                <div>
+                    <p class="jyt-help-kicker">快速上手</p>
+                    <h1>按设置页里的真实引擎完成配置</h1>
+                    <p>
+                        先在“通用”里选择首选翻译引擎。如果选择“大模型翻译”，再到“引擎”里选择具体模型来源。
+                        API Key 会保存在本地浏览器存储中，不会通过 WebDAV 配置同步上传。
+                    </p>
+                </div>
+                <a class="jyt-help-primary" href="options.html">打开设置</a>
+            </header>
+
+            <section class="jyt-help-section">
+                <h2>先选哪一个</h2>
+                <div class="jyt-help-steps">
+                    <article>
+                        <span>1</span>
+                        <h3>想最快试用</h3>
+                        <p>
+                            选择“OpenRouter”，申请 Key 后保留默认模型
+                            <code>openrouter/free</code>。免费模型有额度和稳定性限制。
+                        </p>
+                    </article>
+                    <article>
+                        <span>2</span>
+                        <h3>想要本地隐私</h3>
+                        <p>
+                            选择“Ollama 本地服务”，先安装 Ollama 并拉取模型，再回到设置页选择检测到的模型。
+                        </p>
+                    </article>
+                    <article>
+                        <span>3</span>
+                        <h3>想要稳定质量</h3>
+                        <p>
+                            选择 OpenAI、Gemini、Claude、DeepSeek、Qwen、GLM、xAI Grok 或 Xiaomi MiMo，按平台申请 Key。
+                        </p>
+                    </article>
+                </div>
+            </section>
+
+            <section class="jyt-help-section">
+                <h2>通用引擎</h2>
+                <div class="jyt-engine-grid">
+                    <article class="jyt-engine-card">
+                        <div class="jyt-engine-card-head">
+                            <h3>自动</h3>
+                            <span>auto</span>
+                        </div>
+                        <p>
+                            设置页默认项。当前路由会走 OpenAI 适配，因此仍需要配置 OpenAI API 地址、Key 和模型。
+                        </p>
+                        <ul class="jyt-help-mini-list">
+                            <li>适合：只想保持默认行为。</li>
+                            <li>设置：通用 -> 首选翻译引擎 -> 自动。</li>
+                        </ul>
+                    </article>
+
+                    <article class="jyt-engine-card">
+                        <div class="jyt-engine-card-head">
+                            <h3>大模型翻译</h3>
+                            <span>llm</span>
+                        </div>
+                        <p>
+                            这是所有 LLM 提供方的总入口。选择后，在“引擎”页的“大模型提供方”里选择 OpenAI、OpenRouter、Ollama 等具体引擎。
+                        </p>
+                        <ul class="jyt-help-mini-list">
+                            <li>适合：需要术语、Prompt、思考过程或更自然译文。</li>
+                            <li>设置：通用 -> 大模型翻译；引擎 -> 大模型提供方。</li>
+                        </ul>
+                    </article>
+
+                    <article class="jyt-engine-card">
+                        <div class="jyt-engine-card-head">
+                            <h3>专用大模型翻译</h3>
+                            <span>special_translate</span>
+                        </div>
+                        <p>
+                            面向 Translationgemma 这类专用翻译模型。默认 provider 是 Ollama，也可以切换到 OpenAI 兼容服务。
+                        </p>
+                        <div class="jyt-code-row">
+                            <code>http://localhost:11434/api/chat</code>
+                            <button type="button" data-copy="http://localhost:11434/api/chat">
+                                复制
+                            </button>
+                        </div>
+                        <ul class="jyt-help-mini-list">
+                            <li>provider 选 Ollama：通常不需要 API Key。</li>
+                            <li>provider 选 OpenAI 兼容：按服务要求填写 Key，可留空给本地服务。</li>
+                            <li>模型默认：<code>translategemma</code>。</li>
+                        </ul>
+                    </article>
+
+                    <article class="jyt-engine-card">
+                        <div class="jyt-engine-card-head">
+                            <h3>Google 翻译</h3>
+                            <span>google</span>
+                        </div>
+                        <p>
+                            传统机器翻译入口，不需要在设置页填写 API Key。适合做轻量兜底。
+                        </p>
+                        <ul class="jyt-help-mini-list">
+                            <li>适合：快速、免费、对质量要求不高的网页阅读。</li>
+                            <li>设置：通用 -> 首选翻译引擎 -> 谷歌翻译。</li>
+                        </ul>
+                    </article>
+
+                    <article class="jyt-engine-card">
+                        <div class="jyt-engine-card-head">
+                            <h3>Bing 翻译</h3>
+                            <span>bing</span>
+                        </div>
+                        <p>
+                            传统机器翻译入口，不需要在设置页填写 API Key。可作为 Google 翻译不可用时的备用选择。
+                        </p>
+                        <ul class="jyt-help-mini-list">
+                            <li>适合：不想申请 API Key 的用户。</li>
+                            <li>设置：通用 -> 首选翻译引擎 -> Bing翻译。</li>
+                        </ul>
+                    </article>
+
+                    <article class="jyt-engine-card">
+                        <div class="jyt-engine-card-head">
+                            <h3>浏览器 AI</h3>
+                            <span>browser</span>
+                        </div>
+                        <p>
+                            这是实验入口，面向最新版 Edge 和 Chrome 的浏览器内置 AI/Translation API。不支持 Firefox；当前后台路由仍可能提示无法在扩展 service worker 中运行，因此不建议作为默认引擎。
+                        </p>
+                        <ul class="jyt-help-mini-list">
+                            <li>适合：后续浏览器 API 成熟后再启用。</li>
+                            <li>当前建议：使用 OpenRouter、Ollama 或云端 API。</li>
+                        </ul>
+                    </article>
+                </div>
+            </section>
+
+            <section class="jyt-help-section">
+                <h2>大模型引擎逐项配置</h2>
+                <div class="jyt-help-table-wrap">
+                    <table class="jyt-help-table jyt-engine-guide-table">
+                        <thead>
+                            <tr>
+                                <th>引擎</th>
+                                <th>申请入口</th>
+                                <th>API 地址</th>
+                                <th>默认/示例模型</th>
+                                <th>填写要点</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>OpenAI</td>
+                                <td>
+                                    <a
+                                        href="https://platform.openai.com/api-keys"
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        >API Keys</a
+                                    >
+                                </td>
+                                <td><code>https://api.openai.com/v1/chat/completions</code></td>
+                                <td><code>gpt-5.4-mini</code></td>
+                                <td>
+                                    选择“大模型翻译 -> OpenAI”。API 地址可留空，插件会使用默认地址；Key 必填。需要推理模型时再调整“显示思考过程”和推理强度。
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>自定义 OpenAI 兼容</td>
+                                <td>按服务商提供</td>
+                                <td><code>https://your-endpoint/v1/chat/completions</code></td>
+                                <td><code>gpt-4o-mini</code> 或服务商模型名</td>
+                                <td>
+                                    适合 One API、New API、LiteLLM、LM Studio、llama.cpp server、LocalAI 等。当前设置保存会要求 API Key；本地服务没有 Key 时可填 <code>local</code> 作为占位。
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>OpenRouter</td>
+                                <td>
+                                    <a
+                                        href="https://openrouter.ai/settings/keys"
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        >API Keys</a
+                                    >
+                                </td>
+                                <td><code>https://openrouter.ai/api/v1/chat/completions</code></td>
+                                <td><code>openrouter/free</code></td>
+                                <td>
+                                    最适合快速试用免费模型。插件会加载 OpenRouter 模型列表，并优先显示免费模型。免费路由可能因为额度、地区或模型状态失败。
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Gemini</td>
+                                <td>
+                                    <a
+                                        href="https://aistudio.google.com/app/apikey"
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        >Google AI Studio</a
+                                    >
+                                </td>
+                                <td><code>https://generativelanguage.googleapis.com/v1beta/models</code></td>
+                                <td><code>gemini-flash-latest</code></td>
+                                <td>
+                                    API 地址填写 models 基础路径即可，插件会自动拼接 <code>:streamGenerateContent</code>。Gemma 系列不使用思考配置。
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Claude</td>
+                                <td>
+                                    <a
+                                        href="https://console.anthropic.com/settings/keys"
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        >Anthropic Console</a
+                                    >
+                                </td>
+                                <td><code>https://api.anthropic.com/v1/messages</code></td>
+                                <td><code>claude-sonnet-4-6</code></td>
+                                <td>
+                                    Key 必填。最大输出 Token 默认 <code>4096</code>。开启思考时，思考预算必须小于最大输出 Token。
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Qwen</td>
+                                <td>
+                                    <a
+                                        href="https://dashscope.console.aliyun.com/apiKey"
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        >DashScope API Key</a
+                                    >
+                                </td>
+                                <td><code>https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation</code></td>
+                                <td><code>qwen3.5-plus</code></td>
+                                <td>
+                                    当前插件使用 DashScope text-generation 接口，不是 OpenAI 兼容地址。开启思考后可设置 thinking budget，并选择是否保留思考内容。
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>DeepSeek</td>
+                                <td>
+                                    <a
+                                        href="https://platform.deepseek.com/api_keys"
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        >DeepSeek Platform</a
+                                    >
+                                </td>
+                                <td><code>https://api.deepseek.com/chat/completions</code></td>
+                                <td><code>deepseek-v4-flash</code></td>
+                                <td>
+                                    Key 必填。需要推理内容时打开“显示思考过程”；插件会发送 thinking enabled/disabled 配置。
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>GLM</td>
+                                <td>
+                                    <a
+                                        href="https://open.bigmodel.cn/usercenter/proj-mgmt/apikeys"
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        >智谱开放平台</a
+                                    >
+                                </td>
+                                <td><code>https://open.bigmodel.cn/api/paas/v4/chat/completions</code></td>
+                                <td><code>glm-5.1</code></td>
+                                <td>
+                                    Key 必填。默认会清理思考内容，想在弹窗展示思考时打开“显示思考过程”并按需要关闭“清理思考”。
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Xiaomi MiMo</td>
+                                <td>
+                                    <a
+                                        href="https://platform.xiaomimimo.com"
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        >MiMo Open Platform</a
+                                    >
+                                </td>
+                                <td><code>https://api.xiaomimimo.com/v1/chat/completions</code></td>
+                                <td><code>mimo-v2.5</code></td>
+                                <td>
+                                    Key 必填。该入口走 OpenAI 风格的 chat completions。最大输出 Token 可填 <code>0</code> 让服务端自动决定。
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>xAI Grok</td>
+                                <td>
+                                    <a
+                                        href="https://console.x.ai"
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        >xAI Console</a
+                                    >
+                                </td>
+                                <td><code>https://api.x.ai/v1/chat/completions</code></td>
+                                <td><code>grok-4.3</code></td>
+                                <td>
+                                    Key 必填。该入口是 xAI Grok，不是 Groq。不要把 Groq 的 API 地址填到这里。
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Ollama 本地服务</td>
+                                <td>
+                                    <a
+                                        href="https://ollama.com/download"
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        >下载 Ollama</a
+                                    >
+                                </td>
+                                <td><code>http://localhost:11434/api/chat</code></td>
+                                <td><code>qwen3.5:latest</code>、<code>llama3.1:8b</code></td>
+                                <td>
+                                    不需要 API Key。先启动 Ollama 并拉取模型，设置页会从 <code>/api/tags</code> 自动检测模型。
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="jyt-help-section">
+                <h2>本地模型常用命令</h2>
+                <div class="jyt-engine-grid">
+                    <article class="jyt-engine-card">
+                        <div class="jyt-engine-card-head">
+                            <h3>Ollama 拉取通用模型</h3>
+                            <span>推荐</span>
+                        </div>
+                        <div class="jyt-code-row">
+                            <code>ollama pull qwen3.5:latest</code>
+                            <button
+                                type="button"
+                                data-copy="ollama pull qwen3.5:latest"
+                            >
+                                复制
+                            </button>
+                        </div>
+                        <div class="jyt-code-row">
+                            <code>ollama pull llama3.1:8b</code>
+                            <button type="button" data-copy="ollama pull llama3.1:8b">
+                                复制
+                            </button>
+                        </div>
+                    </article>
+
+                    <article class="jyt-engine-card">
+                        <div class="jyt-engine-card-head">
+                            <h3>Translationgemma</h3>
+                            <span>专用翻译</span>
+                        </div>
+                        <p>
+                            如果 Ollama 中的模型名是 <code>translategemma</code> 或
+                            <code>translategemma:*</code>，插件会自动使用专用翻译模板。
+                        </p>
+                        <div class="jyt-code-row">
+                            <code>ollama pull translategemma</code>
+                            <button type="button" data-copy="ollama pull translategemma">
+                                复制
+                            </button>
+                        </div>
+                    </article>
+                </div>
+            </section>
+
+            <section class="jyt-help-section">
+                <h2>本地 OpenAI 兼容服务</h2>
+                <p>
+                    这些工具通常可以通过“自定义 OpenAI 兼容”接入。因为当前设置页会要求 API Key，本地服务没有 Key 时可先填
+                    <code>local</code>，如果服务拒绝 Authorization 头，再改用支持可选 Key 的“专用大模型翻译 -> OpenAI 兼容”路径。
+                </p>
+                <div class="jyt-help-table-wrap">
+                    <table class="jyt-help-table">
+                        <thead>
+                            <tr>
+                                <th>工具</th>
+                                <th>常见 API 地址</th>
+                                <th>备注</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>LM Studio</td>
+                                <td><code>http://localhost:1234/v1/chat/completions</code></td>
+                                <td>在 LM Studio 中启动 Local Server 后使用。</td>
+                            </tr>
+                            <tr>
+                                <td>llama.cpp server</td>
+                                <td><code>http://localhost:8080/v1/chat/completions</code></td>
+                                <td>端口取决于启动参数。</td>
+                            </tr>
+                            <tr>
+                                <td>LocalAI / New API / One API</td>
+                                <td><code>http://localhost:8080/v1/chat/completions</code></td>
+                                <td>以实际部署地址和模型名为准。</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="jyt-help-section">
+                <h2>字段怎么填</h2>
+                <ul class="jyt-help-checklist">
+                    <li>API 地址可以填完整接口，也可以填基础路径；插件会对 OpenAI 兼容地址补全 <code>/chat/completions</code>。</li>
+                    <li>模型下拉里没有想用的模型时，选择“自定义模型名”，再填写平台给出的模型 ID。</li>
+                    <li>Prompt 支持 <code>{targetLang}</code>、<code>{text}</code>、<code>{glossary}</code>、<code>{glossaryConstraint}</code>。</li>
+                    <li>思考过程只在模型和平台返回对应字段时显示；打开开关不代表所有模型都会返回思考内容。</li>
+                    <li>保存设置后，刷新正在阅读的网页，再重新划词测试。</li>
+                </ul>
+            </section>
+
+            <section class="jyt-help-section">
+                <h2>常见问题</h2>
+                <ul class="jyt-help-checklist">
+                    <li>提示缺少 Key：确认当前“通用”里的首选引擎和“引擎”里的大模型提供方一致。</li>
+                    <li>本地服务连不上：确认 Ollama、LM Studio 或其他服务正在运行，且地址使用 <code>localhost</code> 或 <code>127.0.0.1</code>。</li>
+                    <li>模型列表为空：先手动填自定义模型名；有些平台模型列表接口需要额外权限或暂时不可用。</li>
+                    <li>OpenRouter 免费模型失败：免费模型有频率、日额度和可用性限制，可换一个 <code>:free</code> 模型或改用付费模型。</li>
+                    <li>浏览器 AI 不工作：当前扩展后台不支持直接调用浏览器 Translation API，请改用其他引擎。</li>
+                </ul>
+            </section>
+        </main>
+
+        <div id="toast_container" class="jyt-toast-container"></div>
+        <script src="help.js"></script>
+    </body>
+</html>

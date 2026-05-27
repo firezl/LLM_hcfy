@@ -8,7 +8,7 @@ import { normalizeFixedHttpEndpoint } from "./url-utils.js";
 
 const DEFAULT_QWEN_API_URL =
     "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation";
-const DEFAULT_QWEN_MODEL = "qwen-plus";
+const DEFAULT_QWEN_MODEL = "qwen3.5-plus";
 
 function parseQwenStreamLine(line) {
     const trimmed = String(line || "").trim();

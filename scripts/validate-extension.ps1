@@ -30,8 +30,7 @@ $requiredPaths = @(
     "styles.css",
     "icons/icon-128.png",
     "vendor/pdfjs/web/viewer.html",
-    "vendor/pdfjs/build/pdf.mjs",
-    "vendor/webllm/index.js"
+    "vendor/pdfjs/build/pdf.mjs"
 )
 
 foreach ($path in $requiredPaths) {

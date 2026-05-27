@@ -8,9 +8,9 @@ import { streamGLMTranslate } from "./engines/glm.js";
 import { streamGoogleTranslate } from "./engines/google.js";
 import { streamOllamaTranslate } from "./engines/ollama.js";
 import { streamOpenAITranslate } from "./engines/openai.js";
+import { streamOpenRouterTranslate } from "./engines/openrouter.js";
 import { streamQwenTranslate } from "./engines/qwen.js";
 import { streamSpecialTranslate } from "./engines/special-translate.js";
-import { streamWebLLMTranslate } from "./engines/webllm.js";
 import { streamXiaomiTranslate } from "./engines/xiaomi.js";
 import { postTranslateError } from "./port-utils.js";
 import { getMatchedGlossaryTerms } from "./term.js";
@@ -27,10 +27,10 @@ const CUSTOM_PROMPT_SETTING_BY_ENGINE = {
     glm: "glm_custom_prompt",
     xiaomi: "xiaomi_custom_prompt",
     grok: "grok_custom_prompt",
+    openrouter: "openrouter_custom_prompt",
     custom_openai: "custom_openai_custom_prompt",
     ollama: "ollama_custom_prompt",
     special_translate: "special_translate_custom_prompt",
-    webllm: "webllm_custom_prompt",
 };
 
 const LLM_ENGINES = new Set([
@@ -43,8 +43,8 @@ const LLM_ENGINES = new Set([
     "glm",
     "xiaomi",
     "grok",
+    "openrouter",
     "ollama",
-    "webllm",
 ]);
 
 function resolveEngine(settings) {
@@ -84,11 +84,6 @@ export async function handleTranslateStart(message, port, state) {
             message.requestId,
             "浏览器 Translation API 不支持在扩展 service worker 中运行，请使用 auto 或 openai",
         );
-        return;
-    }
-
-    if (engine === "webllm") {
-        await streamWebLLMTranslate(requestWithGlossary, port, state);
         return;
     }
 
@@ -134,6 +129,11 @@ export async function handleTranslateStart(message, port, state) {
 
     if (engine === "grok") {
         await streamGrokTranslate(requestWithGlossary, port, state);
+        return;
+    }
+
+    if (engine === "openrouter") {
+        await streamOpenRouterTranslate(requestWithGlossary, port, state);
         return;
     }
 

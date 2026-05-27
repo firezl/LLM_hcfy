@@ -8,7 +8,7 @@ import { getThinkingEnabledByEngine } from "./thinking-utils.js";
 import { normalizeOpenAICompatEndpoint } from "./url-utils.js";
 
 const DEFAULT_XIAOMI_API_URL = "https://api.xiaomimimo.com/v1/chat/completions";
-const DEFAULT_XIAOMI_MODEL = "mimo-v2-pro";
+const DEFAULT_XIAOMI_MODEL = "mimo-v2.5";
 
 export async function streamXiaomiTranslate(request, port, state) {
     const { requestId, text, settings } = request;

@@ -69,7 +69,6 @@ function normalizeConfigPayload(raw) {
             key === "custom_openai_show_thoughts" ||
             key === "deepseek_show_thoughts" ||
             key === "qwen_show_thoughts" ||
-            key === "webllm_show_thoughts" ||
             key === "qwen_preserve_thinking" ||
             key === "glm_show_thoughts" ||
             key === "glm_clear_thinking" ||
