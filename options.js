@@ -1,5 +1,22 @@
 // options.js
 document.addEventListener("DOMContentLoaded", () => {
+    (function markOptionsPopupMode() {
+        try {
+            const extensionApi =
+                (typeof browser !== "undefined" && browser.extension) ||
+                (typeof chrome !== "undefined" && chrome.extension);
+            if (!extensionApi || typeof extensionApi.getViews !== "function") {
+                return;
+            }
+            const popupViews = extensionApi.getViews({ type: "popup" }) || [];
+            if (popupViews.includes(window)) {
+                document.body.classList.add("jyt-options--popup");
+            }
+        } catch (_err) {
+            /* ignore */
+        }
+    })();
+
     const shared = globalThis.JYT_SHARED || {};
     const storageModule = globalThis.JYT_OPTION_STORAGE || {};
     const glossaryModule = globalThis.JYT_OPTION_GLOSSARY || {};
@@ -359,16 +376,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // -----------------------------------
 
     function isRunningInPopup() {
-        try {
-            const extensionApi = chrome.extension;
-            if (!extensionApi || typeof extensionApi.getViews !== "function") {
-                return false;
-            }
-            const popupViews = extensionApi.getViews({ type: "popup" }) || [];
-            return popupViews.includes(window);
-        } catch (err) {
-            return false;
-        }
+        return document.body.classList.contains("jyt-options--popup");
     }
 
     function openImportInNewTab() {
