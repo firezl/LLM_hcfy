@@ -46,6 +46,31 @@ function transactionDone(tx, fallbackMessage) {
     });
 }
 
+/**
+ * Walks an object store / index with a cursor so we never load the whole
+ * history into memory. `onEach(cursor)` may return "stop" to end iteration
+ * early (e.g. once enough rows have been collected).
+ */
+function iterateCursor(source, { range = null, direction = "next" }, onEach) {
+    return new Promise((resolve, reject) => {
+        const request = source.openCursor(range, direction);
+        request.onsuccess = () => {
+            const cursor = request.result;
+            if (!cursor) {
+                resolve();
+                return;
+            }
+            if (onEach(cursor) === "stop") {
+                resolve();
+                return;
+            }
+            cursor.continue();
+        };
+        request.onerror = () =>
+            reject(request.error || new Error("翻译历史游标遍历失败"));
+    });
+}
+
 function normalizeText(value, maxLength) {
     const text = String(value || "").trim();
     if (!maxLength || text.length <= maxLength) return text;
@@ -77,33 +102,55 @@ function normalizeHistoryEntry(raw) {
     };
 }
 
-async function getAllHistoryItems() {
+async function getHistoryCount() {
     const db = await openHistoryDb();
     const tx = db.transaction(HISTORY_STORE, "readonly");
-    const store = tx.objectStore(HISTORY_STORE);
-    const values = await requestToPromise(store.getAll());
-    return Array.isArray(values) ? values : [];
+    return requestToPromise(tx.objectStore(HISTORY_STORE).count());
+}
+
+function historyMatchesQuery(item, query) {
+    if (!query) {
+        return true;
+    }
+    return [item.sourceText, item.translatedText, item.pageTitle, item.pageUrl]
+        .join("\n")
+        .toLowerCase()
+        .includes(query);
 }
 
 async function pruneHistory(limit) {
     const maxItems = Number.isFinite(Number(limit))
         ? Math.max(1, Math.floor(Number(limit)))
         : DEFAULT_HISTORY_LIMIT;
-    const items = await getAllHistoryItems();
-    if (items.length <= maxItems) return;
+    const count = await getHistoryCount();
+    if (count <= maxItems) {
+        return;
+    }
 
-    const removable = items
-        .filter((item) => !item.favorite)
-        .sort((a, b) => Number(a.createdAt || 0) - Number(b.createdAt || 0));
-    const removeCount = items.length - maxItems;
-    const ids = removable.slice(0, removeCount).map((item) => item.id);
-    if (ids.length === 0) return;
-
+    const removeCount = count - maxItems;
+    const idsToDelete = [];
     const db = await openHistoryDb();
-    const tx = db.transaction(HISTORY_STORE, "readwrite");
-    const store = tx.objectStore(HISTORY_STORE);
-    ids.forEach((id) => store.delete(id));
-    await transactionDone(tx, "翻译历史清理失败");
+    const readTx = db.transaction(HISTORY_STORE, "readonly");
+    const index = readTx.objectStore(HISTORY_STORE).index("createdAt");
+
+    await iterateCursor(index, { direction: "next" }, (cursor) => {
+        const item = cursor.value;
+        if (!item?.favorite) {
+            idsToDelete.push(item.id);
+            if (idsToDelete.length >= removeCount) {
+                return "stop";
+            }
+        }
+    });
+
+    if (idsToDelete.length === 0) {
+        return;
+    }
+
+    const writeTx = db.transaction(HISTORY_STORE, "readwrite");
+    const store = writeTx.objectStore(HISTORY_STORE);
+    idsToDelete.forEach((id) => store.delete(id));
+    await transactionDone(writeTx, "翻译历史清理失败");
 }
 
 export async function addHistoryItem(rawItem, options = {}) {
@@ -127,22 +174,24 @@ export async function listHistoryItems(params = {}) {
         ? Math.max(1, Math.floor(Number(params.limit)))
         : DEFAULT_HISTORY_LIMIT;
 
-    const items = (await getAllHistoryItems())
-        .filter((item) => !favoriteOnly || !!item.favorite)
-        .filter((item) => {
-            if (!query) return true;
-            return [
-                item.sourceText,
-                item.translatedText,
-                item.pageTitle,
-                item.pageUrl,
-            ]
-                .join("\n")
-                .toLowerCase()
-                .includes(query);
-        })
-        .sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0))
-        .slice(0, limit);
+    const db = await openHistoryDb();
+    const tx = db.transaction(HISTORY_STORE, "readonly");
+    const index = tx.objectStore(HISTORY_STORE).index("createdAt");
+    const items = [];
+
+    await iterateCursor(index, { direction: "prev" }, (cursor) => {
+        const item = cursor.value;
+        if (favoriteOnly && !item?.favorite) {
+            return;
+        }
+        if (!historyMatchesQuery(item, query)) {
+            return;
+        }
+        items.push(item);
+        if (items.length >= limit) {
+            return "stop";
+        }
+    });
 
     return items;
 }
@@ -184,12 +233,25 @@ export async function clearHistoryItems(params = {}) {
         return { ok: true };
     }
 
-    const items = await getAllHistoryItems();
-    const ids = items.filter((item) => !item.favorite).map((item) => item.id);
-    const tx = db.transaction(HISTORY_STORE, "readwrite");
-    const store = tx.objectStore(HISTORY_STORE);
-    ids.forEach((id) => store.delete(id));
-    await transactionDone(tx, "历史记录清理失败");
+    const readTx = db.transaction(HISTORY_STORE, "readonly");
+    const store = readTx.objectStore(HISTORY_STORE);
+    const idsToDelete = [];
+
+    await iterateCursor(store, { direction: "next" }, (cursor) => {
+        const item = cursor.value;
+        if (!item?.favorite) {
+            idsToDelete.push(item.id);
+        }
+    });
+
+    if (idsToDelete.length === 0) {
+        return { ok: true };
+    }
+
+    const writeTx = db.transaction(HISTORY_STORE, "readwrite");
+    const writeStore = writeTx.objectStore(HISTORY_STORE);
+    idsToDelete.forEach((id) => writeStore.delete(id));
+    await transactionDone(writeTx, "历史记录清理失败");
     return { ok: true };
 }
 

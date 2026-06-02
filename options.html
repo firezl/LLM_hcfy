@@ -84,10 +84,12 @@
                         </option>
                         <option value="google">谷歌翻译</option>
                         <option value="bing">Bing翻译</option>
-                        <option value="browser">浏览器AI（实验）</option>
+                        <option value="browser" id="browser_engine_option">
+                            浏览器 AI（实验，仅划词）
+                        </option>
                     </select>
-                    <div class="jyt-hint">
-                        实验功能目前支持最新版 Edge 和 Chrome，不支持 Firefox，并且可能会下载模型
+                    <div class="jyt-hint" id="browser_engine_hint">
+                        仅在网页划词时生效（页面内调用 Chrome/Edge Translation API，不经过扩展后台）。不支持 Firefox，可能会下载模型。
                     </div>
 
                     <label>源语言</label>
@@ -172,6 +174,7 @@
                         <option value="glm">GLM</option>
                         <option value="xiaomi">Xiaomi Mimo</option>
                         <option value="grok">xAI Grok</option>
+                        <option value="nim">NVIDIA NIM</option>
                         <option value="ollama">Ollama 本地服务</option>
                     </select>
                     <div class="jyt-hint">
@@ -527,6 +530,54 @@
                         step="1"
                         placeholder="0"
                     />
+                </div>
+
+                <div class="jyt-section jyt-hidden" id="nim_section">
+                    <div class="jyt-section-title">NVIDIA NIM 配置</div>
+                    <label>API 地址</label>
+                    <input
+                        id="nim_api_url"
+                        type="text"
+                        placeholder="https://integrate.api.nvidia.com/v1/chat/completions"
+                    />
+                    <label>API Key</label>
+                    <input
+                        id="nim_api_key"
+                        type="password"
+                        placeholder="nvapi-..."
+                    />
+                    <label>模型</label>
+                    <select id="nim_model">
+                        <option value="">正在加载模型列表...</option>
+                        <option value="custom">自定义模型名</option>
+                    </select>
+                    <label>自定义模型名</label>
+                    <input
+                        id="nim_custom_model"
+                        type="text"
+                        placeholder="例如: meta/llama-3.1-70b-instruct"
+                    />
+                    <label>自定义翻译 Prompt（仅 NVIDIA NIM 生效）</label>
+                    <textarea
+                        id="nim_custom_prompt"
+                        rows="4"
+                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。"
+                    ></textarea>
+                    <label>最大输出 Token</label>
+                    <input
+                        id="nim_max_tokens"
+                        type="number"
+                        min="0"
+                        placeholder="0"
+                    />
+                    <div class="jyt-hint">
+                        NIM 部分模型要求设置 max_tokens。填 0 时使用默认 4096。
+                    </div>
+                    <label>显示思考过程</label>
+                    <select id="nim_show_thoughts">
+                        <option value="false">否</option>
+                        <option value="true">是</option>
+                    </select>
                 </div>
 
                 <div class="jyt-section jyt-hidden" id="grok_section">
@@ -966,6 +1017,7 @@
         <div id="toast_container" class="jyt-toast-container"></div>
 
         <script src="libs/shared-config.js"></script>
+        <script src="options/modules/engines.js"></script>
         <script src="options/modules/config-storage.js"></script>
         <script src="options/modules/glossary.js"></script>
         <script src="options/modules/history.js"></script>

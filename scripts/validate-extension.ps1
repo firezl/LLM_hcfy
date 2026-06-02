@@ -23,6 +23,7 @@ $requiredPaths = @(
     "background/index.js",
     "content_script.js",
     "libs/shared-config.js",
+    "options/modules/engines.js",
     "options/modules/glossary.js",
     "options/modules/sync-data.js",
     "options.html",
@@ -39,7 +40,9 @@ foreach ($path in $requiredPaths) {
 
 $nodeCommand = Get-Command node -ErrorAction SilentlyContinue
 Assert-True ($null -ne $nodeCommand) "缺少 node，无法执行共享配置校验"
+node scripts/sync-shared-config.mjs --check
 node scripts/validate-shared-config.mjs
+node --test tests/*.test.mjs
 
 $contentScript = @($manifest.content_scripts)[0]
 Assert-True ($contentScript.matches -contains "<all_urls>") "content_scripts 需要覆盖 <all_urls>"
@@ -49,10 +52,13 @@ $optionsHtml = Get-Content "options.html" -Raw
 $optionsScriptMatches = [regex]::Matches($optionsHtml, '<script\s+src="([^"]+)"')
 $optionsScripts = @($optionsScriptMatches | ForEach-Object { $_.Groups[1].Value })
 $sharedConfigIndex = [array]::IndexOf($optionsScripts, "libs/shared-config.js")
+$enginesIndex = [array]::IndexOf($optionsScripts, "options/modules/engines.js")
 $optionsIndex = [array]::IndexOf($optionsScripts, "options.js")
 Assert-True ($sharedConfigIndex -ge 0) "options.html 必须加载 libs/shared-config.js"
+Assert-True ($enginesIndex -ge 0) "options.html 必须加载 options/modules/engines.js"
 Assert-True ($optionsIndex -ge 0) "options.html 必须加载 options.js"
-Assert-True ($sharedConfigIndex -lt $optionsIndex) "libs/shared-config.js 必须先于 options.js 加载"
+Assert-True ($sharedConfigIndex -lt $enginesIndex) "libs/shared-config.js 必须先于 options/modules/engines.js 加载"
+Assert-True ($enginesIndex -lt $optionsIndex) "options/modules/engines.js 必须先于 options.js 加载"
 
 $permissions = @($manifest.permissions)
 Assert-True ($permissions -contains "storage") "缺少 storage 权限"

@@ -2,7 +2,8 @@ import {
     buildPromptWithUserTemplate,
     resolveLanguagePair,
 } from "../language.js";
-import { postTranslateError, safePostMessage } from "../port-utils.js";
+import { postTranslateError } from "../port-utils.js";
+import { streamChatToPort } from "./openai-compat-stream.js";
 import { normalizeFixedHttpEndpoint } from "./url-utils.js";
 
 const DEFAULT_GEMINI_BASE_URL =
@@ -23,6 +24,35 @@ function parseGeminiSSELine(line) {
     } catch (err) {
         return null;
     }
+}
+
+function parseGeminiDeltaLine(line) {
+    const chunk = parseGeminiSSELine(line);
+    if (!chunk) {
+        return null;
+    }
+
+    const parts =
+        chunk?.candidates?.[0]?.content?.parts ||
+        chunk?.candidates?.[0]?.parts ||
+        [];
+    if (!Array.isArray(parts)) {
+        return null;
+    }
+
+    const deltas = [];
+    for (const part of parts) {
+        const textDelta = String(part?.text || "");
+        if (!textDelta) {
+            continue;
+        }
+        if (part?.thought === true) {
+            deltas.push({ thought: textDelta });
+        } else {
+            deltas.push({ content: textDelta });
+        }
+    }
+    return deltas;
 }
 
 function normalizeGeminiBaseUrl(rawUrl) {
@@ -167,141 +197,44 @@ export async function streamGeminiTranslate(request, port, state) {
         generationConfig,
     };
 
-    const controller = new AbortController();
-    state.controllers.set(requestId, controller);
-
-    try {
-        let requestBody = body;
-        let res = await fetch(endpoint.url, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify(requestBody),
-            signal: controller.signal,
-        });
-
-        if (!res.ok) {
-            const textErr = await res.text();
-
-            if (
-                requestBody?.generationConfig?.thinkingConfig &&
-                isUnsupportedThinkingConfigError(res.status, textErr)
-            ) {
-                const fallbackBody = {
-                    ...requestBody,
-                    generationConfig: {
-                        ...requestBody.generationConfig,
-                    },
-                };
-                delete fallbackBody.generationConfig.thinkingConfig;
-                requestBody = fallbackBody;
-
-                res = await fetch(endpoint.url, {
+    await streamChatToPort({
+        requestId,
+        port,
+        state,
+        errorPrefix: "Gemini",
+        requestStream: async (signal) => {
+            const sendBody = (requestBody) =>
+                fetch(endpoint.url, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
                     },
                     body: JSON.stringify(requestBody),
-                    signal: controller.signal,
+                    signal,
                 });
-            }
-        }
 
-        if (!res.ok) {
-            const textErr = await res.text();
-            postTranslateError(
-                port,
-                state,
-                requestId,
-                "Gemini 请求失败: " +
-                    (textErr || `${res.status} ${res.statusText}`),
-            );
-            return;
-        }
+            let res = await sendBody(body);
 
-        if (!res.body) {
-            postTranslateError(
-                port,
-                state,
-                requestId,
-                "Gemini 响应不包含可读流",
-            );
-            return;
-        }
-
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder("utf-8");
-        let done = false;
-        let carry = "";
-
-        while (!done) {
-            const { value, done: streamDone } = await reader.read();
-            done = streamDone;
-            if (!value) {
-                continue;
-            }
-
-            carry += decoder.decode(value, { stream: true });
-            const lines = carry.split("\n");
-            carry = lines.pop() || "";
-
-            for (const line of lines) {
-                const chunk = parseGeminiSSELine(line);
-                if (!chunk) {
-                    continue;
-                }
-
-                const parts =
-                    chunk?.candidates?.[0]?.content?.parts ||
-                    chunk?.candidates?.[0]?.parts ||
-                    [];
-                if (!Array.isArray(parts)) {
-                    continue;
-                }
-
-                for (const part of parts) {
-                    const textDelta = String(part?.text || "");
-                    if (!textDelta) {
-                        continue;
-                    }
-
-                    if (part?.thought === true) {
-                        const ok = safePostMessage(port, state, {
-                            type: "TRANSLATE_THOUGHT",
-                            requestId,
-                            content: textDelta,
-                        });
-                        if (!ok) {
-                            return;
-                        }
-                        continue;
-                    }
-
-                    const ok = safePostMessage(port, state, {
-                        type: "TRANSLATE_CHUNK",
-                        requestId,
-                        content: textDelta,
-                    });
-                    if (!ok) {
-                        return;
-                    }
+            if (!res.ok && body?.generationConfig?.thinkingConfig) {
+                const textErr = await res.text();
+                if (isUnsupportedThinkingConfigError(res.status, textErr)) {
+                    const fallbackBody = {
+                        ...body,
+                        generationConfig: {
+                            ...body.generationConfig,
+                        },
+                    };
+                    delete fallbackBody.generationConfig.thinkingConfig;
+                    res = await sendBody(fallbackBody);
+                } else {
+                    return {
+                        error: "Gemini 请求失败: " + textErr,
+                    };
                 }
             }
-        }
 
-        safePostMessage(port, state, { type: "TRANSLATE_DONE", requestId });
-    } catch (err) {
-        const aborted = err && err.name === "AbortError";
-        if (!aborted && state.connected) {
-            postTranslateError(
-                port,
-                state,
-                requestId,
-                err && err.message ? err.message : String(err),
-            );
-        }
-    } finally {
-        state.controllers.delete(requestId);
-    }
+            return { response: res };
+        },
+        parseLine: parseGeminiDeltaLine,
+    });
 }

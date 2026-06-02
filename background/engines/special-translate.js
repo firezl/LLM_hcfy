@@ -4,6 +4,7 @@ import {
     resolveLanguagePair,
 } from "../language.js";
 import { postTranslateError, safePostMessage } from "../port-utils.js";
+import { streamChatToPort } from "./openai-compat-stream.js";
 import {
     normalizeOllamaEndpoint,
     normalizeOpenAICompatEndpoint,
@@ -109,187 +110,27 @@ function parseOpenAICompatStreamLine(line) {
     }
 }
 
-async function streamByOllama(
-    request,
-    port,
-    state,
-    endpoint,
-    model,
-    promptContent,
-) {
-    const body = {
-        model,
-        messages: [
-            {
-                role: "user",
-                content: promptContent,
-            },
-        ],
-        stream: true,
-        think: !!request?.settings?.special_translate_show_thoughts,
+function parseOllamaDeltaLine(line) {
+    const chunk = parseOllamaChunkLine(line);
+    if (!chunk) {
+        return null;
+    }
+    return {
+        thought: chunk?.message?.thinking || "",
+        content: chunk?.message?.content || "",
+        done: chunk?.done === true,
     };
-
-    const res = await fetch(endpoint.chatUrl, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
-        signal: request.controller.signal,
-    });
-
-    if (!res.ok) {
-        const textErr = await res.text();
-        throw new Error(textErr || `${res.status} ${res.statusText}`);
-    }
-
-    if (!res.body) {
-        throw new Error("响应不包含可读流");
-    }
-
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder("utf-8");
-    let done = false;
-    let carry = "";
-
-    while (!done) {
-        const { value, done: streamDone } = await reader.read();
-        done = streamDone;
-        if (!value) {
-            continue;
-        }
-
-        carry += decoder.decode(value, { stream: true });
-        const lines = carry.split("\n");
-        carry = lines.pop() || "";
-
-        for (const line of lines) {
-            const chunk = parseOllamaChunkLine(line);
-            if (!chunk) {
-                continue;
-            }
-
-            const thoughtDelta = chunk?.message?.thinking;
-            if (thoughtDelta) {
-                const ok = safePostMessage(port, state, {
-                    type: "TRANSLATE_THOUGHT",
-                    requestId: request.requestId,
-                    content: thoughtDelta,
-                });
-                if (!ok) {
-                    return;
-                }
-            }
-
-            const contentDelta = chunk?.message?.content;
-            if (contentDelta) {
-                const ok = safePostMessage(port, state, {
-                    type: "TRANSLATE_CHUNK",
-                    requestId: request.requestId,
-                    content: contentDelta,
-                });
-                if (!ok) {
-                    return;
-                }
-            }
-
-            if (chunk?.done === true) {
-                done = true;
-                break;
-            }
-        }
-    }
 }
 
-async function streamByOpenAICompat(
-    request,
-    port,
-    state,
-    endpoint,
-    model,
-    promptContent,
-    apiKey,
-) {
-    const headers = {
-        "Content-Type": "application/json",
+function parseOpenAICompatDeltaLine(line) {
+    const delta = parseOpenAICompatStreamLine(line);
+    if (!delta) {
+        return null;
+    }
+    return {
+        thought: delta.reasoning_content || "",
+        content: delta.content || "",
     };
-    if (apiKey) {
-        headers.Authorization = `Bearer ${apiKey}`;
-    }
-
-    const body = {
-        model,
-        messages: [
-            {
-                role: "user",
-                content: promptContent,
-            },
-        ],
-        stream: true,
-        temperature: 1.0,
-    };
-
-    const res = await fetch(endpoint.chatUrl, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(body),
-        signal: request.controller.signal,
-    });
-
-    if (!res.ok) {
-        const textErr = await res.text();
-        throw new Error(textErr || `${res.status} ${res.statusText}`);
-    }
-
-    if (!res.body) {
-        throw new Error("响应不包含可读流");
-    }
-
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder("utf-8");
-    let done = false;
-    let carry = "";
-
-    while (!done) {
-        const { value, done: streamDone } = await reader.read();
-        done = streamDone;
-        if (!value) {
-            continue;
-        }
-
-        carry += decoder.decode(value, { stream: true });
-        const lines = carry.split("\n");
-        carry = lines.pop() || "";
-
-        for (const line of lines) {
-            const delta = parseOpenAICompatStreamLine(line);
-            if (!delta) {
-                continue;
-            }
-
-            if (delta.reasoning_content) {
-                const ok = safePostMessage(port, state, {
-                    type: "TRANSLATE_THOUGHT",
-                    requestId: request.requestId,
-                    content: delta.reasoning_content,
-                });
-                if (!ok) {
-                    return;
-                }
-            }
-
-            if (delta.content) {
-                const ok = safePostMessage(port, state, {
-                    type: "TRANSLATE_CHUNK",
-                    requestId: request.requestId,
-                    content: delta.content,
-                });
-                if (!ok) {
-                    return;
-                }
-            }
-        }
-    }
 }
 
 export async function streamSpecialTranslate(request, port, state) {
@@ -304,65 +145,71 @@ export async function streamSpecialTranslate(request, port, state) {
 
     const { from, to } = resolveLanguagePair(request);
     const promptContent = buildPromptByModel(model, request, from, to);
-    const controller = new AbortController();
-    state.controllers.set(requestId, controller);
 
-    try {
-        if (provider === "openai_compatible") {
-            const endpoint = normalizeOpenAICompatChatEndpoint(
-                settings?.special_translate_api_url,
-            );
-            if (!endpoint.ok) {
-                throw new Error(endpoint.error);
-            }
+    const isOpenAICompat = provider === "openai_compatible";
+    const endpoint = isOpenAICompat
+        ? normalizeOpenAICompatChatEndpoint(settings?.special_translate_api_url)
+        : normalizeOllamaChatEndpoint(settings?.special_translate_api_url);
 
-            await streamByOpenAICompat(
-                {
-                    ...request,
-                    controller,
-                },
-                port,
-                state,
-                endpoint,
-                model,
-                promptContent,
-                String(settings?.special_translate_api_key || "").trim(),
-            );
-        } else {
-            const endpoint = normalizeOllamaChatEndpoint(
-                settings?.special_translate_api_url,
-            );
-            if (!endpoint.ok) {
-                throw new Error(endpoint.error);
-            }
-
-            await streamByOllama(
-                {
-                    ...request,
-                    controller,
-                },
-                port,
-                state,
-                endpoint,
-                model,
-                promptContent,
-            );
-        }
-
-        safePostMessage(port, state, { type: "TRANSLATE_DONE", requestId });
-    } catch (err) {
-        const aborted = err && err.name === "AbortError";
-        if (!aborted && state.connected) {
-            postTranslateError(
-                port,
-                state,
-                requestId,
-                err && err.message ? err.message : String(err),
-            );
-        }
-    } finally {
-        state.controllers.delete(requestId);
+    if (!endpoint.ok) {
+        postTranslateError(port, state, requestId, endpoint.error);
+        return;
     }
+
+    const headers = {
+        "Content-Type": "application/json",
+    };
+    let body;
+
+    if (isOpenAICompat) {
+        const apiKey = String(
+            settings?.special_translate_api_key || "",
+        ).trim();
+        if (apiKey) {
+            headers.Authorization = `Bearer ${apiKey}`;
+        }
+        body = {
+            model,
+            messages: [
+                {
+                    role: "user",
+                    content: promptContent,
+                },
+            ],
+            stream: true,
+            temperature: 1.0,
+        };
+    } else {
+        body = {
+            model,
+            messages: [
+                {
+                    role: "user",
+                    content: promptContent,
+                },
+            ],
+            stream: true,
+            think: !!settings?.special_translate_show_thoughts,
+        };
+    }
+
+    await streamChatToPort({
+        requestId,
+        port,
+        state,
+        errorPrefix: "专用翻译",
+        requestStream: async (signal) => ({
+            response: await fetch(endpoint.chatUrl, {
+                method: "POST",
+                headers,
+                body: JSON.stringify(body),
+                signal,
+            }),
+        }),
+        parseLine: isOpenAICompat
+            ? parseOpenAICompatDeltaLine
+            : parseOllamaDeltaLine,
+    });
 }
 
 function buildSpecialModelsError(port, state, requestId, error) {

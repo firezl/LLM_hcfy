@@ -2,7 +2,8 @@ import {
     buildPromptWithUserTemplate,
     resolveLanguagePair,
 } from "../language.js";
-import { postTranslateError, safePostMessage } from "../port-utils.js";
+import { postTranslateError } from "../port-utils.js";
+import { streamChatToPort } from "./openai-compat-stream.js";
 import { getThinkingEnabledByEngine } from "./thinking-utils.js";
 import { normalizeFixedHttpEndpoint } from "./url-utils.js";
 
@@ -30,7 +31,11 @@ function parseQwenStreamLine(line) {
     }
 }
 
-function extractQwenDelta(payload) {
+function parseQwenDeltaLine(line) {
+    const payload = parseQwenStreamLine(line);
+    if (!payload) {
+        return null;
+    }
     const message = payload?.output?.choices?.[0]?.message || {};
     return {
         content: String(message?.content || ""),
@@ -108,96 +113,23 @@ export async function streamQwenTranslate(request, port, state) {
         parameters,
     };
 
-    const controller = new AbortController();
-    state.controllers.set(requestId, controller);
-
-    try {
-        const res = await fetch(endpoint.url, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${key}`,
-                Accept: "text/event-stream",
-            },
-            body: JSON.stringify(body),
-            signal: controller.signal,
-        });
-
-        if (!res.ok) {
-            const textErr = await res.text();
-            postTranslateError(
-                port,
-                state,
-                requestId,
-                "Qwen 请求失败: " + textErr,
-            );
-            return;
-        }
-
-        if (!res.body) {
-            postTranslateError(port, state, requestId, "响应不包含可读流");
-            return;
-        }
-
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder("utf-8");
-        let done = false;
-        let carry = "";
-
-        while (!done) {
-            const { value, done: streamDone } = await reader.read();
-            done = streamDone;
-            if (!value) {
-                continue;
-            }
-
-            carry += decoder.decode(value, { stream: true });
-            const lines = carry.split("\n");
-            carry = lines.pop() || "";
-
-            for (const line of lines) {
-                const payload = parseQwenStreamLine(line);
-                if (!payload) {
-                    continue;
-                }
-
-                const delta = extractQwenDelta(payload);
-                if (delta.thought) {
-                    const ok = safePostMessage(port, state, {
-                        type: "TRANSLATE_THOUGHT",
-                        requestId,
-                        content: delta.thought,
-                    });
-                    if (!ok) {
-                        return;
-                    }
-                }
-
-                if (delta.content) {
-                    const ok = safePostMessage(port, state, {
-                        type: "TRANSLATE_CHUNK",
-                        requestId,
-                        content: delta.content,
-                    });
-                    if (!ok) {
-                        return;
-                    }
-                }
-            }
-        }
-
-        safePostMessage(port, state, { type: "TRANSLATE_DONE", requestId });
-    } catch (err) {
-        const aborted = err && err.name === "AbortError";
-        if (!aborted && state.connected) {
-            postTranslateError(
-                port,
-                state,
-                requestId,
-                err && err.message ? err.message : String(err),
-            );
-        }
-    } finally {
-        state.controllers.delete(requestId);
-    }
+    await streamChatToPort({
+        requestId,
+        port,
+        state,
+        errorPrefix: "Qwen",
+        requestStream: async (signal) => ({
+            response: await fetch(endpoint.url, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${key}`,
+                    Accept: "text/event-stream",
+                },
+                body: JSON.stringify(body),
+                signal,
+            }),
+        }),
+        parseLine: parseQwenDeltaLine,
+    });
 }
