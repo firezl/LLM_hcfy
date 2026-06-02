@@ -81,6 +81,9 @@ export function getThinkingEnabledByEngine(engine, settings) {
     if (engine === "grok") {
         return !!settings?.grok_show_thoughts;
     }
+    if (engine === "nim") {
+        return !!settings?.nim_show_thoughts;
+    }
     if (engine === "custom_openai") {
         return !!settings?.custom_openai_show_thoughts;
     }

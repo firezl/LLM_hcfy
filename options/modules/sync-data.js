@@ -57,6 +57,7 @@
                     key === "glm_clear_thinking" ||
                     key === "xiaomi_show_thoughts" ||
                     key === "grok_show_thoughts" ||
+                    key === "nim_show_thoughts" ||
                     key === "claude_show_thoughts" ||
                     key === "gemini_show_thoughts"
                 ) {
@@ -70,6 +71,7 @@
                     key === "openrouter_max_completion_tokens" ||
                     key === "qwen_thinking_budget" ||
                     key === "xiaomi_max_completion_tokens" ||
+                    key === "nim_max_tokens" ||
                     key === "claude_max_tokens" ||
                     key === "claude_thinking_budget" ||
                     key === "gemini_thinking_budget"

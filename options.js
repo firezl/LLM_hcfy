@@ -86,6 +86,14 @@ document.addEventListener("DOMContentLoaded", () => {
             customModelId: "grok_custom_model",
             defaultModel: "grok-4.3",
         },
+        {
+            name: "nim",
+            apiUrlId: "nim_api_url",
+            apiKeyId: "nim_api_key",
+            modelId: "nim_model",
+            customModelId: "nim_custom_model",
+            defaultModel: "meta/llama-3.1-70b-instruct",
+        },
     ];
     const OPENAI_COMPAT_ENGINE_BY_NAME = Object.fromEntries(
         OPENAI_COMPAT_MODEL_ENGINES.map((cfg) => [cfg.name, cfg]),
@@ -233,6 +241,13 @@ document.addEventListener("DOMContentLoaded", () => {
         "grok_custom_model",
         "grok_custom_prompt",
         "grok_show_thoughts",
+        "nim_api_url",
+        "nim_api_key",
+        "nim_model",
+        "nim_custom_model",
+        "nim_custom_prompt",
+        "nim_show_thoughts",
+        "nim_max_tokens",
         "claude_api_url",
         "claude_api_key",
         "claude_model",
@@ -280,6 +295,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const glmSection = document.getElementById("glm_section");
     const xiaomiSection = document.getElementById("xiaomi_section");
     const grokSection = document.getElementById("grok_section");
+    const nimSection = document.getElementById("nim_section");
     const claudeSection = document.getElementById("claude_section");
     const geminiSection = document.getElementById("gemini_section");
     const ollamaSection = document.getElementById("ollama_section");
@@ -362,6 +378,7 @@ document.addEventListener("DOMContentLoaded", () => {
         "glm",
         "xiaomi",
         "grok",
+        "nim",
         "ollama",
     ]);
 
@@ -1312,6 +1329,7 @@ document.addEventListener("DOMContentLoaded", () => {
             engine === "glm" ||
             engine === "xiaomi" ||
             engine === "grok" ||
+            engine === "nim" ||
             engine === "claude" ||
             engine === "gemini" ||
             engine === "google" ||
@@ -1353,6 +1371,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (grokSection) {
             grokSection.classList.toggle("jyt-hidden", engine !== "grok");
+        }
+
+        if (nimSection) {
+            nimSection.classList.toggle("jyt-hidden", engine !== "nim");
         }
 
         if (claudeSection) {
@@ -1729,6 +1751,22 @@ document.addEventListener("DOMContentLoaded", () => {
                 els.grok_show_thoughts.value = items.grok_show_thoughts
                     ? "true"
                     : "false";
+                els.nim_api_url.value =
+                    items.nim_api_url ||
+                    "https://integrate.api.nvidia.com/v1/chat/completions";
+                els.nim_api_key.value = items.nim_api_key || "";
+                const savedNimModel =
+                    items.nim_model || "meta/llama-3.1-70b-instruct";
+                els.nim_custom_model.value = items.nim_custom_model || "";
+                els.nim_custom_prompt.value = items.nim_custom_prompt || "";
+                els.nim_show_thoughts.value = items.nim_show_thoughts
+                    ? "true"
+                    : "false";
+                els.nim_max_tokens.value = Number.isFinite(
+                    Number(items.nim_max_tokens),
+                )
+                    ? String(Math.floor(Number(items.nim_max_tokens)))
+                    : "0";
                 const openaiCompatSavedModelMap = {
                     openai: savedOpenAIModel,
                     custom_openai: savedCustomOpenAIModel,
@@ -1737,6 +1775,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     glm: savedGLMModel,
                     xiaomi: savedXiaomiModel,
                     grok: savedGrokModel,
+                    nim: savedNimModel,
                 };
                 OPENAI_COMPAT_MODEL_ENGINES.forEach((cfg) => {
                     const selectEl = els[cfg.modelId];
@@ -1896,6 +1935,10 @@ document.addEventListener("DOMContentLoaded", () => {
             els.grok_model,
             els.grok_custom_model,
         );
+        const selectedNimModel = getSelectedOpenAICompatModel(
+            els.nim_model,
+            els.nim_custom_model,
+        );
         const selectedClaudeModel = getSelectedOpenAICompatModel(
             els.claude_model,
             els.claude_custom_model,
@@ -1990,6 +2033,13 @@ document.addEventListener("DOMContentLoaded", () => {
             grok_custom_model: (els.grok_custom_model.value || "").trim(),
             grok_custom_prompt: els.grok_custom_prompt.value || "",
             grok_show_thoughts: els.grok_show_thoughts.value === "true",
+            nim_api_url: (els.nim_api_url.value || "").trim(),
+            nim_api_key: els.nim_api_key.value,
+            nim_model: selectedNimModel,
+            nim_custom_model: (els.nim_custom_model.value || "").trim(),
+            nim_custom_prompt: els.nim_custom_prompt.value || "",
+            nim_show_thoughts: els.nim_show_thoughts.value === "true",
+            nim_max_tokens: Number(els.nim_max_tokens.value || 0),
             claude_api_url: (els.claude_api_url.value || "").trim(),
             claude_api_key: els.claude_api_key.value,
             claude_model: selectedClaudeModel,
@@ -2144,6 +2194,21 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             if (!data.grok_api_url) {
                 data.grok_api_url = "https://api.x.ai/v1/chat/completions";
+            }
+        }
+
+        if (effectiveEngine === "nim") {
+            if (!data.nim_api_key) {
+                showToast("请先填写 NVIDIA NIM API Key。", true);
+                return;
+            }
+            if (!data.nim_model) {
+                showToast("请先填写 NVIDIA NIM 模型。", true);
+                return;
+            }
+            if (!data.nim_api_url) {
+                data.nim_api_url =
+                    "https://integrate.api.nvidia.com/v1/chat/completions";
             }
         }
 
