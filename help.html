@@ -134,11 +134,11 @@
                             <span>browser</span>
                         </div>
                         <p>
-                            这是实验入口，面向最新版 Edge 和 Chrome 的浏览器内置 AI/Translation API。不支持 Firefox；当前后台路由仍可能提示无法在扩展 service worker 中运行，因此不建议作为默认引擎。
+                            实验入口，面向最新版 Chrome / Edge 的浏览器内置 Translation API。翻译在<strong>网页划词时于页面内完成</strong>，不经过扩展后台；Firefox 不支持，PDF 阅读器内请改用其他引擎。
                         </p>
                         <ul class="jyt-help-mini-list">
-                            <li>适合：后续浏览器 API 成熟后再启用。</li>
-                            <li>当前建议：使用 OpenRouter、Ollama 或云端 API。</li>
+                            <li>适合：离线/低延迟的简单网页翻译。</li>
+                            <li>复杂推理或 PDF：请使用大模型翻译或 Ollama。</li>
                         </ul>
                     </article>
                 </div>
@@ -446,7 +446,7 @@
                     <li>本地服务连不上：确认 Ollama、LM Studio 或其他服务正在运行，且地址使用 <code>localhost</code> 或 <code>127.0.0.1</code>。</li>
                     <li>模型列表为空：先手动填自定义模型名；有些平台模型列表接口需要额外权限或暂时不可用。</li>
                     <li>OpenRouter 免费模型失败：免费模型有频率、日额度和可用性限制，可换一个 <code>:free</code> 模型或改用付费模型。</li>
-                    <li>浏览器 AI 不工作：当前扩展后台不支持直接调用浏览器 Translation API，请改用其他引擎。</li>
+                    <li>浏览器 AI 不工作：确认使用 Chrome/Edge 最新版、已在网页（非 PDF 阅读器）划词，且浏览器已允许 Translation API；否则改用大模型翻译。</li>
                 </ul>
             </section>
         </main>

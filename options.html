@@ -84,10 +84,12 @@
                         </option>
                         <option value="google">谷歌翻译</option>
                         <option value="bing">Bing翻译</option>
-                        <option value="browser">浏览器AI（实验）</option>
+                        <option value="browser" id="browser_engine_option">
+                            浏览器 AI（实验，仅划词）
+                        </option>
                     </select>
-                    <div class="jyt-hint">
-                        实验功能目前支持最新版 Edge 和 Chrome，不支持 Firefox，并且可能会下载模型
+                    <div class="jyt-hint" id="browser_engine_hint">
+                        仅在网页划词时生效（页面内调用 Chrome/Edge Translation API，不经过扩展后台）。不支持 Firefox，可能会下载模型。
                     </div>
 
                     <label>源语言</label>
@@ -1015,6 +1017,7 @@
         <div id="toast_container" class="jyt-toast-container"></div>
 
         <script src="libs/shared-config.js"></script>
+        <script src="options/modules/engines.js"></script>
         <script src="options/modules/config-storage.js"></script>
         <script src="options/modules/glossary.js"></script>
         <script src="options/modules/history.js"></script>
