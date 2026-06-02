@@ -12,6 +12,7 @@
     let isPinned = false;
     let translatePort = null;
     let activeRequest = null;
+    let translateGeneration = 0;
     let lastTranslateContext = null;
     let copyStatusTimer = null;
     let runtimeSettings = { ...DEFAULT_SETTINGS };
@@ -24,6 +25,108 @@
     let pdfPromptCountdownInterval = null;
 
     const PDF_PROMPT_AUTO_CLOSE_MS = 10 * 1000;
+    const LANG_DETECT_TIMEOUT_MS = 8000;
+    const TRANSLATE_RESPONSE_TIMEOUT_MS = 30000;
+
+    function withTimeout(promise, timeoutMs, fallbackValue) {
+        return new Promise((resolve) => {
+            let settled = false;
+            const timer = window.setTimeout(() => {
+                if (settled) return;
+                settled = true;
+                resolve(fallbackValue);
+            }, timeoutMs);
+
+            Promise.resolve(promise)
+                .then((value) => {
+                    if (settled) return;
+                    settled = true;
+                    window.clearTimeout(timer);
+                    resolve(value);
+                })
+                .catch(() => {
+                    if (settled) return;
+                    settled = true;
+                    window.clearTimeout(timer);
+                    resolve(fallbackValue);
+                });
+        });
+    }
+
+    function clearActiveRequestTimeout(request) {
+        if (!request?.responseTimeoutId) return;
+        window.clearTimeout(request.responseTimeoutId);
+        request.responseTimeoutId = null;
+    }
+
+    function armActiveRequestTimeout(request) {
+        clearActiveRequestTimeout(request);
+        request.responseTimeoutId = window.setTimeout(() => {
+            if (activeRequest !== request) return;
+            request.streamEl.innerText = "翻译请求超时，请重试";
+            setBubbleState(
+                request.streamEl?.closest(".jyt-bubble"),
+                "error",
+            );
+            activeRequest = null;
+        }, TRANSLATE_RESPONSE_TIMEOUT_MS);
+    }
+
+    function touchActiveRequestTimeout(request) {
+        if (activeRequest !== request) return;
+        armActiveRequestTimeout(request);
+    }
+
+    let translatePortClosing = false;
+
+    function drainRuntimeLastError() {
+        let message = "";
+        try {
+            if (
+                typeof chrome !== "undefined" &&
+                chrome.runtime &&
+                chrome.runtime.lastError
+            ) {
+                message = chrome.runtime.lastError.message || "";
+            }
+        } catch (err) {
+            // ignore
+        }
+        return message;
+    }
+
+    function isBfcachePortError(message) {
+        return /back\/forward cache|bfcache/i.test(String(message || ""));
+    }
+
+    function releaseTranslatePortForPageHide() {
+        const currentRequest = activeRequest;
+        activeRequest = null;
+        clearActiveRequestTimeout(currentRequest);
+        translatePort = null;
+        translateGeneration += 1;
+        drainRuntimeLastError();
+    }
+
+    function handleTranslatePortDisconnect() {
+        const lastErrorMessage = drainRuntimeLastError();
+        translatePort = null;
+
+        if (translatePortClosing || isBfcachePortError(lastErrorMessage)) {
+            return;
+        }
+
+        const currentRequest = activeRequest;
+        if (!currentRequest) return;
+
+        activeRequest = null;
+        clearActiveRequestTimeout(currentRequest);
+        currentRequest.streamEl.innerText = "翻译连接已断开，请重试";
+        setBubbleState(
+            currentRequest.streamEl?.closest(".jyt-bubble"),
+            "error",
+        );
+    }
 
     const translatorCache = new Map();
     let translationModelReady = false;
@@ -1070,9 +1173,15 @@
     async function detectTextLangByChromeI18n(text) {
         if (!chrome?.i18n?.detectLanguage) return null;
         try {
-            const result = await new Promise((resolve) => {
-                chrome.i18n.detectLanguage(text, (res) => resolve(res || null));
-            });
+            const result = await withTimeout(
+                new Promise((resolve) => {
+                    chrome.i18n.detectLanguage(text, (res) =>
+                        resolve(res || null),
+                    );
+                }),
+                LANG_DETECT_TIMEOUT_MS,
+                null,
+            );
             if (
                 !result ||
                 !Array.isArray(result.languages) ||
@@ -1110,14 +1219,22 @@
 
         try {
             if (languageDetectorInstance) {
-                const results = await languageDetectorInstance.detect(text);
+                const results = await withTimeout(
+                    languageDetectorInstance.detect(text),
+                    LANG_DETECT_TIMEOUT_MS,
+                    null,
+                );
                 return (
                     normalizeBasicLang(results?.[0]?.detectedLanguage || "") ||
                     null
                 );
             }
 
-            const availability = await self.LanguageDetector.availability();
+            const availability = await withTimeout(
+                self.LanguageDetector.availability(),
+                LANG_DETECT_TIMEOUT_MS,
+                "unavailable",
+            );
             if (availability === "available") languageDetectorModelReady = true;
             if (availability === "unavailable") return null;
 
@@ -1140,13 +1257,25 @@
                 };
             }
 
-            const detector = await self.LanguageDetector.create(createOptions);
-            if (detector.ready) await detector.ready;
+            const detector = await withTimeout(
+                self.LanguageDetector.create(createOptions),
+                LANG_DETECT_TIMEOUT_MS,
+                null,
+            );
+            if (!detector) return null;
+
+            if (detector.ready) {
+                await withTimeout(detector.ready, LANG_DETECT_TIMEOUT_MS, null);
+            }
 
             languageDetectorModelReady = true;
             languageDetectorInstance = detector;
 
-            const results = await detector.detect(text);
+            const results = await withTimeout(
+                detector.detect(text),
+                LANG_DETECT_TIMEOUT_MS,
+                null,
+            );
             return (
                 normalizeBasicLang(results?.[0]?.detectedLanguage || "") || null
             );
@@ -1219,6 +1348,20 @@
         return output;
     }
 
+    function resetTranslatePort() {
+        if (!translatePort) return;
+        translatePortClosing = true;
+        try {
+            translatePort.disconnect();
+        } catch (err) {
+            // Ignore stale port disconnect failures.
+        } finally {
+            drainRuntimeLastError();
+            translatePort = null;
+            translatePortClosing = false;
+        }
+    }
+
     function ensureTranslatePort() {
         if (translatePort) return translatePort;
 
@@ -1248,6 +1391,7 @@
             if (message.type === "TRANSLATE_CHUNK") {
                 const chunk = message.content || "";
                 activeRequest.buffer += chunk;
+                touchActiveRequestTimeout(activeRequest);
                 renderContentAndThought(
                     activeRequest.buffer,
                     chunk,
@@ -1270,6 +1414,7 @@
 
             if (message.type === "TRANSLATE_ERROR") {
                 const currentRequest = activeRequest;
+                clearActiveRequestTimeout(currentRequest);
                 const errorText = message.error || "未知错误";
                 setBubbleState(streamEl?.closest(".jyt-bubble"), "error");
 
@@ -1334,6 +1479,7 @@
             }
 
             if (message.type === "TRANSLATE_DONE") {
+                clearActiveRequestTimeout(activeRequest);
                 streamEl.innerText = trimEdgeBlankLines(streamEl.innerText || "");
                 const translatedText = getCleanTranslatedText();
                 lastTranslateContext = {
@@ -1355,14 +1501,13 @@
             }
         });
 
-        translatePort.onDisconnect.addListener(() => {
-            translatePort = null;
-        });
+        translatePort.onDisconnect.addListener(handleTranslatePortDisconnect);
 
         return translatePort;
     }
 
     function sendTranslateStart(payload) {
+        resetTranslatePort();
         let port = ensureTranslatePort();
         if (!port) {
             return false;
@@ -1370,17 +1515,21 @@
 
         try {
             port.postMessage(payload);
+            drainRuntimeLastError();
             return true;
         } catch (err) {
             translatePort = null;
+            drainRuntimeLastError();
             try {
                 port = ensureTranslatePort();
                 if (!port) {
                     return false;
                 }
                 port.postMessage(payload);
+                drainRuntimeLastError();
                 return true;
             } catch (retryErr) {
+                drainRuntimeLastError();
                 return false;
             }
         }
@@ -1389,6 +1538,7 @@
     function cancelActiveTranslateRequest() {
         const currentRequest = activeRequest;
         activeRequest = null;
+        clearActiveRequestTimeout(currentRequest);
 
         if (!currentRequest || !translatePort) {
             return;
@@ -1401,6 +1551,8 @@
             });
         } catch (err) {
             // Ignore port send failures when runtime is unavailable.
+        } finally {
+            drainRuntimeLastError();
         }
     }
 
@@ -1528,14 +1680,19 @@
         });
 
         if (!sent) {
+            clearActiveRequestTimeout(activeRequest);
             streamEl.innerText =
                 "翻译失败: 无法连接扩展后台（请刷新页面或重载扩展）";
             setBubbleState(streamEl?.closest(".jyt-bubble"), "error");
             activeRequest = null;
+            return;
         }
+
+        armActiveRequestTimeout(activeRequest);
     }
 
-    async function translateText(text, settings, bubble) {
+    async function translateText(text, settings, bubble, generation) {
+        const isStale = () => generation !== translateGeneration;
         const selectedEngine = settings.engine || "auto";
         const llmEngine = settings.llm_engine || "openai";
         const engine = selectedEngine === "llm" ? llmEngine : selectedEngine;
@@ -1560,8 +1717,11 @@
         setBubbleState(bubble, "loading");
 
         if (!from) from = await detectLangByLanguageDetector(text, streamEl);
+        if (isStale()) return;
         if (!from) from = await detectTextLangByChromeI18n(text);
+        if (isStale()) return;
         if (!from) from = detectLangHeuristic(text);
+        if (isStale()) return;
 
         let to = targetSetting === "auto" ? "" : targetSetting;
         if (!to) to = detectBrowserLangByNavigator();
@@ -1577,6 +1737,7 @@
                     to,
                     streamEl,
                 );
+                if (isStale()) return;
                 const output = translatedText || getCleanTranslatedText();
                 lastTranslateContext = {
                     text,
@@ -1767,6 +1928,7 @@
                         to,
                         streamEl,
                     );
+                    if (isStale()) return;
                     const output = translatedText || getCleanTranslatedText();
                     lastTranslateContext = {
                         text,
@@ -1794,6 +1956,8 @@
                 }
             }
         }
+
+        if (isStale()) return;
 
         startBackgroundTranslate(
             text,
@@ -1827,7 +1991,8 @@
         positionBubble(bubble, x, y);
         setBubbleLoading(bubble, true);
         applyTheme(runtimeSettings.theme_mode || "auto");
-        translateText(text, runtimeSettings, bubble);
+        const generation = ++translateGeneration;
+        void translateText(text, runtimeSettings, bubble, generation);
     }
 
     const btn = createButton();
@@ -1967,12 +2132,11 @@
 
     window.addEventListener("pagehide", () => {
         hidePdfPrompt();
-        if (!translatePort) return;
-        try {
-            translatePort.disconnect();
-        } catch (err) {
-            // ignore
-        }
-        translatePort = null;
+        releaseTranslatePortForPageHide();
+    });
+
+    window.addEventListener("pageshow", (event) => {
+        if (!event.persisted) return;
+        releaseTranslatePortForPageHide();
     });
 })();
