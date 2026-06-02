@@ -3,6 +3,7 @@ import {
     resolveLanguagePair,
 } from "../language.js";
 import { postTranslateError, safePostMessage } from "../port-utils.js";
+import { streamChatToPort } from "./openai-compat-stream.js";
 import { normalizeOllamaEndpoint } from "./url-utils.js";
 
 const DEFAULT_OLLAMA_CHAT_URL = "http://localhost:11434/api/chat";
@@ -42,6 +43,18 @@ function parseOllamaChunkLine(line) {
     } catch (err) {
         return null;
     }
+}
+
+function parseOllamaDeltaLine(line) {
+    const chunk = parseOllamaChunkLine(line);
+    if (!chunk) {
+        return null;
+    }
+    return {
+        thought: chunk?.message?.thinking || "",
+        content: chunk?.message?.content || "",
+        done: chunk?.done === true,
+    };
 }
 
 export async function streamOllamaTranslate(request, port, state) {
@@ -85,108 +98,23 @@ export async function streamOllamaTranslate(request, port, state) {
         think: !!settings?.ollama_show_thoughts,
     };
 
-    const controller = new AbortController();
-    state.controllers.set(requestId, controller);
-
-    try {
-        const res = await fetch(endpoint.chatUrl, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify(body),
-            signal: controller.signal,
-        });
-
-        if (!res.ok) {
-            const textErr = await res.text();
-            postTranslateError(
-                port,
-                state,
-                requestId,
-                "Ollama 请求失败: " +
-                    (textErr || `${res.status} ${res.statusText}`),
-            );
-            return;
-        }
-
-        if (!res.body) {
-            postTranslateError(
-                port,
-                state,
-                requestId,
-                "Ollama 响应不包含可读流",
-            );
-            return;
-        }
-
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder("utf-8");
-        let done = false;
-        let carry = "";
-
-        while (!done) {
-            const { value, done: streamDone } = await reader.read();
-            done = streamDone;
-            if (!value) {
-                continue;
-            }
-
-            carry += decoder.decode(value, { stream: true });
-            const lines = carry.split("\n");
-            carry = lines.pop() || "";
-
-            for (const line of lines) {
-                const chunk = parseOllamaChunkLine(line);
-                if (!chunk) {
-                    continue;
-                }
-
-                const thoughtDelta = chunk?.message?.thinking;
-                if (thoughtDelta) {
-                    const ok = safePostMessage(port, state, {
-                        type: "TRANSLATE_THOUGHT",
-                        requestId,
-                        content: thoughtDelta,
-                    });
-                    if (!ok) {
-                        return;
-                    }
-                }
-
-                const contentDelta = chunk?.message?.content;
-                if (contentDelta) {
-                    const ok = safePostMessage(port, state, {
-                        type: "TRANSLATE_CHUNK",
-                        requestId,
-                        content: contentDelta,
-                    });
-                    if (!ok) {
-                        return;
-                    }
-                }
-
-                if (chunk?.done === true) {
-                    done = true;
-                    break;
-                }
-            }
-        }
-
-        safePostMessage(port, state, { type: "TRANSLATE_DONE", requestId });
-    } catch (err) {
-        const aborted = err && err.name === "AbortError";
-        if (!aborted && state.connected) {
-            postTranslateError(
-                port,
-                state,
-                requestId,
-                err && err.message ? err.message : String(err),
-            );
-        }
-    } finally {
-        state.controllers.delete(requestId);
-    }
+    await streamChatToPort({
+        requestId,
+        port,
+        state,
+        errorPrefix: "Ollama",
+        requestStream: async (signal) => ({
+            response: await fetch(endpoint.chatUrl, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(body),
+                signal,
+            }),
+        }),
+        parseLine: parseOllamaDeltaLine,
+    });
 }
 
 export async function handleOllamaGetModels(message, port, state) {

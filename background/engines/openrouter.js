@@ -6,6 +6,7 @@ import { postTranslateError, safePostMessage } from "../port-utils.js";
 import {
     parseSseJsonLine,
     extractChoiceDelta,
+    streamChatToPort,
 } from "./openai-compat-stream.js";
 import { pickOpenAIReasoningEffort } from "./thinking-utils.js";
 import { normalizeOpenAICompatEndpoint } from "./url-utils.js";
@@ -243,6 +244,14 @@ function extractOpenRouterDelta(payload) {
     };
 }
 
+function parseOpenRouterDeltaLine(line) {
+    const payload = parseSseJsonLine(line);
+    if (!payload) {
+        return null;
+    }
+    return extractOpenRouterDelta(payload);
+}
+
 async function streamOpenRouterResponse({
     requestId,
     port,
@@ -252,123 +261,41 @@ async function streamOpenRouterResponse({
     primaryBody,
     fallbackBody,
 }) {
-    const controller = new AbortController();
-    state.controllers.set(requestId, controller);
+    await streamChatToPort({
+        requestId,
+        port,
+        state,
+        errorPrefix: "OpenRouter",
+        requestStream: async (signal) => {
+            const sendBody = (body) =>
+                fetch(endpoint.url, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${apiKey}`,
+                    },
+                    body: JSON.stringify(body),
+                    signal,
+                });
 
-    async function sendBody(body) {
-        return fetch(endpoint.url, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${apiKey}`,
-            },
-            body: JSON.stringify(body),
-            signal: controller.signal,
-        });
-    }
-
-    try {
-        let res = await sendBody(primaryBody);
-        if (!res.ok) {
-            const textErr = await res.text();
-            const shouldRetry =
-                fallbackBody &&
-                fallbackBody !== primaryBody &&
-                isUnsupportedParameterError(res.status, textErr);
-            if (shouldRetry) {
-                res = await sendBody(fallbackBody);
-            } else {
-                postTranslateError(
-                    port,
-                    state,
-                    requestId,
-                    "OpenRouter 请求失败: " + textErr,
-                );
-                return;
-            }
-        }
-
-        if (!res.ok) {
-            const textErr = await res.text();
-            postTranslateError(
-                port,
-                state,
-                requestId,
-                "OpenRouter 请求失败: " + textErr,
-            );
-            return;
-        }
-
-        if (!res.body) {
-            postTranslateError(port, state, requestId, "响应不包含可读流");
-            return;
-        }
-
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder("utf-8");
-        let done = false;
-        let carry = "";
-
-        while (!done) {
-            const { value, done: streamDone } = await reader.read();
-            done = streamDone;
-            if (!value) {
-                continue;
-            }
-
-            carry += decoder.decode(value, { stream: true });
-            const lines = carry.split("\n");
-            carry = lines.pop() || "";
-
-            for (const line of lines) {
-                const payload = parseSseJsonLine(line);
-                if (!payload) {
-                    continue;
-                }
-
-                const delta = extractOpenRouterDelta(payload);
-                if (!delta) {
-                    continue;
-                }
-
-                if (delta.thought) {
-                    const ok = safePostMessage(port, state, {
-                        type: "TRANSLATE_THOUGHT",
-                        requestId,
-                        content: delta.thought,
-                    });
-                    if (!ok) {
-                        return;
-                    }
-                }
-
-                if (delta.content) {
-                    const ok = safePostMessage(port, state, {
-                        type: "TRANSLATE_CHUNK",
-                        requestId,
-                        content: delta.content,
-                    });
-                    if (!ok) {
-                        return;
-                    }
+            let res = await sendBody(primaryBody);
+            if (!res.ok) {
+                const textErr = await res.text();
+                const shouldRetry =
+                    fallbackBody &&
+                    fallbackBody !== primaryBody &&
+                    isUnsupportedParameterError(res.status, textErr);
+                if (shouldRetry) {
+                    res = await sendBody(fallbackBody);
+                } else {
+                    return { error: "OpenRouter 请求失败: " + textErr };
                 }
             }
-        }
 
-        safePostMessage(port, state, { type: "TRANSLATE_DONE", requestId });
-    } catch (err) {
-        const aborted = err && err.name === "AbortError";
-        if (!aborted && state.connected) {
-            postTranslateError(
-                port,
-                state,
-                requestId,
-                err && err.message ? err.message : String(err),
-            );
-        }
-    } finally {
-        state.controllers.delete(requestId);
-    }
+            return { response: res };
+        },
+        parseLine: parseOpenRouterDeltaLine,
+    });
 }
 
 export async function streamOpenRouterTranslate(request, port, state) {

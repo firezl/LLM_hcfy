@@ -2,7 +2,12 @@ import {
     buildPromptWithUserTemplate,
     resolveLanguagePair,
 } from "../language.js";
-import { postTranslateError, safePostMessage } from "../port-utils.js";
+import { postTranslateError } from "../port-utils.js";
+import {
+    parseSseJsonLine,
+    extractChoiceDelta,
+    streamChatToPort,
+} from "./openai-compat-stream.js";
 import {
     buildOpenAIThinkingPatch,
     getThinkingEnabledByEngine,
@@ -11,24 +16,23 @@ import { normalizeOpenAICompatEndpoint } from "./url-utils.js";
 
 const DEFAULT_OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
 
-function parseOpenAIStreamLine(line) {
-    const trimmed = line.trim();
-    if (!trimmed || !trimmed.startsWith("data:")) {
+function parseOpenAIDeltaLine(line) {
+    const payload = parseSseJsonLine(line);
+    if (!payload) {
         return null;
     }
-
-    const payload = trimmed.substring(5).trim();
-    if (!payload || payload === "[DONE]") {
+    const delta = extractChoiceDelta(payload);
+    if (!delta) {
         return null;
     }
-
-    try {
-        const json = JSON.parse(payload);
-        return json.choices?.[0]?.delta || null;
-    } catch (err) {
-        console.error("Error parsing stream data", err);
-        return null;
+    const out = {};
+    if (delta.content) {
+        out.content = delta.content;
     }
+    if (delta.reasoning_content) {
+        out.thought = delta.reasoning_content;
+    }
+    return out;
 }
 
 export async function streamOpenAITranslate(request, port, state) {
@@ -97,123 +101,44 @@ export async function streamOpenAITranslate(request, port, state) {
         ...thinkingPatch,
     };
 
-    const controller = new AbortController();
-    state.controllers.set(requestId, controller);
+    const headers = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${key}`,
+    };
 
-    try {
-        let res = await fetch(endpoint.url, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${key}`,
-            },
-            body: JSON.stringify(primaryBody),
-            signal: controller.signal,
-        });
-
-        if (!res.ok && Object.keys(thinkingPatch).length > 0) {
-            const textErr = await res.text();
-            const maybeUnsupportedThinking =
-                res.status === 400 &&
-                /(reasoning|thinking|unsupported|unknown|invalid)/i.test(
-                    textErr || "",
-                );
-
-            if (maybeUnsupportedThinking) {
-                res = await fetch(endpoint.url, {
+    await streamChatToPort({
+        requestId,
+        port,
+        state,
+        errorPrefix: "OpenAI",
+        requestStream: async (signal) => {
+            const sendBody = (body) =>
+                fetch(endpoint.url, {
                     method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${key}`,
-                    },
-                    body: JSON.stringify(baseBody),
-                    signal: controller.signal,
+                    headers,
+                    body: JSON.stringify(body),
+                    signal,
                 });
-            } else {
-                postTranslateError(
-                    port,
-                    state,
-                    requestId,
-                    "OpenAI 请求失败: " + textErr,
-                );
-                return;
-            }
-        }
 
-        if (!res.ok) {
-            const textErr = await res.text();
-            postTranslateError(
-                port,
-                state,
-                requestId,
-                "OpenAI 请求失败: " + textErr,
-            );
-            return;
-        }
+            let res = await sendBody(primaryBody);
 
-        if (!res.body) {
-            postTranslateError(port, state, requestId, "响应不包含可读流");
-            return;
-        }
+            if (!res.ok && Object.keys(thinkingPatch).length > 0) {
+                const textErr = await res.text();
+                const maybeUnsupportedThinking =
+                    res.status === 400 &&
+                    /(reasoning|thinking|unsupported|unknown|invalid)/i.test(
+                        textErr || "",
+                    );
 
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder("utf-8");
-        let done = false;
-        let carry = "";
-
-        while (!done) {
-            const { value, done: streamDone } = await reader.read();
-            done = streamDone;
-            if (!value) {
-                continue;
-            }
-
-            carry += decoder.decode(value, { stream: true });
-            const lines = carry.split("\n");
-            carry = lines.pop() || "";
-
-            for (const line of lines) {
-                const delta = parseOpenAIStreamLine(line);
-                if (!delta) {
-                    continue;
-                }
-
-                if (delta.content) {
-                    const ok = safePostMessage(port, state, {
-                        type: "TRANSLATE_CHUNK",
-                        requestId,
-                        content: delta.content,
-                    });
-                    if (!ok) {
-                        return;
-                    }
-                }
-
-                if (delta.reasoning_content) {
-                    const ok = safePostMessage(port, state, {
-                        type: "TRANSLATE_THOUGHT",
-                        requestId,
-                        content: delta.reasoning_content,
-                    });
-                    if (!ok) {
-                        return;
-                    }
+                if (maybeUnsupportedThinking) {
+                    res = await sendBody(baseBody);
+                } else {
+                    return { error: "OpenAI 请求失败: " + textErr };
                 }
             }
-        }
 
-        safePostMessage(port, state, { type: "TRANSLATE_DONE", requestId });
-    } catch (err) {
-        const aborted = err && err.name === "AbortError";
-        if (!aborted && state.connected) {
-            postTranslateError(
-                port,
-                state,
-                requestId,
-                err && err.message ? err.message : String(err),
-            );
-        }
-    } finally {
-        state.controllers.delete(requestId);
-    }
+            return { response: res };
+        },
+        parseLine: parseOpenAIDeltaLine,
+    });
 }

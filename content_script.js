@@ -1246,9 +1246,11 @@
                 activeRequest;
 
             if (message.type === "TRANSLATE_CHUNK") {
-                activeRequest.buffer += message.content || "";
+                const chunk = message.content || "";
+                activeRequest.buffer += chunk;
                 renderContentAndThought(
                     activeRequest.buffer,
+                    chunk,
                     streamEl,
                     thoughtEl,
                     thoughtDetails,
@@ -1332,6 +1334,7 @@
             }
 
             if (message.type === "TRANSLATE_DONE") {
+                streamEl.innerText = trimEdgeBlankLines(streamEl.innerText || "");
                 const translatedText = getCleanTranslatedText();
                 lastTranslateContext = {
                     text: activeRequest?.text || lastSelection || "",
@@ -1403,11 +1406,31 @@
 
     function renderContentAndThought(
         buffer,
+        newChunk,
         streamEl,
         thoughtEl,
         thoughtDetails,
         isThinking,
     ) {
+        const hasEmbeddedThinking = buffer.includes("<think>");
+
+        if (!hasEmbeddedThinking) {
+            if (!isThinking) {
+                if (thoughtDetails) {
+                    thoughtDetails.style.display = "none";
+                    thoughtDetails.removeAttribute("open");
+                }
+                thoughtEl.textContent = "";
+            }
+
+            if (newChunk) {
+                streamEl.innerText += newChunk;
+            } else {
+                streamEl.innerText = trimEdgeBlankLines(buffer);
+            }
+            return;
+        }
+
         if (!isThinking) {
             if (thoughtDetails) {
                 thoughtDetails.style.display = "none";
