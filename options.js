@@ -10,6 +10,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             const popupViews = extensionApi.getViews({ type: "popup" }) || [];
             if (popupViews.includes(window)) {
+                document.documentElement.classList.add("jyt-options--popup-root");
                 document.body.classList.add("jyt-options--popup");
             }
         } catch (_err) {

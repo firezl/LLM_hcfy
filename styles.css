@@ -493,10 +493,13 @@
 }
 
 /* Toolbar popup: Firefox matches @media against the browser viewport, not the popup */
+html.jyt-options--popup-root,
 #jyt-options-body.jyt-options--popup {
     width: 520px;
     max-width: 520px;
-    min-width: 320px;
+    min-width: 520px;
+    min-height: 480px;
+    box-sizing: border-box;
 }
 
 /* 
@@ -982,6 +985,7 @@ button#open_local_pdf:hover {
     margin-top: 10px;
     display: grid;
     gap: 8px;
+    min-height: 160px;
     max-height: 420px;
     overflow: auto;
 }
@@ -1192,10 +1196,12 @@ button#open_local_pdf:hover {
         margin-right: auto;
     }
 
+    html.jyt-options--popup-root,
     #jyt-options-body.jyt-options--popup {
         width: 520px;
         max-width: 520px;
-        min-width: 320px;
+        min-width: 520px;
+        min-height: 480px;
         padding: 0;
         background: var(--jyt-bg);
     }
