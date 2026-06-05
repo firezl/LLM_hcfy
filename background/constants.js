@@ -46,6 +46,11 @@ export const GOOGLE_TRANSLATE_ENDPOINT =
     "https://translate.googleapis.com/translate_a/single";
 export const BING_TRANSLATOR_PAGE_URL = "https://www.bing.com/translator";
 export const BING_AUTH_TTL_MS = 10 * 60 * 1000;
+export const DEEPL_TRANSLATE_ENDPOINT_FREE =
+    "https://api-free.deepl.com/v2/translate";
+export const DEEPL_TRANSLATE_ENDPOINT_PRO =
+    "https://api.deepl.com/v2/translate";
+export const DEEPLX_TRANSLATE_ENDPOINT = "http://localhost:1188/translate";
 
 export const SYNC_CONFIG_FILE = "config.json";
 export const SYNC_GLOSSARY_FILE = "glossary.json";

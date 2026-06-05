@@ -1691,11 +1691,32 @@
         armActiveRequestTimeout(activeRequest);
     }
 
+    function maybeNormalizePdfSelectionText(text, engine) {
+        const pdfText = globalThis.JYT_PDF_TEXT || {};
+        if (typeof pdfText.isMachineTranslateEngine !== "function") {
+            return text;
+        }
+        if (!pdfText.isMachineTranslateEngine(engine)) {
+            return text;
+        }
+        if (typeof pdfText.isPdfSelectionContext !== "function") {
+            return text;
+        }
+        if (!pdfText.isPdfSelectionContext()) {
+            return text;
+        }
+        if (typeof pdfText.normalizePdfSelectionText !== "function") {
+            return text;
+        }
+        return pdfText.normalizePdfSelectionText(text);
+    }
+
     async function translateText(text, settings, bubble, generation) {
         const isStale = () => generation !== translateGeneration;
         const selectedEngine = settings.engine || "auto";
         const llmEngine = settings.llm_engine || "openai";
         const engine = selectedEngine === "llm" ? llmEngine : selectedEngine;
+        text = maybeNormalizePdfSelectionText(text, engine);
         const sourceSetting = settings.source_lang || "auto";
         const targetSetting = settings.target_lang || "auto";
 

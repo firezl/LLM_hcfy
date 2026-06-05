@@ -84,6 +84,8 @@
                         </option>
                         <option value="google">谷歌翻译</option>
                         <option value="bing">Bing翻译</option>
+                        <option value="deepl">DeepL 翻译</option>
+                        <option value="deeplx">DeepLX 翻译</option>
                         <option value="browser" id="browser_engine_option">
                             浏览器 AI（实验，仅划词）
                         </option>
@@ -771,6 +773,56 @@
                     </select>
                     <div class="jyt-hint">
                         自动检测模型来自 /api/tags 的 models[].name。
+                    </div>
+                </div>
+
+                <div class="jyt-section jyt-hidden" id="deepl_section">
+                    <div class="jyt-section-title">DeepL 翻译</div>
+                    <label>API 地址</label>
+                    <input
+                        id="deepl_api_url"
+                        type="text"
+                        placeholder="https://api-free.deepl.com/v2/translate"
+                    />
+                    <label>API Key</label>
+                    <input
+                        id="deepl_api_key"
+                        type="password"
+                        placeholder="DeepL Auth Key"
+                    />
+                    <div class="jyt-hint">
+                        免费版默认使用
+                        <code>api-free.deepl.com</code>，Pro 订阅请改为
+                        <code>api.deepl.com/v2/translate</code>。需在
+                        <a
+                            href="https://www.deepl.com/pro-api"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            >DeepL 官网</a
+                        >
+                        申请 API Key。
+                    </div>
+                </div>
+
+                <div class="jyt-section jyt-hidden" id="deeplx_section">
+                    <div class="jyt-section-title">DeepLX 翻译</div>
+                    <label>API 地址</label>
+                    <input
+                        id="deeplx_api_url"
+                        type="text"
+                        placeholder="http://localhost:1188/translate"
+                    />
+                    <label>访问令牌（可选）</label>
+                    <input
+                        id="deeplx_api_key"
+                        type="password"
+                        placeholder="若 DeepLX 启用了 TOKEN 则填写"
+                    />
+                    <div class="jyt-hint">
+                        连接自托管 DeepLX 服务。默认使用
+                        <code>/translate</code> 端点；若填写
+                        <code>/v2/translate</code> 则自动兼容官方 DeepL API
+                        格式。本地服务通常不需要令牌。
                     </div>
                 </div>
 

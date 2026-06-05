@@ -1,6 +1,8 @@
 import { streamBingTranslate } from "./engines/bing.js";
 import { streamClaudeTranslate } from "./engines/claude.js";
 import { streamCustomOpenAITranslate } from "./engines/custom-openai.js";
+import { streamDeepLTranslate } from "./engines/deepl.js";
+import { streamDeepLXTranslate } from "./engines/deeplx.js";
 import { streamDeepSeekTranslate } from "./engines/deepseek.js";
 import { streamGeminiTranslate } from "./engines/gemini.js";
 import { streamGrokTranslate } from "./engines/grok.js";
@@ -18,6 +20,8 @@ import { streamXiaomiTranslate } from "./engines/xiaomi.js";
 export const TRANSLATE_HANDLERS = Object.freeze({
     google: streamGoogleTranslate,
     bing: streamBingTranslate,
+    deepl: streamDeepLTranslate,
+    deeplx: streamDeepLXTranslate,
     claude: streamClaudeTranslate,
     custom_openai: streamCustomOpenAITranslate,
     deepseek: streamDeepSeekTranslate,

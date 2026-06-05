@@ -231,6 +231,10 @@ document.addEventListener("DOMContentLoaded", () => {
         "ollama_custom_model",
         "ollama_custom_prompt",
         "ollama_show_thoughts",
+        "deepl_api_url",
+        "deepl_api_key",
+        "deeplx_api_url",
+        "deeplx_api_key",
         "special_translate_provider",
         "special_translate_api_url",
         "special_translate_api_key",
@@ -259,6 +263,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const claudeSection = document.getElementById("claude_section");
     const geminiSection = document.getElementById("gemini_section");
     const ollamaSection = document.getElementById("ollama_section");
+    const deeplSection = document.getElementById("deepl_section");
+    const deeplxSection = document.getElementById("deeplx_section");
     const specialTranslateSection = document.getElementById(
         "special_translate_section",
     );
@@ -1270,6 +1276,8 @@ document.addEventListener("DOMContentLoaded", () => {
             ["claude_section", claudeSection],
             ["gemini_section", geminiSection],
             ["ollama_section", ollamaSection],
+            ["deepl_section", deeplSection],
+            ["deeplx_section", deeplxSection],
             ["special_translate_section", specialTranslateSection],
         ].filter(([, el]) => el),
     );
@@ -1749,6 +1757,13 @@ document.addEventListener("DOMContentLoaded", () => {
                     : "false";
                 populateOllamaModelSelect([], savedOllamaModel);
                 modelListLoaded.delete("ollama");
+                els.deepl_api_url.value =
+                    items.deepl_api_url ||
+                    "https://api-free.deepl.com/v2/translate";
+                els.deepl_api_key.value = items.deepl_api_key || "";
+                els.deeplx_api_url.value =
+                    items.deeplx_api_url || "http://localhost:1188/translate";
+                els.deeplx_api_key.value = items.deeplx_api_key || "";
                 const specialProvider = normalizeSpecialProvider(
                     items.special_translate_provider || SPECIAL_PROVIDER_OLLAMA,
                 );
@@ -1969,6 +1984,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 els.special_translate_custom_prompt.value || "",
             special_translate_show_thoughts:
                 els.special_translate_show_thoughts.value === "true",
+            deepl_api_url: (els.deepl_api_url.value || "").trim(),
+            deepl_api_key: els.deepl_api_key.value,
+            deeplx_api_url: (els.deeplx_api_url.value || "").trim(),
+            deeplx_api_key: els.deeplx_api_key.value,
             theme_mode: els.theme_mode.value,
             font_family: els.font_family.value,
             bubble_width_percent: clampPercent(
@@ -2139,6 +2158,23 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!selectedOllamaModel) {
                 showToast("请先选择 Ollama 模型或填写自定义模型名。", true);
                 return;
+            }
+        }
+
+        if (effectiveEngine === "deepl") {
+            if (!data.deepl_api_key) {
+                showToast("请先填写 DeepL API Key。", true);
+                return;
+            }
+            if (!data.deepl_api_url) {
+                data.deepl_api_url =
+                    "https://api-free.deepl.com/v2/translate";
+            }
+        }
+
+        if (effectiveEngine === "deeplx") {
+            if (!data.deeplx_api_url) {
+                data.deeplx_api_url = "http://localhost:1188/translate";
             }
         }
 

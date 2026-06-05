@@ -46,6 +46,18 @@ export const ENGINE_DEFINITIONS = [
         handler: "bing",
     },
     {
+        id: "deepl",
+        kind: "builtin",
+        handler: "deepl",
+        sectionId: "deepl_section",
+    },
+    {
+        id: "deeplx",
+        kind: "builtin",
+        handler: "deeplx",
+        sectionId: "deeplx_section",
+    },
+    {
         id: "browser",
         kind: "builtin",
         runtime: "content",
