@@ -472,7 +472,7 @@
 
 /* options page */
 #jyt-options-body {
-    width: 520px;
+    width: 100%;
     max-width: 100%;
     min-height: 100vh;
     background: var(--jyt-bg);
@@ -495,9 +495,9 @@
 /* Toolbar popup: Firefox matches @media against the browser viewport, not the popup */
 html.jyt-options--popup-root,
 #jyt-options-body.jyt-options--popup {
-    width: 520px;
-    max-width: 520px;
-    min-width: 520px;
+    width: 100%;
+    min-width: 320px;
+    max-width: 480px;
     min-height: 480px;
     box-sizing: border-box;
 }
@@ -1134,7 +1134,7 @@ button#open_local_pdf:hover {
     }
 
     .jyt-form {
-        width: min(960px, 100%);
+        width: min(800px, 100%);
         margin: 0 auto;
         padding: 28px;
         border: 1px solid var(--jyt-border);
@@ -1165,6 +1165,7 @@ button#open_local_pdf:hover {
         align-items: start;
     }
 
+    .jyt-tab-content#tab_engine.active,
     .jyt-tab-content#tab_glossary.active,
     .jyt-tab-content#tab_history.active,
     .jyt-tab-content#tab_sync.active {
@@ -1198,9 +1199,9 @@ button#open_local_pdf:hover {
 
     html.jyt-options--popup-root,
     #jyt-options-body.jyt-options--popup {
-        width: 520px;
-        max-width: 520px;
-        min-width: 520px;
+        width: 100%;
+        max-width: 480px;
+        min-width: 320px;
         min-height: 480px;
         padding: 0;
         background: var(--jyt-bg);
@@ -1249,12 +1250,6 @@ button#open_local_pdf:hover {
         max-width: none;
         margin-left: 0;
         margin-right: 0;
-    }
-}
-
-@media (min-width: 1120px) {
-    .jyt-form {
-        width: min(1080px, 100%);
     }
 }
 
