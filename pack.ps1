@@ -15,6 +15,8 @@ $includes = @(
     "libs",
     "options.html",
     "options.js",
+    "help.html",
+    "help.js",
     "styles.css",
     "icons",
     "vendor",
