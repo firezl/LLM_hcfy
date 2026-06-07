@@ -91,7 +91,7 @@
 }
 
 #jyt-translate-btn.jyt-btn {
-    position: absolute;
+    position: fixed;
     z-index: 2147483647;
     display: flex;
     align-items: center;
@@ -153,7 +153,7 @@
 }
 
 .jyt-bubble {
-    position: absolute;
+    position: fixed;
     z-index: 2147483647;
     min-width: 180px;
     width: fit-content;

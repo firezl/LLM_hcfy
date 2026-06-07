@@ -186,7 +186,11 @@
             function onTranslateClick(e) {
                 const selection = state.lastSelection.trim();
                 if (!selection) return;
-                triggerTranslate(selection, e.clientX, e.clientY);
+                const point = state.lastSelectionPoint || {
+                    x: e.clientX,
+                    y: e.clientY,
+                };
+                triggerTranslate(selection, point.x, point.y);
             }
 
             function triggerTranslate(selection, x, y) {
@@ -194,6 +198,7 @@
                 if (!text) return;
 
                 app.cancelActiveTranslateRequest();
+                app.hideButton();
 
                 const bubble = app.createBubble();
                 app.clearTermEditorUI(true);
