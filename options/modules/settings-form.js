@@ -1,0 +1,897 @@
+// options/modules/settings-form.js — load, save, reset settings form
+(function (global) {
+    function createSettingsForm(deps) {
+        const {
+            els,
+            showToast,
+            applyTheme,
+            DEFAULT_SETTINGS,
+            API_KEY_FIELDS,
+            LLM_ENGINES,
+            OPENAI_COMPAT_MODEL_ENGINES,
+            modelLists,
+            shortcutsModule,
+            updateEngineDependentUI,
+            extractApiKeyPayload,
+            collectMissingLocalApiKeys,
+            stripApiKeyPayload,
+            requestOptionalHostPermissions,
+        } = deps;
+
+        const {
+            populateOllamaModelSelect,
+            populateOpenAICompatModelSelect,
+            populateOpenRouterModelSelect,
+            populateSpecialTranslateModelSelect,
+            getSelectedOpenAICompatModel,
+            getSelectedOpenRouterModel,
+            normalizeSpecialProvider,
+            getSpecialApiDefaultByProvider,
+            DEFAULT_OPENROUTER_API_URL,
+            DEFAULT_OPENROUTER_FREE_MODEL,
+            RECOMMENDED_SPECIAL_TRANSLATE_MODELS,
+            SPECIAL_PROVIDER_OLLAMA,
+        } = modelLists;
+
+        const { normalizeShortcut } = shortcutsModule;
+        const modelListLoaded = deps.modelListLoaded;
+
+        function clampPercent(value, fallback) {
+            const n = Number(value);
+            if (!Number.isFinite(n)) {
+                return fallback;
+            }
+            return Math.max(5, Math.min(95, Math.round(n)));
+        }
+
+            function load() {
+                chrome.storage.sync.get(DEFAULT_SETTINGS, (syncItems) => {
+                    const syncErr = chrome.runtime.lastError;
+                    if (syncErr) {
+                        showToast(`读取同步配置失败: ${syncErr.message}`, true);
+                        return;
+                    }
+
+                    chrome.storage.local.get(API_KEY_FIELDS, (localItems) => {
+                        const localErr = chrome.runtime.lastError;
+                        const migrateKeys = collectMissingLocalApiKeys(
+                            syncItems,
+                            localErr ? null : localItems,
+                        );
+                        const mergedLocalItems = {
+                            ...(localErr ? {} : localItems || {}),
+                            ...migrateKeys,
+                        };
+                        const items = {
+                            ...DEFAULT_SETTINGS,
+                            ...(syncItems || {}),
+                            ...mergedLocalItems,
+                        };
+
+                        if (localErr) {
+                            showToast(`读取本地密钥失败: ${localErr.message}`, true);
+                        } else if (Object.keys(migrateKeys).length > 0) {
+                            chrome.storage.local.set(migrateKeys, () => {
+                                const migrateErr = chrome.runtime.lastError;
+                                if (migrateErr) {
+                                    showToast(
+                                        `迁移本地密钥失败: ${migrateErr.message}`,
+                                        true,
+                                    );
+                                }
+                            });
+                        }
+
+                        const savedEngine = String(items.engine || "auto").trim();
+                        const savedLLMEngine = String(items.llm_engine || "").trim();
+                        const migratedLLMEngine = LLM_ENGINES.has(savedEngine)
+                            ? savedEngine
+                            : "";
+                        const llmEngine = LLM_ENGINES.has(savedLLMEngine)
+                            ? savedLLMEngine
+                            : migratedLLMEngine || "openrouter";
+                        const uiEngine = LLM_ENGINES.has(savedEngine)
+                            ? "llm"
+                            : savedEngine || "auto";
+
+                        els.enable_select.value = items.enabled;
+                        els.engine_select.value = uiEngine;
+                        if (els.llm_engine_select) {
+                            els.llm_engine_select.value = llmEngine;
+                        }
+                        els.translate_shortcut.value = normalizeShortcut(
+                            items.translate_shortcut,
+                        );
+                        els.source_lang.value = items.source_lang || "auto";
+                        els.target_lang.value = items.target_lang || "auto";
+                        els.openai_api_url.value = items.openai_api_url;
+                        els.openai_api_key.value = items.openai_api_key;
+                        const legacyThinkingModel = String(
+                            items.openai_thinking_model || "",
+                        ).trim();
+                        const unifiedOpenAIModel = String(
+                            items.openai_model || "",
+                        ).trim();
+                        const savedOpenAIModel =
+                            unifiedOpenAIModel || legacyThinkingModel || "gpt-5.4-mini";
+                        els.openai_custom_model.value = items.openai_custom_model || "";
+                        els.openai_custom_prompt.value =
+                            items.openai_custom_prompt || "";
+                        els.show_thoughts.value = items.show_thoughts
+                            ? "true"
+                            : "false";
+                        els.openai_reasoning_effort.value =
+                            items.openai_reasoning_effort || "medium";
+                        els.openai_max_completion_tokens.value = Number.isFinite(
+                            Number(items.openai_max_completion_tokens),
+                        )
+                            ? String(
+                                  Math.floor(
+                                      Number(items.openai_max_completion_tokens),
+                                  ),
+                              )
+                            : "0";
+                        els.custom_openai_api_url.value =
+                            items.custom_openai_api_url ||
+                            "https://api.openai.com/v1/chat/completions";
+                        els.custom_openai_api_key.value =
+                            items.custom_openai_api_key || "";
+                        const savedCustomOpenAIModel =
+                            items.custom_openai_model || "gpt-4o-mini";
+                        els.custom_openai_custom_model.value =
+                            items.custom_openai_custom_model || "";
+                        els.custom_openai_custom_prompt.value =
+                            items.custom_openai_custom_prompt || "";
+                        els.custom_openai_show_thoughts.value =
+                            items.custom_openai_show_thoughts ? "true" : "false";
+                        els.custom_openai_reasoning_effort.value =
+                            items.custom_openai_reasoning_effort || "medium";
+                        els.custom_openai_max_completion_tokens.value = Number.isFinite(
+                            Number(items.custom_openai_max_completion_tokens),
+                        )
+                            ? String(
+                                  Math.floor(
+                                      Number(items.custom_openai_max_completion_tokens),
+                                  ),
+                              )
+                            : "0";
+                        els.openrouter_api_url.value =
+                            items.openrouter_api_url || DEFAULT_OPENROUTER_API_URL;
+                        els.openrouter_api_key.value = items.openrouter_api_key || "";
+                        const savedOpenRouterModel =
+                            items.openrouter_model || DEFAULT_OPENROUTER_FREE_MODEL;
+                        els.openrouter_custom_model.value =
+                            items.openrouter_custom_model || "";
+                        els.openrouter_custom_prompt.value =
+                            items.openrouter_custom_prompt || "";
+                        els.openrouter_show_thoughts.value =
+                            items.openrouter_show_thoughts ? "true" : "false";
+                        els.openrouter_reasoning_effort.value =
+                            items.openrouter_reasoning_effort || "medium";
+                        els.openrouter_max_completion_tokens.value = Number.isFinite(
+                            Number(items.openrouter_max_completion_tokens),
+                        )
+                            ? String(
+                                  Math.floor(
+                                      Number(items.openrouter_max_completion_tokens),
+                                  ),
+                              )
+                            : "0";
+                        populateOpenRouterModelSelect([], savedOpenRouterModel);
+                        modelListLoaded.delete("openrouter");
+                        els.deepseek_api_url.value =
+                            items.deepseek_api_url ||
+                            "https://api.deepseek.com/chat/completions";
+                        els.deepseek_api_key.value = items.deepseek_api_key || "";
+                        const savedDeepSeekModel =
+                            items.deepseek_model || "deepseek-v4-flash";
+                        els.deepseek_custom_model.value =
+                            items.deepseek_custom_model || "";
+                        els.deepseek_custom_prompt.value =
+                            items.deepseek_custom_prompt || "";
+                        els.deepseek_show_thoughts.value = items.deepseek_show_thoughts
+                            ? "true"
+                            : "false";
+                        els.qwen_api_url.value =
+                            items.qwen_api_url ||
+                            "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation";
+                        els.qwen_api_key.value = items.qwen_api_key || "";
+                        const savedQwenModel = items.qwen_model || "qwen3.5-plus";
+                        els.qwen_custom_model.value = items.qwen_custom_model || "";
+                        els.qwen_custom_prompt.value = items.qwen_custom_prompt || "";
+                        els.qwen_show_thoughts.value = items.qwen_show_thoughts
+                            ? "true"
+                            : "false";
+                        els.qwen_thinking_budget.value = Number.isFinite(
+                            Number(items.qwen_thinking_budget),
+                        )
+                            ? String(Math.floor(Number(items.qwen_thinking_budget)))
+                            : "0";
+                        els.qwen_preserve_thinking.value = items.qwen_preserve_thinking
+                            ? "true"
+                            : "false";
+                        els.glm_api_url.value =
+                            items.glm_api_url ||
+                            "https://open.bigmodel.cn/api/paas/v4/chat/completions";
+                        els.glm_api_key.value = items.glm_api_key || "";
+                        const savedGLMModel = items.glm_model || "glm-5.1";
+                        els.glm_custom_model.value = items.glm_custom_model || "";
+                        els.glm_custom_prompt.value = items.glm_custom_prompt || "";
+                        els.glm_show_thoughts.value = items.glm_show_thoughts
+                            ? "true"
+                            : "false";
+                        els.glm_clear_thinking.value =
+                            items.glm_clear_thinking === false ? "false" : "true";
+                        els.xiaomi_api_url.value =
+                            items.xiaomi_api_url ||
+                            "https://api.xiaomimimo.com/v1/chat/completions";
+                        els.xiaomi_api_key.value = items.xiaomi_api_key || "";
+                        const savedXiaomiModel = items.xiaomi_model || "mimo-v2.5";
+                        els.xiaomi_custom_model.value = items.xiaomi_custom_model || "";
+                        els.xiaomi_custom_prompt.value =
+                            items.xiaomi_custom_prompt || "";
+                        els.xiaomi_show_thoughts.value = items.xiaomi_show_thoughts
+                            ? "true"
+                            : "false";
+                        els.xiaomi_max_completion_tokens.value = Number.isFinite(
+                            Number(items.xiaomi_max_completion_tokens),
+                        )
+                            ? String(
+                                  Math.floor(
+                                      Number(items.xiaomi_max_completion_tokens),
+                                  ),
+                              )
+                            : "0";
+                        els.grok_api_url.value =
+                            items.grok_api_url ||
+                            "https://api.x.ai/v1/chat/completions";
+                        els.grok_api_key.value = items.grok_api_key || "";
+                        const savedGrokModel = items.grok_model || "grok-4.3";
+                        els.grok_custom_model.value = items.grok_custom_model || "";
+                        els.grok_custom_prompt.value = items.grok_custom_prompt || "";
+                        els.grok_show_thoughts.value = items.grok_show_thoughts
+                            ? "true"
+                            : "false";
+                        els.nim_api_url.value =
+                            items.nim_api_url ||
+                            "https://integrate.api.nvidia.com/v1/chat/completions";
+                        els.nim_api_key.value = items.nim_api_key || "";
+                        const savedNimModel =
+                            items.nim_model || "meta/llama-3.1-70b-instruct";
+                        els.nim_custom_model.value = items.nim_custom_model || "";
+                        els.nim_custom_prompt.value = items.nim_custom_prompt || "";
+                        els.nim_show_thoughts.value = items.nim_show_thoughts
+                            ? "true"
+                            : "false";
+                        els.nim_max_tokens.value = Number.isFinite(
+                            Number(items.nim_max_tokens),
+                        )
+                            ? String(Math.floor(Number(items.nim_max_tokens)))
+                            : "0";
+                        const openaiCompatSavedModelMap = {
+                            openai: savedOpenAIModel,
+                            custom_openai: savedCustomOpenAIModel,
+                            deepseek: savedDeepSeekModel,
+                            qwen: savedQwenModel,
+                            glm: savedGLMModel,
+                            xiaomi: savedXiaomiModel,
+                            grok: savedGrokModel,
+                            nim: savedNimModel,
+                        };
+                        OPENAI_COMPAT_MODEL_ENGINES.forEach((cfg) => {
+                            const selectEl = els[cfg.modelId];
+                            const customEl = els[cfg.customModelId];
+                            const savedModel =
+                                openaiCompatSavedModelMap[cfg.name] || cfg.defaultModel;
+
+                            populateOpenAICompatModelSelect(
+                                selectEl,
+                                customEl,
+                                [],
+                                savedModel,
+                            );
+                            modelListLoaded.delete(cfg.name);
+                        });
+                        els.claude_api_url.value =
+                            items.claude_api_url ||
+                            "https://api.anthropic.com/v1/messages";
+                        els.claude_api_key.value = items.claude_api_key || "";
+                        const savedClaudeModel =
+                            items.claude_model || "claude-sonnet-4-6";
+                        els.claude_custom_model.value = items.claude_custom_model || "";
+                        els.claude_custom_prompt.value =
+                            items.claude_custom_prompt || "";
+                        els.claude_show_thoughts.value = items.claude_show_thoughts
+                            ? "true"
+                            : "false";
+                        els.claude_max_tokens.value = Number.isFinite(
+                            Number(items.claude_max_tokens),
+                        )
+                            ? String(Math.floor(Number(items.claude_max_tokens)))
+                            : "4096";
+                        els.claude_thinking_mode.value =
+                            items.claude_thinking_mode || "adaptive";
+                        els.claude_thinking_budget.value = Number.isFinite(
+                            Number(items.claude_thinking_budget),
+                        )
+                            ? String(Math.floor(Number(items.claude_thinking_budget)))
+                            : "2048";
+                        els.claude_thinking_effort.value =
+                            items.claude_thinking_effort || "medium";
+                        populateOpenAICompatModelSelect(
+                            els.claude_model,
+                            els.claude_custom_model,
+                            [],
+                            savedClaudeModel,
+                        );
+                        modelListLoaded.delete("claude");
+                        els.gemini_api_url.value =
+                            items.gemini_api_url ||
+                            "https://generativelanguage.googleapis.com/v1beta/models";
+                        els.gemini_api_key.value = items.gemini_api_key || "";
+                        const savedGeminiModel =
+                            items.gemini_model || "gemini-flash-latest";
+                        els.gemini_custom_model.value = items.gemini_custom_model || "";
+                        els.gemini_custom_prompt.value =
+                            items.gemini_custom_prompt || "";
+                        els.gemini_show_thoughts.value = items.gemini_show_thoughts
+                            ? "true"
+                            : "false";
+                        els.gemini_thinking_level.value =
+                            items.gemini_thinking_level || "high";
+                        els.gemini_thinking_budget.value = Number.isFinite(
+                            Number(items.gemini_thinking_budget),
+                        )
+                            ? String(Math.floor(Number(items.gemini_thinking_budget)))
+                            : "-1";
+                        populateOpenAICompatModelSelect(
+                            els.gemini_model,
+                            els.gemini_custom_model,
+                            [],
+                            savedGeminiModel,
+                        );
+                        modelListLoaded.delete("gemini");
+                        const savedOllamaModel =
+                            items.ollama_model || "qwen3.5:latest";
+                        els.ollama_api_url.value =
+                            items.ollama_api_url || "http://localhost:11434/api/chat";
+                        els.ollama_custom_model.value = items.ollama_custom_model || "";
+                        els.ollama_custom_prompt.value =
+                            items.ollama_custom_prompt || "";
+                        els.ollama_show_thoughts.value = items.ollama_show_thoughts
+                            ? "true"
+                            : "false";
+                        populateOllamaModelSelect([], savedOllamaModel);
+                        modelListLoaded.delete("ollama");
+                        els.deepl_api_url.value =
+                            items.deepl_api_url ||
+                            "https://api-free.deepl.com/v2/translate";
+                        els.deepl_api_key.value = items.deepl_api_key || "";
+                        els.deeplx_api_url.value =
+                            items.deeplx_api_url || "http://localhost:1188/translate";
+                        els.deeplx_api_key.value = items.deeplx_api_key || "";
+                        const specialProvider = normalizeSpecialProvider(
+                            items.special_translate_provider || SPECIAL_PROVIDER_OLLAMA,
+                        );
+                        const savedSpecialModel =
+                            items.special_translate_model || "translategemma";
+                        els.special_translate_provider.value = specialProvider;
+                        els.special_translate_api_url.value =
+                            items.special_translate_api_url ||
+                            getSpecialApiDefaultByProvider(specialProvider);
+                        els.special_translate_api_key.value =
+                            items.special_translate_api_key || "";
+                        els.special_translate_custom_model.value =
+                            items.special_translate_custom_model || "";
+                        els.special_translate_custom_prompt.value =
+                            items.special_translate_custom_prompt || "";
+                        els.special_translate_show_thoughts.value =
+                            items.special_translate_show_thoughts ? "true" : "false";
+                        populateSpecialTranslateModelSelect(
+                            RECOMMENDED_SPECIAL_TRANSLATE_MODELS,
+                            savedSpecialModel,
+                        );
+                        modelListLoaded.delete("special_translate");
+                        els.theme_mode.value = items.theme_mode || "auto";
+                        els.font_family.value = items.font_family || "";
+                        els.bubble_width_percent.value = clampPercent(
+                            items.bubble_width_percent,
+                            20,
+                        );
+                        els.bubble_height_percent.value = clampPercent(
+                            items.bubble_height_percent,
+                            40,
+                        );
+                        updateEngineDependentUI();
+                        applyTheme(items.theme_mode || "auto");
+                    });
+                });
+            }
+
+        function bindSaveReset() {
+                document.getElementById("save").addEventListener("click", async () => {
+                    const selectedEngine = els.engine_select.value;
+                    const selectedLlmEngine =
+                        (els.llm_engine_select?.value || "openai").trim() || "openai";
+                    const effectiveEngine =
+                        selectedEngine === "llm" ? selectedLlmEngine : selectedEngine;
+                    const selectedOpenAIModel = getSelectedOpenAICompatModel(
+                        els.openai_model,
+                        els.openai_custom_model,
+                    );
+                    const selectedCustomOpenAIModel = getSelectedOpenAICompatModel(
+                        els.custom_openai_model,
+                        els.custom_openai_custom_model,
+                    );
+                    const selectedOpenRouterModel = getSelectedOpenRouterModel();
+                    const selectedDeepSeekModel = getSelectedOpenAICompatModel(
+                        els.deepseek_model,
+                        els.deepseek_custom_model,
+                    );
+                    const selectedQwenModel = getSelectedOpenAICompatModel(
+                        els.qwen_model,
+                        els.qwen_custom_model,
+                    );
+                    const selectedGLMModel = getSelectedOpenAICompatModel(
+                        els.glm_model,
+                        els.glm_custom_model,
+                    );
+                    const selectedXiaomiModel = getSelectedOpenAICompatModel(
+                        els.xiaomi_model,
+                        els.xiaomi_custom_model,
+                    );
+                    const selectedGrokModel = getSelectedOpenAICompatModel(
+                        els.grok_model,
+                        els.grok_custom_model,
+                    );
+                    const selectedNimModel = getSelectedOpenAICompatModel(
+                        els.nim_model,
+                        els.nim_custom_model,
+                    );
+                    const selectedClaudeModel = getSelectedOpenAICompatModel(
+                        els.claude_model,
+                        els.claude_custom_model,
+                    );
+                    const selectedGeminiModel = getSelectedOpenAICompatModel(
+                        els.gemini_model,
+                        els.gemini_custom_model,
+                    );
+                    const data = {
+                        enabled: els.enable_select.value,
+                        engine: selectedEngine,
+                        llm_engine: selectedLlmEngine,
+                        translate_shortcut: normalizeShortcut(els.translate_shortcut.value),
+                        source_lang: els.source_lang.value,
+                        target_lang: els.target_lang.value,
+                        openai_api_url: els.openai_api_url.value,
+                        openai_api_key: els.openai_api_key.value,
+                        openai_model: selectedOpenAIModel,
+                        openai_custom_model: (els.openai_custom_model.value || "").trim(),
+                        openai_custom_prompt: els.openai_custom_prompt.value || "",
+                        show_thoughts: els.show_thoughts.value === "true",
+                        openai_reasoning_effort: els.openai_reasoning_effort.value,
+                        openai_max_completion_tokens: Number(
+                            els.openai_max_completion_tokens.value || 0,
+                        ),
+                        custom_openai_api_url: (
+                            els.custom_openai_api_url.value || ""
+                        ).trim(),
+                        custom_openai_api_key: els.custom_openai_api_key.value,
+                        custom_openai_model: selectedCustomOpenAIModel,
+                        custom_openai_custom_model: (
+                            els.custom_openai_custom_model.value || ""
+                        ).trim(),
+                        custom_openai_custom_prompt:
+                            els.custom_openai_custom_prompt.value || "",
+                        custom_openai_show_thoughts:
+                            els.custom_openai_show_thoughts.value === "true",
+                        custom_openai_reasoning_effort:
+                            els.custom_openai_reasoning_effort.value,
+                        custom_openai_max_completion_tokens: Number(
+                            els.custom_openai_max_completion_tokens.value || 0,
+                        ),
+                        openrouter_api_url: (els.openrouter_api_url.value || "").trim(),
+                        openrouter_api_key: els.openrouter_api_key.value,
+                        openrouter_model: selectedOpenRouterModel,
+                        openrouter_custom_model: (
+                            els.openrouter_custom_model.value || ""
+                        ).trim(),
+                        openrouter_custom_prompt: els.openrouter_custom_prompt.value || "",
+                        openrouter_show_thoughts:
+                            els.openrouter_show_thoughts.value === "true",
+                        openrouter_reasoning_effort:
+                            els.openrouter_reasoning_effort.value,
+                        openrouter_max_completion_tokens: Number(
+                            els.openrouter_max_completion_tokens.value || 0,
+                        ),
+                        deepseek_api_url: (els.deepseek_api_url.value || "").trim(),
+                        deepseek_api_key: els.deepseek_api_key.value,
+                        deepseek_model: selectedDeepSeekModel,
+                        deepseek_custom_model: (
+                            els.deepseek_custom_model.value || ""
+                        ).trim(),
+                        deepseek_custom_prompt: els.deepseek_custom_prompt.value || "",
+                        deepseek_show_thoughts: els.deepseek_show_thoughts.value === "true",
+                        qwen_api_url: (els.qwen_api_url.value || "").trim(),
+                        qwen_api_key: els.qwen_api_key.value,
+                        qwen_model: selectedQwenModel,
+                        qwen_custom_model: (els.qwen_custom_model.value || "").trim(),
+                        qwen_custom_prompt: els.qwen_custom_prompt.value || "",
+                        qwen_show_thoughts: els.qwen_show_thoughts.value === "true",
+                        qwen_thinking_budget: Number(els.qwen_thinking_budget.value || 0),
+                        qwen_preserve_thinking: els.qwen_preserve_thinking.value === "true",
+                        glm_api_url: (els.glm_api_url.value || "").trim(),
+                        glm_api_key: els.glm_api_key.value,
+                        glm_model: selectedGLMModel,
+                        glm_custom_model: (els.glm_custom_model.value || "").trim(),
+                        glm_custom_prompt: els.glm_custom_prompt.value || "",
+                        glm_show_thoughts: els.glm_show_thoughts.value === "true",
+                        glm_clear_thinking: els.glm_clear_thinking.value === "true",
+                        xiaomi_api_url: (els.xiaomi_api_url.value || "").trim(),
+                        xiaomi_api_key: els.xiaomi_api_key.value,
+                        xiaomi_model: selectedXiaomiModel,
+                        xiaomi_custom_model: (els.xiaomi_custom_model.value || "").trim(),
+                        xiaomi_custom_prompt: els.xiaomi_custom_prompt.value || "",
+                        xiaomi_show_thoughts: els.xiaomi_show_thoughts.value === "true",
+                        xiaomi_max_completion_tokens: Number(
+                            els.xiaomi_max_completion_tokens.value || 0,
+                        ),
+                        grok_api_url: (els.grok_api_url.value || "").trim(),
+                        grok_api_key: els.grok_api_key.value,
+                        grok_model: selectedGrokModel,
+                        grok_custom_model: (els.grok_custom_model.value || "").trim(),
+                        grok_custom_prompt: els.grok_custom_prompt.value || "",
+                        grok_show_thoughts: els.grok_show_thoughts.value === "true",
+                        nim_api_url: (els.nim_api_url.value || "").trim(),
+                        nim_api_key: els.nim_api_key.value,
+                        nim_model: selectedNimModel,
+                        nim_custom_model: (els.nim_custom_model.value || "").trim(),
+                        nim_custom_prompt: els.nim_custom_prompt.value || "",
+                        nim_show_thoughts: els.nim_show_thoughts.value === "true",
+                        nim_max_tokens: Number(els.nim_max_tokens.value || 0),
+                        claude_api_url: (els.claude_api_url.value || "").trim(),
+                        claude_api_key: els.claude_api_key.value,
+                        claude_model: selectedClaudeModel,
+                        claude_custom_model: (els.claude_custom_model.value || "").trim(),
+                        claude_custom_prompt: els.claude_custom_prompt.value || "",
+                        claude_show_thoughts: els.claude_show_thoughts.value === "true",
+                        claude_max_tokens: Number(els.claude_max_tokens.value || 4096),
+                        claude_thinking_mode: els.claude_thinking_mode.value,
+                        claude_thinking_budget: Number(
+                            els.claude_thinking_budget.value || 2048,
+                        ),
+                        claude_thinking_effort: els.claude_thinking_effort.value,
+                        gemini_api_url: (els.gemini_api_url.value || "").trim(),
+                        gemini_api_key: els.gemini_api_key.value,
+                        gemini_model: selectedGeminiModel,
+                        gemini_custom_model: (els.gemini_custom_model.value || "").trim(),
+                        gemini_custom_prompt: els.gemini_custom_prompt.value || "",
+                        gemini_show_thoughts: els.gemini_show_thoughts.value === "true",
+                        gemini_thinking_level: els.gemini_thinking_level.value,
+                        gemini_thinking_budget: Number(
+                            els.gemini_thinking_budget.value || -1,
+                        ),
+                        ollama_api_url: (els.ollama_api_url.value || "").trim(),
+                        ollama_model: els.ollama_model_select.value,
+                        ollama_custom_model: (els.ollama_custom_model.value || "").trim(),
+                        ollama_custom_prompt: els.ollama_custom_prompt.value || "",
+                        ollama_show_thoughts: els.ollama_show_thoughts.value === "true",
+                        special_translate_provider: normalizeSpecialProvider(
+                            els.special_translate_provider.value,
+                        ),
+                        special_translate_api_url: (
+                            els.special_translate_api_url.value || ""
+                        ).trim(),
+                        special_translate_api_key: els.special_translate_api_key.value,
+                        special_translate_model: els.special_translate_model_select.value,
+                        special_translate_custom_model: (
+                            els.special_translate_custom_model.value || ""
+                        ).trim(),
+                        special_translate_custom_prompt:
+                            els.special_translate_custom_prompt.value || "",
+                        special_translate_show_thoughts:
+                            els.special_translate_show_thoughts.value === "true",
+                        deepl_api_url: (els.deepl_api_url.value || "").trim(),
+                        deepl_api_key: els.deepl_api_key.value,
+                        deeplx_api_url: (els.deeplx_api_url.value || "").trim(),
+                        deeplx_api_key: els.deeplx_api_key.value,
+                        theme_mode: els.theme_mode.value,
+                        font_family: els.font_family.value,
+                        bubble_width_percent: clampPercent(
+                            els.bubble_width_percent.value,
+                            20,
+                        ),
+                        bubble_height_percent: clampPercent(
+                            els.bubble_height_percent.value,
+                            40,
+                        ),
+                        config_updated_at: Date.now(),
+                    };
+                    if (effectiveEngine === "custom_openai") {
+                        if (!data.custom_openai_api_key) {
+                            showToast("请先填写自定义 OpenAI 兼容 API Key。", true);
+                            return;
+                        }
+                        if (!data.custom_openai_model) {
+                            showToast("请先填写自定义 OpenAI 兼容模型。", true);
+                            return;
+                        }
+                        if (!data.custom_openai_api_url) {
+                            data.custom_openai_api_url =
+                                "https://api.openai.com/v1/chat/completions";
+                        }
+                    }
+
+                    if (effectiveEngine === "openrouter") {
+                        if (!data.openrouter_api_key) {
+                            showToast("请先填写 OpenRouter API Key。", true);
+                            return;
+                        }
+                        if (!data.openrouter_model) {
+                            showToast("请先选择 OpenRouter 模型或填写自定义模型名。", true);
+                            return;
+                        }
+                        if (!data.openrouter_api_url) {
+                            data.openrouter_api_url = DEFAULT_OPENROUTER_API_URL;
+                        }
+                    }
+
+                    if (effectiveEngine === "deepseek") {
+                        if (!data.deepseek_api_key) {
+                            showToast("请先填写 DeepSeek API Key。", true);
+                            return;
+                        }
+                        if (!data.deepseek_model) {
+                            showToast("请先填写 DeepSeek 模型。", true);
+                            return;
+                        }
+                        if (!data.deepseek_api_url) {
+                            data.deepseek_api_url =
+                                "https://api.deepseek.com/chat/completions";
+                        }
+                    }
+
+                    if (effectiveEngine === "qwen") {
+                        if (!data.qwen_api_key) {
+                            showToast("请先填写 Qwen API Key。", true);
+                            return;
+                        }
+                        if (!data.qwen_model) {
+                            showToast("请先填写 Qwen 模型。", true);
+                            return;
+                        }
+                        if (!data.qwen_api_url) {
+                            data.qwen_api_url =
+                                "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation";
+                        }
+                    }
+
+                    if (effectiveEngine === "glm") {
+                        if (!data.glm_api_key) {
+                            showToast("请先填写 GLM API Key。", true);
+                            return;
+                        }
+                        if (!data.glm_model) {
+                            showToast("请先填写 GLM 模型。", true);
+                            return;
+                        }
+                        if (!data.glm_api_url) {
+                            data.glm_api_url =
+                                "https://open.bigmodel.cn/api/paas/v4/chat/completions";
+                        }
+                    }
+
+                    if (effectiveEngine === "xiaomi") {
+                        if (!data.xiaomi_api_key) {
+                            showToast("请先填写 Xiaomi API Key。", true);
+                            return;
+                        }
+                        if (!data.xiaomi_model) {
+                            showToast("请先填写 Xiaomi 模型。", true);
+                            return;
+                        }
+                        if (!data.xiaomi_api_url) {
+                            data.xiaomi_api_url =
+                                "https://api.xiaomimimo.com/v1/chat/completions";
+                        }
+                    }
+
+                    if (effectiveEngine === "grok") {
+                        if (!data.grok_api_key) {
+                            showToast("请先填写 Grok API Key。", true);
+                            return;
+                        }
+                        if (!data.grok_model) {
+                            showToast("请先填写 Grok 模型。", true);
+                            return;
+                        }
+                        if (!data.grok_api_url) {
+                            data.grok_api_url = "https://api.x.ai/v1/chat/completions";
+                        }
+                    }
+
+                    if (effectiveEngine === "nim") {
+                        if (!data.nim_api_key) {
+                            showToast("请先填写 NVIDIA NIM API Key。", true);
+                            return;
+                        }
+                        if (!data.nim_model) {
+                            showToast("请先填写 NVIDIA NIM 模型。", true);
+                            return;
+                        }
+                        if (!data.nim_api_url) {
+                            data.nim_api_url =
+                                "https://integrate.api.nvidia.com/v1/chat/completions";
+                        }
+                    }
+
+                    if (effectiveEngine === "claude") {
+                        if (!data.claude_api_key) {
+                            showToast("请先填写 Claude API Key。", true);
+                            return;
+                        }
+                        if (!data.claude_model) {
+                            showToast("请先填写 Claude 模型。", true);
+                            return;
+                        }
+                        if (!data.claude_api_url) {
+                            data.claude_api_url = "https://api.anthropic.com/v1/messages";
+                        }
+                    }
+
+                    if (effectiveEngine === "gemini") {
+                        if (!data.gemini_api_key) {
+                            showToast("请先填写 Gemini API Key。", true);
+                            return;
+                        }
+                        if (!data.gemini_model) {
+                            showToast("请先填写 Gemini 模型。", true);
+                            return;
+                        }
+                        if (!data.gemini_api_url) {
+                            data.gemini_api_url =
+                                "https://generativelanguage.googleapis.com/v1beta/models";
+                        }
+                    }
+
+                    if (effectiveEngine === "ollama") {
+                        if (!data.ollama_api_url) {
+                            data.ollama_api_url = "http://localhost:11434/api/chat";
+                        }
+                        const selectedOllamaModel =
+                            data.ollama_model === "custom"
+                                ? data.ollama_custom_model
+                                : data.ollama_model;
+                        if (!selectedOllamaModel) {
+                            showToast("请先选择 Ollama 模型或填写自定义模型名。", true);
+                            return;
+                        }
+                    }
+
+                    if (effectiveEngine === "deepl") {
+                        if (!data.deepl_api_key) {
+                            showToast("请先填写 DeepL API Key。", true);
+                            return;
+                        }
+                        if (!data.deepl_api_url) {
+                            data.deepl_api_url =
+                                "https://api-free.deepl.com/v2/translate";
+                        }
+                    }
+
+                    if (effectiveEngine === "deeplx") {
+                        if (!data.deeplx_api_url) {
+                            data.deeplx_api_url = "http://localhost:1188/translate";
+                        }
+                    }
+
+                    if (effectiveEngine === "special_translate") {
+                        data.special_translate_provider = normalizeSpecialProvider(
+                            data.special_translate_provider,
+                        );
+                        if (!data.special_translate_api_url) {
+                            data.special_translate_api_url = getSpecialApiDefaultByProvider(
+                                data.special_translate_provider,
+                            );
+                        }
+
+                        const selectedSpecialModel =
+                            data.special_translate_model === "custom"
+                                ? data.special_translate_custom_model
+                                : data.special_translate_model;
+
+                        if (!selectedSpecialModel) {
+                            showToast("请先选择专用翻译模型或填写自定义模型名。", true);
+                            return;
+                        }
+                    }
+
+                    const permissionUrls = Object.entries(data)
+                        .filter(([key, value]) => key.endsWith("_api_url") && value)
+                        .map(([, value]) => value);
+                    const granted =
+                        await requestOptionalHostPermissions(
+                            permissionUrls,
+                        );
+                    if (!granted) {
+                        showToast(
+                            "未授予部分自定义接口访问权限，若服务端不支持 CORS，翻译可能失败。",
+                            true,
+                        );
+                    }
+
+                    const localApiKeys = extractApiKeyPayload(data);
+                    const syncData = stripApiKeyPayload(data);
+
+                    chrome.storage.local.set(localApiKeys, () => {
+                        const localErr = chrome.runtime.lastError;
+                        if (localErr) {
+                            showToast(`保存失败: ${localErr.message}`, true);
+                            return;
+                        }
+
+                        chrome.storage.sync.set(syncData, () => {
+                            const syncErr = chrome.runtime.lastError;
+                            if (syncErr) {
+                                showToast(`保存失败: ${syncErr.message}`, true);
+                                return;
+                            }
+                            applyTheme(syncData.theme_mode);
+                            showToast("已保存");
+                        });
+                    });
+                });
+
+                document.getElementById("reset").addEventListener("click", () => {
+                    chrome.storage.sync.clear(() => {
+                        const syncErr = chrome.runtime.lastError;
+                        if (syncErr) {
+                            showToast(`恢复失败: ${syncErr.message}`, true);
+                            return;
+                        }
+
+                        chrome.storage.local.remove(API_KEY_FIELDS, () => {
+                            const localErr = chrome.runtime.lastError;
+                            if (localErr) {
+                                showToast(`恢复失败: ${localErr.message}`, true);
+                                return;
+                            }
+
+                            load();
+                            showToast("已恢复默认");
+                        });
+                    });
+                });
+        }
+
+        function bindGeneralEvents() {
+            els.engine_select.addEventListener("change", updateEngineDependentUI);
+            els.llm_engine_select?.addEventListener("change", updateEngineDependentUI);
+
+            els.theme_mode.addEventListener("change", () => {
+                applyTheme(els.theme_mode.value);
+            });
+
+            els.ollama_model_select?.addEventListener("change", () => {
+                const isCustom = els.ollama_model_select.value === "custom";
+                els.ollama_custom_model.disabled = !isCustom;
+            });
+
+            els.special_translate_model_select?.addEventListener("change", () => {
+                const isCustom = els.special_translate_model_select.value === "custom";
+                els.special_translate_custom_model.disabled = !isCustom;
+            });
+        }
+
+        return {
+            load,
+            bindSaveReset,
+            bindGeneralEvents,
+            clampPercent,
+        };
+    }
+
+    global.JYT_OPTION_SETTINGS = {
+        createSettingsForm,
+    };
+})(globalThis);

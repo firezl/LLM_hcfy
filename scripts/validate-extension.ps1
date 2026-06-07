@@ -22,7 +22,14 @@ $requiredPaths = @(
     "background.js",
     "background/index.js",
     "content_script.js",
+    "content/modules/state.js",
+    "content/modules/bootstrap.js",
     "libs/shared-config.js",
+    "options/modules/dom-refs.js",
+    "options/modules/ui-shell.js",
+    "options/modules/messaging.js",
+    "options/modules/model-lists.js",
+    "options/modules/settings-form.js",
     "options/modules/engines.js",
     "options/modules/glossary.js",
     "options/modules/sync-data.js",
@@ -47,6 +54,8 @@ node --test tests/*.test.mjs
 $contentScript = @($manifest.content_scripts)[0]
 Assert-True ($contentScript.matches -contains "<all_urls>") "content_scripts 需要覆盖 <all_urls>"
 Assert-True ($contentScript.js[0] -eq "libs/shared-config.js") "libs/shared-config.js 必须先于 content_script.js 加载"
+Assert-True ($contentScript.js[-1] -eq "content_script.js") "content_script.js 必须为 content_scripts 最后一项"
+Assert-True ($contentScript.js -contains "content/modules/bootstrap.js") "manifest 必须加载 content/modules/bootstrap.js"
 
 $optionsHtml = Get-Content "options.html" -Raw
 $optionsScriptMatches = [regex]::Matches($optionsHtml, '<script\s+src="([^"]+)"')
