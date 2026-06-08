@@ -168,8 +168,8 @@
                 progressBarEl.style.width = `${Math.round(ratio * 100)}%`;
             }
 
-            async function openPdfInBrowser(state) {
-                const currentState = state || state.pdfPromptState;
+            async function openPdfInBrowser(options) {
+                const currentState = options || state.pdfPromptState;
                 hidePdfPrompt();
 
                 if (!currentState?.pdfUrl) {
@@ -242,12 +242,12 @@
                 }
             }
 
-            function showPdfPrompt(state) {
+            function showPdfPrompt(options) {
                 state.pdfPromptState = {
-                    source: state?.source || "click",
-                    promptId: state?.promptId || "",
-                    pdfUrl: state?.pdfUrl || "",
-                    isPdf: state?.isPdf ?? null,
+                    source: options?.source || "click",
+                    promptId: options?.promptId || "",
+                    pdfUrl: options?.pdfUrl || "",
+                    isPdf: options?.isPdf ?? null,
                 };
 
                 ensurePdfPrompt();
