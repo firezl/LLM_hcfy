@@ -20,6 +20,7 @@
             languageDetectorModelReady: false,
             languageDetectorInstance: null,
             translatePortClosing: false,
+            renderRafId: null,
         };
     }
 

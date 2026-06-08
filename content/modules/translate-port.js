@@ -103,15 +103,7 @@
                         const chunk = message.content || "";
                         state.activeRequest.buffer += chunk;
                         touchActiveRequestTimeout(state.activeRequest);
-                        renderContentAndThought(
-                            state.activeRequest.buffer,
-                            chunk,
-                            streamEl,
-                            thoughtEl,
-                            thoughtDetails,
-                            isThinking,
-                        );
-                        streamEl.scrollTop = streamEl.scrollHeight;
+                        scheduleRender(state, streamEl, thoughtEl, thoughtDetails, isThinking);
                         return;
                     }
 
@@ -218,7 +210,6 @@
             }
 
             function sendTranslateStart(payload) {
-                resetTranslatePort();
                 let port = ensureTranslatePort();
                 if (!port) {
                     return false;
@@ -265,6 +256,26 @@
                 } finally {
                     app.drainRuntimeLastError();
                 }
+            }
+
+            function scheduleRender(state, streamEl, thoughtEl, thoughtDetails, isThinking) {
+                if (state.renderRafId) {
+                    cancelAnimationFrame(state.renderRafId);
+                }
+                state.renderRafId = requestAnimationFrame(() => {
+                    state.renderRafId = null;
+                    if (!state.activeRequest) return;
+                    const buffer = state.activeRequest.buffer;
+                    renderContentAndThought(
+                        buffer,
+                        null,
+                        streamEl,
+                        thoughtEl,
+                        thoughtDetails,
+                        isThinking,
+                    );
+                    streamEl.scrollTop = streamEl.scrollHeight;
+                });
             }
 
             function renderContentAndThought(

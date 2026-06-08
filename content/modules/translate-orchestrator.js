@@ -49,12 +49,18 @@
                 state.activeRequest = null;
                 app.setBubbleState(bubble, "loading");
 
-                if (!from) from = await app.detectLangByLanguageDetector(text, streamEl);
-                if (isStale()) return;
-                if (!from) from = await app.detectTextLangByChromeI18n(text);
-                if (isStale()) return;
-                if (!from) from = app.detectLangHeuristic(text);
-                if (isStale()) return;
+                if (!from) {
+                    const [det1, det2, det3] = await Promise.allSettled([
+                        app.detectLangByLanguageDetector(text, streamEl),
+                        app.detectTextLangByChromeI18n(text),
+                        Promise.resolve(app.detectLangHeuristic(text))
+                    ]);
+                    if (isStale()) return;
+                    from = det1.status === 'fulfilled' ? det1.value : null
+                        || det2.status === 'fulfilled' ? det2.value : null
+                        || det3.status === 'fulfilled' ? det3.value : null
+                        || '';
+                }
 
                 let to = targetSetting === "auto" ? "" : targetSetting;
                 if (!to) to = app.detectBrowserLangByNavigator();
