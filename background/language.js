@@ -156,8 +156,23 @@ function renderPromptTemplate(template, text, to, options) {
     );
 }
 
+function buildDefaultSystemPrompt(_text, to, options) {
+    const targetLang = getLanguageDisplayName(to);
+    const glossaryBlock = buildGlossaryConstraint(
+        options?.glossaryTerms,
+    ).trimStart();
+    const parts = [
+        `你是一个专业翻译引擎。请把用户提供的文本翻译为${targetLang}，准确保留原意、语气、格式和术语。`,
+        "只输出译文，不要输出解释、前后缀、Markdown 包裹或其它多余内容。",
+    ];
+    if (glossaryBlock) {
+        parts.push(glossaryBlock);
+    }
+    return parts.join("\n");
+}
+
 function buildDefaultUserPrompt(text, to, options) {
-    return buildPrompt(text, to, options);
+    return String(text || "");
 }
 
 export function buildPrompt(text, to, options) {
@@ -187,7 +202,7 @@ export function buildChatPromptParts(text, to, options) {
 
     const systemPrompt = systemTemplate
         ? renderPromptTemplate(systemTemplate, text, to, options)
-        : "";
+        : buildDefaultSystemPrompt(text, to, options);
     const userPrompt = userTemplate
         ? buildPromptWithTemplate(
               userTemplate,

@@ -6,11 +6,11 @@ import {
 } from "../background/language.js";
 
 describe("language prompt builders", () => {
-    it("builds default user prompt when split prompts are empty", () => {
+    it("splits default translation instructions into system and source text into user", () => {
         const parts = buildChatPromptParts("hello", "zh", {});
-        assert.equal(parts.systemPrompt, "");
-        assert.match(parts.userPrompt, /翻译为中文/);
-        assert.match(parts.userPrompt, /hello/);
+        assert.match(parts.systemPrompt, /翻译为中文/);
+        assert.match(parts.systemPrompt, /只输出译文/);
+        assert.equal(parts.userPrompt, "hello");
     });
 
     it("uses legacy prompt as system prompt fallback", () => {
@@ -18,7 +18,21 @@ describe("language prompt builders", () => {
             legacyCustomPromptTemplate: "你是翻译助手，目标是 {targetLang}",
         });
         assert.equal(parts.systemPrompt, "你是翻译助手，目标是 中文");
-        assert.match(parts.userPrompt, /hello/);
+        assert.equal(parts.userPrompt, "hello");
+    });
+
+    it("puts glossary constraints in the default system prompt", () => {
+        const parts = buildChatPromptParts("OpenAI", "zh", {
+            glossaryTerms: [
+                {
+                    sourceTerm: "OpenAI",
+                    targetTerm: "开放人工智能",
+                },
+            ],
+        });
+        assert.match(parts.systemPrompt, /术语约束/);
+        assert.match(parts.systemPrompt, /OpenAI => 开放人工智能/);
+        assert.equal(parts.userPrompt, "OpenAI");
     });
 
     it("appends input to user templates that omit text", () => {
