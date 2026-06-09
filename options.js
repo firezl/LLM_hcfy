@@ -50,11 +50,13 @@ document.addEventListener("DOMContentLoaded", () => {
         enginesModule.OPENAI_COMPAT_MODEL_ENGINES || [];
 
     const API_KEY_FIELDS =
-        typeof storageModule.buildApiKeyFields === "function"
-            ? storageModule.buildApiKeyFields(DEFAULT_SETTINGS)
-            : Object.keys(DEFAULT_SETTINGS).filter((key) =>
-                  key.endsWith("_api_key"),
-              );
+        typeof storageModule.buildLocalOnlyFields === "function"
+            ? storageModule.buildLocalOnlyFields(DEFAULT_SETTINGS)
+            : typeof storageModule.buildApiKeyFields === "function"
+              ? storageModule.buildApiKeyFields(DEFAULT_SETTINGS)
+              : Object.keys(DEFAULT_SETTINGS).filter((key) =>
+                    key.endsWith("_api_key") || key.endsWith("_custom_headers"),
+                );
 
     const modelState =
         typeof modelModule.createModelLoaderState === "function"
@@ -87,7 +89,11 @@ document.addEventListener("DOMContentLoaded", () => {
         const source = input && typeof input === "object" ? input : {};
         const payload = {};
         for (const key of API_KEY_FIELDS) {
-            payload[key] = String(source[key] || "").trim();
+            if (key.endsWith("_custom_headers")) {
+                payload[key] = Array.isArray(source[key]) ? source[key] : [];
+            } else {
+                payload[key] = String(source[key] || "").trim();
+            }
         }
         return payload;
     }
@@ -106,10 +112,22 @@ document.addEventListener("DOMContentLoaded", () => {
             localItems && typeof localItems === "object" ? localItems : {};
         const missing = {};
         for (const key of API_KEY_FIELDS) {
-            const localValue = String(sourceLocal[key] || "").trim();
-            const syncValue = String(sourceSync[key] || "").trim();
-            if (!localValue && syncValue) {
-                missing[key] = syncValue;
+            if (key.endsWith("_custom_headers")) {
+                const localValue = Array.isArray(sourceLocal[key])
+                    ? sourceLocal[key]
+                    : [];
+                const syncValue = Array.isArray(sourceSync[key])
+                    ? sourceSync[key]
+                    : [];
+                if (localValue.length === 0 && syncValue.length > 0) {
+                    missing[key] = syncValue;
+                }
+            } else {
+                const localValue = String(sourceLocal[key] || "").trim();
+                const syncValue = String(sourceSync[key] || "").trim();
+                if (!localValue && syncValue) {
+                    missing[key] = syncValue;
+                }
             }
         }
         return missing;

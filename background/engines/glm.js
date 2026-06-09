@@ -12,14 +12,9 @@ export const streamGLMTranslate = createOpenAICompatTranslate({
     modelKey: "glm_model",
     defaultUrl: DEFAULT_GLM_API_URL,
     defaultModel: DEFAULT_GLM_MODEL,
-    buildBody: ({ model, promptContent, showThoughts, settings }) => ({
+    buildBody: ({ model, messages, showThoughts, settings }) => ({
         model,
-        messages: [
-            {
-                role: "user",
-                content: promptContent,
-            },
-        ],
+        messages,
         stream: true,
         do_sample: false,
         thinking: {

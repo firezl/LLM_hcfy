@@ -889,6 +889,46 @@ button#open_local_pdf:hover {
     line-height: 1.55;
 }
 
+.jyt-custom-header-editor {
+    display: grid;
+    gap: 8px;
+}
+
+.jyt-custom-header-rows {
+    display: grid;
+    gap: 8px;
+}
+
+.jyt-custom-header-row {
+    display: grid;
+    grid-template-columns: 24px minmax(0, 1fr) minmax(0, 1.2fr) auto;
+    gap: 8px;
+    align-items: center;
+}
+
+.jyt-custom-header-row input[type="checkbox"] {
+    width: 16px;
+    min-height: 16px;
+    justify-self: center;
+}
+
+button.jyt-custom-header-add,
+button.jyt-custom-header-remove {
+    min-height: 32px;
+    padding: 6px 10px;
+    border: 1px solid var(--jyt-border);
+    border-radius: var(--jyt-radius-sm);
+    background: var(--jyt-bg);
+    color: var(--jyt-text);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+button.jyt-custom-header-remove {
+    color: var(--jyt-danger);
+}
+
 .jyt-current-pdf-status {
     margin-top: 8px;
     padding: 10px 12px;

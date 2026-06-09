@@ -1,8 +1,11 @@
 import {
-    buildPromptWithUserTemplate,
+    buildChatPromptParts,
+    buildOpenAIStyleMessages,
     resolveLanguagePair,
 } from "../language.js";
 import { postTranslateError } from "../port-utils.js";
+import { mergeCustomHeaders } from "./custom-headers.js";
+import { mergeCustomPayload } from "./custom-payload.js";
 import { streamChatToPort } from "./openai-compat-stream.js";
 import { getThinkingEnabledByEngine } from "./thinking-utils.js";
 import { normalizeFixedHttpEndpoint } from "./url-utils.js";
@@ -64,9 +67,12 @@ export async function streamQwenTranslate(request, port, state) {
     const key = String(settings?.qwen_api_key || "").trim();
     const model = String(settings?.qwen_model || DEFAULT_QWEN_MODEL).trim();
     const showThoughts = getThinkingEnabledByEngine("qwen", settings);
-    const promptContent = buildPromptWithUserTemplate(text, to, {
+    const promptParts = buildChatPromptParts(text, to, {
         glossaryTerms,
-        customPromptTemplate: request?.customPromptTemplate,
+        legacyCustomPromptTemplate:
+            request?.promptTemplates?.legacy || request?.customPromptTemplate,
+        systemPromptTemplate: request?.promptTemplates?.system,
+        userPromptTemplate: request?.promptTemplates?.user,
     });
 
     if (!endpoint.ok) {
@@ -100,18 +106,14 @@ export async function streamQwenTranslate(request, port, state) {
         parameters.preserve_thinking = !!settings?.qwen_preserve_thinking;
     }
 
-    const body = {
+    const baseBody = {
         model,
         input: {
-            messages: [
-                {
-                    role: "user",
-                    content: promptContent,
-                },
-            ],
+            messages: buildOpenAIStyleMessages(promptParts),
         },
         parameters,
     };
+    const { body } = mergeCustomPayload(baseBody, request?.customPayload);
 
     await streamChatToPort({
         requestId,
@@ -121,11 +123,14 @@ export async function streamQwenTranslate(request, port, state) {
         requestStream: async (signal) => ({
             response: await fetch(endpoint.url, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${key}`,
-                    Accept: "text/event-stream",
-                },
+                headers: mergeCustomHeaders(
+                    {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${key}`,
+                        Accept: "text/event-stream",
+                    },
+                    request?.customHeaders,
+                ).headers,
                 body: JSON.stringify(body),
                 signal,
             }),

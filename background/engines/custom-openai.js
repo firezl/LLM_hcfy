@@ -1,8 +1,11 @@
 import {
-    buildPromptWithUserTemplate,
+    buildChatPromptParts,
+    buildOpenAIStyleMessages,
     resolveLanguagePair,
 } from "../language.js";
 import { postTranslateError } from "../port-utils.js";
+import { mergeCustomHeaders } from "./custom-headers.js";
+import { mergeCustomPayload } from "./custom-payload.js";
 import {
     parseSseJsonLine,
     extractChoiceDelta,
@@ -54,9 +57,12 @@ export async function streamCustomOpenAITranslate(request, port, state) {
         settings?.custom_openai_model || DEFAULT_CUSTOM_OPENAI_MODEL,
     ).trim();
     const showThoughts = getThinkingEnabledByEngine("custom_openai", settings);
-    const promptContent = buildPromptWithUserTemplate(text, to, {
+    const promptParts = buildChatPromptParts(text, to, {
         glossaryTerms,
-        customPromptTemplate: request?.customPromptTemplate,
+        legacyCustomPromptTemplate:
+            request?.promptTemplates?.legacy || request?.customPromptTemplate,
+        systemPromptTemplate: request?.promptTemplates?.system,
+        userPromptTemplate: request?.promptTemplates?.user,
     });
 
     if (!endpoint.ok) {
@@ -76,12 +82,7 @@ export async function streamCustomOpenAITranslate(request, port, state) {
 
     const baseBody = {
         model,
-        messages: [
-            {
-                role: "user",
-                content: promptContent,
-            },
-        ],
+        messages: buildOpenAIStyleMessages(promptParts),
         temperature: 1.0,
         stream: true,
     };
@@ -95,11 +96,22 @@ export async function streamCustomOpenAITranslate(request, port, state) {
         ...baseBody,
         ...thinkingPatch,
     };
+    const { body: primaryBodyWithCustomPayload } = mergeCustomPayload(
+        primaryBody,
+        request?.customPayload,
+    );
+    const { body: fallbackBodyWithCustomPayload } = mergeCustomPayload(
+        baseBody,
+        request?.customPayload,
+    );
 
-    const headers = {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-    };
+    const { headers } = mergeCustomHeaders(
+        {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+        },
+        request?.customHeaders,
+    );
 
     await streamChatToPort({
         requestId,
@@ -115,7 +127,7 @@ export async function streamCustomOpenAITranslate(request, port, state) {
                     signal,
                 });
 
-            let res = await sendBody(primaryBody);
+            let res = await sendBody(primaryBodyWithCustomPayload);
 
             if (!res.ok && Object.keys(thinkingPatch).length > 0) {
                 const textErr = await res.text();
@@ -126,7 +138,7 @@ export async function streamCustomOpenAITranslate(request, port, state) {
                     );
 
                 if (maybeUnsupportedThinking) {
-                    res = await sendBody(baseBody);
+                    res = await sendBody(fallbackBodyWithCustomPayload);
                 } else {
                     return {
                         error: "自定义 OpenAI 兼容 请求失败: " + textErr,

@@ -1,5 +1,8 @@
 import {
+    getCustomHeadersSettingKey,
+    getCustomPayloadSettingKey,
     getCustomPromptSettingKey,
+    getPromptSettingKeys,
     getTranslateHandlerKey,
     isContentOnlyEngine,
     resolveTranslateEngine,
@@ -21,15 +24,37 @@ export async function handleTranslateStart(message, port, state) {
         maxTerms: 20,
     });
 
+    const promptSettingKeys = getPromptSettingKeys(engine);
     const customPromptSettingKey = getCustomPromptSettingKey(engine);
-    const customPromptTemplate = customPromptSettingKey
+    const customHeadersSettingKey = getCustomHeadersSettingKey(engine);
+    const customPayloadSettingKey = getCustomPayloadSettingKey(engine);
+    const legacyCustomPromptTemplate = customPromptSettingKey
         ? String(message?.settings?.[customPromptSettingKey] || "")
+        : "";
+    const systemPromptTemplate = promptSettingKeys.system
+        ? String(message?.settings?.[promptSettingKeys.system] || "")
+        : "";
+    const userPromptTemplate = promptSettingKeys.user
+        ? String(message?.settings?.[promptSettingKeys.user] || "")
+        : "";
+    const customHeaders = customHeadersSettingKey
+        ? message?.settings?.[customHeadersSettingKey]
+        : [];
+    const customPayload = customPayloadSettingKey
+        ? message?.settings?.[customPayloadSettingKey]
         : "";
 
     const requestWithGlossary = {
         ...message,
         glossaryTerms,
-        customPromptTemplate,
+        customPromptTemplate: legacyCustomPromptTemplate,
+        promptTemplates: {
+            legacy: legacyCustomPromptTemplate,
+            system: systemPromptTemplate,
+            user: userPromptTemplate,
+        },
+        customHeaders,
+        customPayload,
     };
 
     if (isContentOnlyEngine(engine)) {

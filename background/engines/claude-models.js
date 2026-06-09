@@ -1,4 +1,5 @@
 import { safePostMessage } from "../port-utils.js";
+import { mergeCustomHeaders } from "./custom-headers.js";
 import { normalizeFixedHttpEndpoint } from "./url-utils.js";
 
 const DEFAULT_CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
@@ -71,11 +72,15 @@ export async function handleClaudeGetModels(message, port, state) {
     if (apiKey) {
         headers["x-api-key"] = apiKey;
     }
+    const mergedHeaders = mergeCustomHeaders(
+        headers,
+        message?.customHeaders,
+    ).headers;
 
     try {
         const res = await fetch(endpoint.modelsUrl, {
             method: "GET",
-            headers,
+            headers: mergedHeaders,
         });
 
         if (!res.ok) {

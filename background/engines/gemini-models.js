@@ -1,4 +1,5 @@
 import { safePostMessage } from "../port-utils.js";
+import { mergeCustomHeaders } from "./custom-headers.js";
 import { normalizeFixedHttpEndpoint } from "./url-utils.js";
 
 const DEFAULT_GEMINI_BASE_URL =
@@ -74,9 +75,12 @@ export async function handleGeminiGetModels(message, port, state) {
     try {
         const res = await fetch(endpoint.modelsUrl, {
             method: "GET",
-            headers: {
-                Accept: "application/json",
-            },
+            headers: mergeCustomHeaders(
+                {
+                    Accept: "application/json",
+                },
+                message?.customHeaders,
+            ).headers,
         });
 
         if (!res.ok) {

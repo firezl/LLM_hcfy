@@ -1,4 +1,5 @@
 import { safePostMessage } from "../port-utils.js";
+import { mergeCustomHeaders } from "./custom-headers.js";
 import { normalizeOpenAICompatEndpoint } from "./url-utils.js";
 
 const DEFAULT_OPENAI_COMPAT_API_URL =
@@ -37,11 +38,15 @@ export async function handleOpenAICompatGetModels(message, port, state) {
     if (apiKey) {
         headers.Authorization = `Bearer ${apiKey}`;
     }
+    const mergedHeaders = mergeCustomHeaders(
+        headers,
+        message?.customHeaders,
+    ).headers;
 
     try {
         const res = await fetch(endpoint.modelsUrl, {
             method: "GET",
-            headers,
+            headers: mergedHeaders,
         });
 
         if (!res.ok) {

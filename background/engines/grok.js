@@ -12,14 +12,9 @@ export const streamGrokTranslate = createOpenAICompatTranslate({
     defaultUrl: DEFAULT_GROK_API_URL,
     defaultModel: DEFAULT_GROK_MODEL,
     includeThoughts: ({ showThoughts }) => showThoughts,
-    buildBody: ({ model, promptContent }) => ({
+    buildBody: ({ model, messages }) => ({
         model,
-        messages: [
-            {
-                role: "user",
-                content: promptContent,
-            },
-        ],
+        messages,
         temperature: 1.0,
         stream: true,
     }),

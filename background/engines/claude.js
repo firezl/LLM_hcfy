@@ -1,8 +1,10 @@
 import {
-    buildPromptWithUserTemplate,
+    buildChatPromptParts,
     resolveLanguagePair,
 } from "../language.js";
 import { postTranslateError } from "../port-utils.js";
+import { mergeCustomHeaders } from "./custom-headers.js";
+import { mergeCustomPayload } from "./custom-payload.js";
 import { streamChatToPort } from "./openai-compat-stream.js";
 import { normalizeFixedHttpEndpoint } from "./url-utils.js";
 
@@ -101,9 +103,12 @@ export async function streamClaudeTranslate(request, port, state) {
         Number.isFinite(maxTokensRaw) && maxTokensRaw > 0
             ? Math.floor(maxTokensRaw)
             : 4096;
-    const promptContent = buildPromptWithUserTemplate(text, to, {
+    const promptParts = buildChatPromptParts(text, to, {
         glossaryTerms,
-        customPromptTemplate: request?.customPromptTemplate,
+        legacyCustomPromptTemplate:
+            request?.promptTemplates?.legacy || request?.customPromptTemplate,
+        systemPromptTemplate: request?.promptTemplates?.system,
+        userPromptTemplate: request?.promptTemplates?.user,
     });
 
     if (!endpoint.ok) {
@@ -130,18 +135,22 @@ export async function streamClaudeTranslate(request, port, state) {
         thinking.budget_tokens = Math.max(1024, maxTokens - 1);
     }
 
-    const body = {
+    const baseBody = {
         model,
         max_tokens: maxTokens,
         stream: true,
         messages: [
             {
                 role: "user",
-                content: promptContent,
+                content: promptParts.userPrompt,
             },
         ],
         thinking,
     };
+    if (String(promptParts.systemPrompt || "").trim()) {
+        baseBody.system = promptParts.systemPrompt;
+    }
+    const { body } = mergeCustomPayload(baseBody, request?.customPayload);
 
     await streamChatToPort({
         requestId,
@@ -151,11 +160,14 @@ export async function streamClaudeTranslate(request, port, state) {
         requestStream: async (signal) => ({
             response: await fetch(endpoint.url, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "x-api-key": apiKey,
-                    "anthropic-version": "2023-06-01",
-                },
+                headers: mergeCustomHeaders(
+                    {
+                        "Content-Type": "application/json",
+                        "x-api-key": apiKey,
+                        "anthropic-version": "2023-06-01",
+                    },
+                    request?.customHeaders,
+                ).headers,
                 body: JSON.stringify(body),
                 signal,
             }),

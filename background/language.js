@@ -113,7 +113,14 @@ function buildGlossaryLines(glossaryTerms) {
     return lines.join("\n");
 }
 
-function buildPromptWithTemplate(template, text, to, options, fallbackBuilder) {
+function buildPromptWithTemplate(
+    template,
+    text,
+    to,
+    options,
+    fallbackBuilder,
+    appendTextWhenMissing = true,
+) {
     const normalizedTemplate = String(template || "").trim();
     if (!normalizedTemplate) {
         return fallbackBuilder(text, to, options);
@@ -131,11 +138,26 @@ function buildPromptWithTemplate(template, text, to, options, fallbackBuilder) {
         .replaceAll("{glossary}", glossaryLines)
         .replaceAll("{glossaryConstraint}", glossaryConstraint);
 
-    if (!normalizedTemplate.includes("{text}")) {
+    if (appendTextWhenMissing && !normalizedTemplate.includes("{text}")) {
         prompt += `\n输入:\n${text}`;
     }
 
     return prompt;
+}
+
+function renderPromptTemplate(template, text, to, options) {
+    return buildPromptWithTemplate(
+        template,
+        text,
+        to,
+        options,
+        () => "",
+        false,
+    );
+}
+
+function buildDefaultUserPrompt(text, to, options) {
+    return buildPrompt(text, to, options);
 }
 
 export function buildPrompt(text, to, options) {
@@ -152,6 +174,52 @@ export function buildPromptWithUserTemplate(text, to, options) {
         options,
         buildPrompt,
     );
+}
+
+export function buildChatPromptParts(text, to, options) {
+    const systemTemplate = String(
+        options?.systemPromptTemplate ||
+            options?.legacyCustomPromptTemplate ||
+            options?.customPromptTemplate ||
+            "",
+    ).trim();
+    const userTemplate = String(options?.userPromptTemplate || "").trim();
+
+    const systemPrompt = systemTemplate
+        ? renderPromptTemplate(systemTemplate, text, to, options)
+        : "";
+    const userPrompt = userTemplate
+        ? buildPromptWithTemplate(
+              userTemplate,
+              text,
+              to,
+              options,
+              buildDefaultUserPrompt,
+              true,
+          )
+        : buildDefaultUserPrompt(text, to, options);
+
+    return {
+        systemPrompt,
+        userPrompt,
+    };
+}
+
+export function buildOpenAIStyleMessages(promptParts) {
+    const messages = [];
+    const systemPrompt = String(promptParts?.systemPrompt || "").trim();
+    const userPrompt = String(promptParts?.userPrompt || "").trim();
+    if (systemPrompt) {
+        messages.push({
+            role: "system",
+            content: systemPrompt,
+        });
+    }
+    messages.push({
+        role: "user",
+        content: userPrompt,
+    });
+    return messages;
 }
 
 export function buildTranslationgemmaPrompt(text, from, to, options) {

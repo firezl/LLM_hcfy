@@ -1,9 +1,12 @@
 import {
-    buildPromptWithUserTemplate,
+    buildChatPromptParts,
+    buildOpenAIStyleMessages,
     buildTranslationgemmaPrompt,
     resolveLanguagePair,
 } from "../language.js";
 import { postTranslateError, safePostMessage } from "../port-utils.js";
+import { mergeCustomHeaders } from "./custom-headers.js";
+import { mergeCustomPayload } from "./custom-payload.js";
 import { streamChatToPort } from "./openai-compat-stream.js";
 import {
     normalizeOllamaEndpoint,
@@ -61,20 +64,26 @@ function isTranslationgemmaModel(model) {
     );
 }
 
-function buildPromptByModel(model, request, from, to) {
+function buildPromptPartsByModel(model, request, from, to) {
     const glossaryTerms = Array.isArray(request?.glossaryTerms)
         ? request.glossaryTerms
         : [];
 
     if (isTranslationgemmaModel(model)) {
-        return buildTranslationgemmaPrompt(request?.text || "", from, to, {
-            glossaryTerms,
-        });
+        return {
+            systemPrompt: "",
+            userPrompt: buildTranslationgemmaPrompt(request?.text || "", from, to, {
+                glossaryTerms,
+            }),
+        };
     }
 
-    return buildPromptWithUserTemplate(request?.text || "", to, {
+    return buildChatPromptParts(request?.text || "", to, {
         glossaryTerms,
-        customPromptTemplate: request?.customPromptTemplate,
+        legacyCustomPromptTemplate:
+            request?.promptTemplates?.legacy || request?.customPromptTemplate,
+        systemPromptTemplate: request?.promptTemplates?.system,
+        userPromptTemplate: request?.promptTemplates?.user,
     });
 }
 
@@ -144,7 +153,7 @@ export async function streamSpecialTranslate(request, port, state) {
     }
 
     const { from, to } = resolveLanguagePair(request);
-    const promptContent = buildPromptByModel(model, request, from, to);
+    const promptParts = buildPromptPartsByModel(model, request, from, to);
 
     const isOpenAICompat = provider === "openai_compatible";
     const endpoint = isOpenAICompat
@@ -159,7 +168,7 @@ export async function streamSpecialTranslate(request, port, state) {
     const headers = {
         "Content-Type": "application/json",
     };
-    let body;
+    let baseBody;
 
     if (isOpenAICompat) {
         const apiKey = String(
@@ -168,30 +177,21 @@ export async function streamSpecialTranslate(request, port, state) {
         if (apiKey) {
             headers.Authorization = `Bearer ${apiKey}`;
         }
-        body = {
+        baseBody = {
             model,
-            messages: [
-                {
-                    role: "user",
-                    content: promptContent,
-                },
-            ],
+            messages: buildOpenAIStyleMessages(promptParts),
             stream: true,
             temperature: 1.0,
         };
     } else {
-        body = {
+        baseBody = {
             model,
-            messages: [
-                {
-                    role: "user",
-                    content: promptContent,
-                },
-            ],
+            messages: buildOpenAIStyleMessages(promptParts),
             stream: true,
             think: !!settings?.special_translate_show_thoughts,
         };
     }
+    const { body } = mergeCustomPayload(baseBody, request?.customPayload);
 
     await streamChatToPort({
         requestId,
@@ -201,7 +201,7 @@ export async function streamSpecialTranslate(request, port, state) {
         requestStream: async (signal) => ({
             response: await fetch(endpoint.chatUrl, {
                 method: "POST",
-                headers,
+                headers: mergeCustomHeaders(headers, request?.customHeaders).headers,
                 body: JSON.stringify(body),
                 signal,
             }),
@@ -266,10 +266,14 @@ export async function handleSpecialTranslateGetModels(message, port, state) {
         if (provider === "openai_compatible" && apiKey) {
             headers.Authorization = `Bearer ${apiKey}`;
         }
+        const mergedHeaders = mergeCustomHeaders(
+            headers,
+            message?.customHeaders,
+        ).headers;
 
         const res = await fetch(endpoint.modelsUrl, {
             method: "GET",
-            headers,
+            headers: mergedHeaders,
         });
 
         if (!res.ok) {

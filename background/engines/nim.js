@@ -15,15 +15,10 @@ export const streamNimTranslate = createOpenAICompatTranslate({
     defaultModel: DEFAULT_NIM_MODEL,
     missingKeyError:
         "请在设置中配置 NVIDIA NIM API Key（在 build.nvidia.com 获取 nvapi- 密钥）",
-    buildBody: ({ model, promptContent, settings }) => {
+    buildBody: ({ model, messages, settings }) => {
         const body = {
             model,
-            messages: [
-                {
-                    role: "user",
-                    content: promptContent,
-                },
-            ],
+            messages,
             temperature: 0.2,
             stream: true,
             max_tokens: DEFAULT_MAX_TOKENS,

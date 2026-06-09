@@ -1,8 +1,11 @@
 import {
-    buildPromptWithUserTemplate,
+    buildChatPromptParts,
+    buildOpenAIStyleMessages,
     resolveLanguagePair,
 } from "../language.js";
 import { postTranslateError } from "../port-utils.js";
+import { mergeCustomHeaders } from "./custom-headers.js";
+import { mergeCustomPayload } from "./custom-payload.js";
 import {
     parseSseJsonLine,
     extractChoiceDelta,
@@ -68,9 +71,12 @@ export async function streamOpenAITranslate(request, port, state) {
             "gpt-5.4-mini",
     ).trim();
     const showThoughts = getThinkingEnabledByEngine("openai", settings);
-    const promptContent = buildPromptWithUserTemplate(text, to, {
+    const promptParts = buildChatPromptParts(text, to, {
         glossaryTerms,
-        customPromptTemplate: request?.customPromptTemplate,
+        legacyCustomPromptTemplate:
+            request?.promptTemplates?.legacy || request?.customPromptTemplate,
+        systemPromptTemplate: request?.promptTemplates?.system,
+        userPromptTemplate: request?.promptTemplates?.user,
     });
 
     if (!model) {
@@ -80,12 +86,7 @@ export async function streamOpenAITranslate(request, port, state) {
 
     const baseBody = {
         model,
-        messages: [
-            {
-                role: "user",
-                content: promptContent,
-            },
-        ],
+        messages: buildOpenAIStyleMessages(promptParts),
         temperature: 1.0,
         stream: true,
     };
@@ -100,11 +101,22 @@ export async function streamOpenAITranslate(request, port, state) {
         ...baseBody,
         ...thinkingPatch,
     };
+    const { body: primaryBodyWithCustomPayload } = mergeCustomPayload(
+        primaryBody,
+        request?.customPayload,
+    );
+    const { body: fallbackBodyWithCustomPayload } = mergeCustomPayload(
+        baseBody,
+        request?.customPayload,
+    );
 
-    const headers = {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${key}`,
-    };
+    const { headers } = mergeCustomHeaders(
+        {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${key}`,
+        },
+        request?.customHeaders,
+    );
 
     await streamChatToPort({
         requestId,
@@ -120,7 +132,7 @@ export async function streamOpenAITranslate(request, port, state) {
                     signal,
                 });
 
-            let res = await sendBody(primaryBody);
+            let res = await sendBody(primaryBodyWithCustomPayload);
 
             if (!res.ok && Object.keys(thinkingPatch).length > 0) {
                 const textErr = await res.text();
@@ -131,7 +143,7 @@ export async function streamOpenAITranslate(request, port, state) {
                     );
 
                 if (maybeUnsupportedThinking) {
-                    res = await sendBody(baseBody);
+                    res = await sendBody(fallbackBodyWithCustomPayload);
                 } else {
                     return { error: "OpenAI 请求失败: " + textErr };
                 }

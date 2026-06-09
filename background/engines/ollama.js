@@ -1,8 +1,11 @@
 import {
-    buildPromptWithUserTemplate,
+    buildChatPromptParts,
+    buildOpenAIStyleMessages,
     resolveLanguagePair,
 } from "../language.js";
 import { postTranslateError, safePostMessage } from "../port-utils.js";
+import { mergeCustomHeaders } from "./custom-headers.js";
+import { mergeCustomPayload } from "./custom-payload.js";
 import { streamChatToPort } from "./openai-compat-stream.js";
 import { normalizeOllamaEndpoint } from "./url-utils.js";
 
@@ -81,22 +84,21 @@ export async function streamOllamaTranslate(request, port, state) {
         return;
     }
 
-    const promptContent = buildPromptWithUserTemplate(text, to, {
+    const promptParts = buildChatPromptParts(text, to, {
         glossaryTerms,
-        customPromptTemplate: request?.customPromptTemplate,
+        legacyCustomPromptTemplate:
+            request?.promptTemplates?.legacy || request?.customPromptTemplate,
+        systemPromptTemplate: request?.promptTemplates?.system,
+        userPromptTemplate: request?.promptTemplates?.user,
     });
 
-    const body = {
+    const baseBody = {
         model,
-        messages: [
-            {
-                role: "user",
-                content: promptContent,
-            },
-        ],
+        messages: buildOpenAIStyleMessages(promptParts),
         stream: true,
         think: !!settings?.ollama_show_thoughts,
     };
+    const { body } = mergeCustomPayload(baseBody, request?.customPayload);
 
     await streamChatToPort({
         requestId,
@@ -106,9 +108,12 @@ export async function streamOllamaTranslate(request, port, state) {
         requestStream: async (signal) => ({
             response: await fetch(endpoint.chatUrl, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
+                headers: mergeCustomHeaders(
+                    {
+                        "Content-Type": "application/json",
+                    },
+                    request?.customHeaders,
+                ).headers,
                 body: JSON.stringify(body),
                 signal,
             }),
@@ -135,9 +140,12 @@ export async function handleOllamaGetModels(message, port, state) {
     try {
         const res = await fetch(endpoint.tagsUrl, {
             method: "GET",
-            headers: {
-                Accept: "application/json",
-            },
+            headers: mergeCustomHeaders(
+                {
+                    Accept: "application/json",
+                },
+                message?.customHeaders,
+            ).headers,
         });
 
         if (!res.ok) {

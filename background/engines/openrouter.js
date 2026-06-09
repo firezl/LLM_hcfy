@@ -1,8 +1,11 @@
 import {
-    buildPromptWithUserTemplate,
+    buildChatPromptParts,
+    buildOpenAIStyleMessages,
     resolveLanguagePair,
 } from "../language.js";
 import { postTranslateError, safePostMessage } from "../port-utils.js";
+import { mergeCustomHeaders } from "./custom-headers.js";
+import { mergeCustomPayload } from "./custom-payload.js";
 import {
     parseSseJsonLine,
     extractChoiceDelta,
@@ -107,18 +110,18 @@ function extractOpenRouterModelItems(payload) {
         .filter((item) => item.id);
 }
 
-function buildHeaders(apiKey) {
+function buildHeaders(apiKey, customHeaders) {
     const headers = {
         Accept: "application/json",
     };
     if (apiKey) {
         headers.Authorization = `Bearer ${apiKey}`;
     }
-    return headers;
+    return mergeCustomHeaders(headers, customHeaders).headers;
 }
 
-async function fetchOpenRouterModelItems(endpoint, apiKey) {
-    const cacheKey = `${endpoint.modelsUrl}\n${apiKey ? "auth" : "anon"}`;
+async function fetchOpenRouterModelItems(endpoint, apiKey, customHeaders) {
+    const cacheKey = `${endpoint.modelsUrl}\n${apiKey ? "auth" : "anon"}\n${JSON.stringify(customHeaders || [])}`;
     const cached = modelCache.get(cacheKey);
     if (cached && Date.now() - cached.loadedAt < MODEL_CACHE_TTL_MS) {
         return cached.items;
@@ -126,7 +129,7 @@ async function fetchOpenRouterModelItems(endpoint, apiKey) {
 
     const res = await fetch(endpoint.modelsUrl, {
         method: "GET",
-        headers: buildHeaders(apiKey),
+        headers: buildHeaders(apiKey, customHeaders),
     });
     if (!res.ok) {
         const textErr = await res.text();
@@ -142,9 +145,13 @@ async function fetchOpenRouterModelItems(endpoint, apiKey) {
     return items;
 }
 
-async function getOpenRouterModelMeta(endpoint, apiKey, model) {
+async function getOpenRouterModelMeta(endpoint, apiKey, model, customHeaders) {
     try {
-        const items = await fetchOpenRouterModelItems(endpoint, apiKey);
+        const items = await fetchOpenRouterModelItems(
+            endpoint,
+            apiKey,
+            customHeaders,
+        );
         const normalizedModel = normalizeModelId(model);
         return (
             items.find((item) => normalizeModelId(item.id) === normalizedModel) ||
@@ -258,6 +265,7 @@ async function streamOpenRouterResponse({
     state,
     endpoint,
     apiKey,
+    customHeaders,
     primaryBody,
     fallbackBody,
 }) {
@@ -270,10 +278,13 @@ async function streamOpenRouterResponse({
             const sendBody = (body) =>
                 fetch(endpoint.url, {
                     method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${apiKey}`,
-                    },
+                    headers: mergeCustomHeaders(
+                        {
+                            "Content-Type": "application/json",
+                            Authorization: `Bearer ${apiKey}`,
+                        },
+                        customHeaders,
+                    ).headers,
                     body: JSON.stringify(body),
                     signal,
                 });
@@ -313,9 +324,12 @@ export async function streamOpenRouterTranslate(request, port, state) {
     const model = String(
         settings?.openrouter_model || DEFAULT_OPENROUTER_MODEL,
     ).trim();
-    const promptContent = buildPromptWithUserTemplate(text, to, {
+    const promptParts = buildChatPromptParts(text, to, {
         glossaryTerms,
-        customPromptTemplate: request?.customPromptTemplate,
+        legacyCustomPromptTemplate:
+            request?.promptTemplates?.legacy || request?.customPromptTemplate,
+        systemPromptTemplate: request?.promptTemplates?.system,
+        userPromptTemplate: request?.promptTemplates?.user,
     });
 
     if (!endpoint.ok) {
@@ -340,20 +354,28 @@ export async function streamOpenRouterTranslate(request, port, state) {
 
     const baseBody = {
         model,
-        messages: [
-            {
-                role: "user",
-                content: promptContent,
-            },
-        ],
+        messages: buildOpenAIStyleMessages(promptParts),
         stream: true,
     };
-    const meta = await getOpenRouterModelMeta(endpoint, apiKey, model);
+    const meta = await getOpenRouterModelMeta(
+        endpoint,
+        apiKey,
+        model,
+        request?.customHeaders,
+    );
     const optionalPatch = buildOpenRouterOptionalPatch(settings, meta);
     const primaryBody = {
         ...baseBody,
         ...optionalPatch,
     };
+    const { body: primaryBodyWithCustomPayload } = mergeCustomPayload(
+        primaryBody,
+        request?.customPayload,
+    );
+    const { body: fallbackBodyWithCustomPayload } = mergeCustomPayload(
+        baseBody,
+        request?.customPayload,
+    );
 
     await streamOpenRouterResponse({
         requestId,
@@ -361,9 +383,12 @@ export async function streamOpenRouterTranslate(request, port, state) {
         state,
         endpoint,
         apiKey,
-        primaryBody,
+        customHeaders: request?.customHeaders,
+        primaryBody: primaryBodyWithCustomPayload,
         fallbackBody:
-            Object.keys(optionalPatch).length > 0 ? baseBody : null,
+            Object.keys(optionalPatch).length > 0
+                ? fallbackBodyWithCustomPayload
+                : null,
     });
 }
 
@@ -386,7 +411,11 @@ export async function handleOpenRouterGetModels(message, port, state) {
     const apiKey = String(message?.apiKey || "").trim();
 
     try {
-        const modelItems = await fetchOpenRouterModelItems(endpoint, apiKey);
+        const modelItems = await fetchOpenRouterModelItems(
+            endpoint,
+            apiKey,
+            message?.customHeaders,
+        );
         safePostMessage(port, state, {
             type: "OPENROUTER_MODELS_RESPONSE",
             requestId,

@@ -475,7 +475,7 @@ const contentBootstrap = `// content_script.js — bootstrap entry for content s
         LANG_DETECT_TIMEOUT_MS: 8000,
         TRANSLATE_RESPONSE_TIMEOUT_MS: 30000,
         API_KEY_FIELDS: Object.keys(DEFAULT_SETTINGS || {}).filter((key) =>
-            key.endsWith("_api_key"),
+            key.endsWith("_api_key") || key.endsWith("_custom_headers"),
         ),
         state: globalThis.JYT_CS_STATE.createSessionState(DEFAULT_SETTINGS),
     };

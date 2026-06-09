@@ -10,7 +10,8 @@ export const CONFIG_SYNC_DEFAULTS = Object.freeze(
             ([key]) =>
                 key !== "glossary_terms" &&
                 key !== "glossary_version" &&
-                !key.endsWith("_api_key"),
+                !key.endsWith("_api_key") &&
+                !key.endsWith("_custom_headers"),
         ),
     ),
 );

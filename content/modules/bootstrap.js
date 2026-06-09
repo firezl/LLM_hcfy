@@ -38,9 +38,11 @@
                     if (!app.API_KEY_FIELDS.includes(key)) {
                         continue;
                     }
-                    state.runtimeSettings[key] = String(
-                        changes[key].newValue || "",
-                    );
+                    state.runtimeSettings[key] = key.endsWith("_custom_headers")
+                        ? Array.isArray(changes[key].newValue)
+                            ? changes[key].newValue
+                            : []
+                        : String(changes[key].newValue || "");
                 }
             }
         });

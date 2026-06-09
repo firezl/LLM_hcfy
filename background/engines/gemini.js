@@ -1,8 +1,10 @@
 import {
-    buildPromptWithUserTemplate,
+    buildChatPromptParts,
     resolveLanguagePair,
 } from "../language.js";
 import { postTranslateError } from "../port-utils.js";
+import { mergeCustomHeaders } from "./custom-headers.js";
+import { mergeCustomPayload } from "./custom-payload.js";
 import { streamChatToPort } from "./openai-compat-stream.js";
 import { normalizeFixedHttpEndpoint } from "./url-utils.js";
 
@@ -144,9 +146,12 @@ export async function streamGeminiTranslate(request, port, state) {
     const apiKey = String(settings?.gemini_api_key || "").trim();
     const model = String(settings?.gemini_model || DEFAULT_GEMINI_MODEL).trim();
     const baseUrl = settings?.gemini_api_url || DEFAULT_GEMINI_BASE_URL;
-    const promptContent = buildPromptWithUserTemplate(text, to, {
+    const promptParts = buildChatPromptParts(text, to, {
         glossaryTerms,
-        customPromptTemplate: request?.customPromptTemplate,
+        legacyCustomPromptTemplate:
+            request?.promptTemplates?.legacy || request?.customPromptTemplate,
+        systemPromptTemplate: request?.promptTemplates?.system,
+        userPromptTemplate: request?.promptTemplates?.user,
     });
 
     if (!apiKey) {
@@ -183,19 +188,29 @@ export async function streamGeminiTranslate(request, port, state) {
         generationConfig.thinkingConfig = thinkingConfig;
     }
 
-    const body = {
+    const baseBody = {
         contents: [
             {
                 role: "user",
                 parts: [
                     {
-                        text: promptContent,
+                        text: promptParts.userPrompt,
                     },
                 ],
             },
         ],
         generationConfig,
     };
+    if (String(promptParts.systemPrompt || "").trim()) {
+        baseBody.systemInstruction = {
+            parts: [
+                {
+                    text: promptParts.systemPrompt,
+                },
+            ],
+        };
+    }
+    const { body } = mergeCustomPayload(baseBody, request?.customPayload);
 
     await streamChatToPort({
         requestId,
@@ -206,9 +221,12 @@ export async function streamGeminiTranslate(request, port, state) {
             const sendBody = (requestBody) =>
                 fetch(endpoint.url, {
                     method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
+                    headers: mergeCustomHeaders(
+                        {
+                            "Content-Type": "application/json",
+                        },
+                        request?.customHeaders,
+                    ).headers,
                     body: JSON.stringify(requestBody),
                     signal,
                 });

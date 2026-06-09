@@ -11,14 +11,9 @@ export const streamDeepSeekTranslate = createOpenAICompatTranslate({
     modelKey: "deepseek_model",
     defaultUrl: DEFAULT_DEEPSEEK_API_URL,
     defaultModel: DEFAULT_DEEPSEEK_MODEL,
-    buildBody: ({ model, promptContent, showThoughts }) => ({
+    buildBody: ({ model, messages, showThoughts }) => ({
         model,
-        messages: [
-            {
-                role: "user",
-                content: promptContent,
-            },
-        ],
+        messages,
         temperature: 1.0,
         stream: true,
         thinking: {

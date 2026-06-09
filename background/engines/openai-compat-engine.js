@@ -1,8 +1,11 @@
 import {
-    buildPromptWithUserTemplate,
+    buildChatPromptParts,
+    buildOpenAIStyleMessages,
     resolveLanguagePair,
 } from "../language.js";
 import { postTranslateError } from "../port-utils.js";
+import { mergeCustomHeaders } from "./custom-headers.js";
+import { mergeCustomPayload } from "./custom-payload.js";
 import { streamOpenAICompatRequest } from "./openai-compat-stream.js";
 import { getThinkingEnabledByEngine } from "./thinking-utils.js";
 import { normalizeOpenAICompatEndpoint } from "./url-utils.js";
@@ -24,7 +27,7 @@ import { normalizeOpenAICompatEndpoint } from "./url-utils.js";
  * @param {string} config.defaultUrl        fallback endpoint
  * @param {string} config.defaultModel      fallback model
  * @param {string} [config.missingKeyError] message when key is missing
- * @param {(ctx: { model: string, promptContent: string, showThoughts: boolean, settings: object }) => object} config.buildBody
+ * @param {(ctx: { model: string, promptContent: string, messages: object[], promptParts: object, showThoughts: boolean, settings: object }) => object} config.buildBody
  * @param {(key: string) => object} [config.buildHeaders]
  * @param {(ctx: { showThoughts: boolean }) => boolean} [config.includeThoughts]
  */
@@ -60,10 +63,15 @@ export function createOpenAICompatTranslate(config) {
         const key = String(settings?.[apiKeyKey] || "").trim();
         const model = String(settings?.[modelKey] || defaultModel).trim();
         const showThoughts = getThinkingEnabledByEngine(engine, settings);
-        const promptContent = buildPromptWithUserTemplate(text, to, {
+        const promptParts = buildChatPromptParts(text, to, {
             glossaryTerms,
-            customPromptTemplate: request?.customPromptTemplate,
+            legacyCustomPromptTemplate:
+                request?.promptTemplates?.legacy ||
+                request?.customPromptTemplate,
+            systemPromptTemplate: request?.promptTemplates?.system,
+            userPromptTemplate: request?.promptTemplates?.user,
         });
+        const messages = buildOpenAIStyleMessages(promptParts);
 
         if (!endpoint.ok) {
             postTranslateError(port, state, requestId, endpoint.error);
@@ -81,14 +89,29 @@ export function createOpenAICompatTranslate(config) {
             return;
         }
 
-        const body = buildBody({ model, promptContent, showThoughts, settings });
+        const baseBody = buildBody({
+            model,
+            promptContent: promptParts.userPrompt,
+            messages,
+            promptParts,
+            showThoughts,
+            settings,
+        });
+        const { body } = mergeCustomPayload(
+            baseBody,
+            request?.customPayload,
+        );
+        const { headers } = mergeCustomHeaders(
+            buildHeaders(key),
+            request?.customHeaders,
+        );
 
         await streamOpenAICompatRequest({
             requestId,
             port,
             state,
             url: endpoint.url,
-            headers: buildHeaders(key),
+            headers,
             body,
             errorPrefix,
             includeThoughts: includeThoughts({ showThoughts }),

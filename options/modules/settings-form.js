@@ -35,6 +35,38 @@
 
         const { normalizeShortcut } = shortcutsModule;
         const modelListLoaded = deps.modelListLoaded;
+        const registry = global.JYT_ENGINE_REGISTRY || {};
+        const HEADER_NAME_RE = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/;
+        const BLOCKED_CUSTOM_HEADER_NAMES = new Set([
+            "accept",
+            "authorization",
+            "content-type",
+            "x-api-key",
+            "anthropic-version",
+        ]);
+        const PROMPT_UI_CONFIGS = Array.from(
+            new Map(
+                (registry.ENGINE_DEFINITIONS || [])
+                    .filter(
+                        (def) =>
+                            def?.customPromptKey &&
+                            def?.systemPromptKey &&
+                            def?.userPromptKey &&
+                            def?.customHeadersKey &&
+                            def?.customPayloadKey,
+                    )
+                    .map((def) => [
+                        def.customPromptKey,
+                        {
+                            legacyKey: def.customPromptKey,
+                            systemKey: def.systemPromptKey,
+                            userKey: def.userPromptKey,
+                            customHeadersKey: def.customHeadersKey,
+                            customPayloadKey: def.customPayloadKey,
+                        },
+                    ]),
+            ).values(),
+        );
 
         function clampPercent(value, fallback) {
             const n = Number(value);
@@ -43,6 +75,287 @@
             }
             return Math.max(5, Math.min(95, Math.round(n)));
         }
+
+        function insertAfter(referenceEl, newEl) {
+            referenceEl.parentNode.insertBefore(newEl, referenceEl.nextSibling);
+            return newEl;
+        }
+
+        function createPromptTextarea(id, labelText, placeholder) {
+            const label = document.createElement("label");
+            label.htmlFor = id;
+            label.textContent = labelText;
+
+            const textarea = document.createElement("textarea");
+            textarea.id = id;
+            textarea.rows = 4;
+            textarea.placeholder = placeholder;
+
+            return { label, textarea };
+        }
+
+        function createHeaderRow(editor, item) {
+            const row = document.createElement("div");
+            row.className = "jyt-custom-header-row";
+
+            const enabled = document.createElement("input");
+            enabled.type = "checkbox";
+            enabled.checked = item?.enabled !== false;
+            enabled.setAttribute("data-header-enabled", "");
+            enabled.title = "启用";
+
+            const name = document.createElement("input");
+            name.type = "text";
+            name.placeholder = "Header 名称";
+            name.value = item?.name || "";
+            name.setAttribute("data-header-name", "");
+
+            const value = document.createElement("input");
+            value.type = "text";
+            value.placeholder = "Header 值";
+            value.value = item?.value || "";
+            value.setAttribute("data-header-value", "");
+
+            const remove = document.createElement("button");
+            remove.type = "button";
+            remove.className = "jyt-custom-header-remove";
+            remove.textContent = "删除";
+            remove.addEventListener("click", () => row.remove());
+
+            row.append(enabled, name, value, remove);
+            editor.appendChild(row);
+        }
+
+        function createHeaderEditor(id, customHeadersKey) {
+            const wrap = document.createElement("div");
+            wrap.id = id;
+            wrap.className = "jyt-custom-header-editor";
+            wrap.setAttribute("data-custom-headers-key", customHeadersKey);
+
+            const rows = document.createElement("div");
+            rows.className = "jyt-custom-header-rows";
+            rows.setAttribute("data-header-rows", "");
+
+            const add = document.createElement("button");
+            add.type = "button";
+            add.className = "jyt-custom-header-add";
+            add.textContent = "添加 Header";
+            add.addEventListener("click", () => createHeaderRow(rows, {}));
+
+            const hint = document.createElement("div");
+            hint.className = "jyt-hint";
+            hint.textContent =
+                "不会同步到云端；Authorization、Content-Type、x-api-key、anthropic-version、Accept 不允许覆盖。";
+
+            wrap.append(rows, add, hint);
+            return { wrap, rows };
+        }
+
+        function ensureAdvancedLLMFields() {
+            for (const cfg of PROMPT_UI_CONFIGS) {
+                const legacyEl = document.getElementById(cfg.legacyKey);
+                if (!legacyEl || document.getElementById(cfg.systemKey)) {
+                    continue;
+                }
+
+                const legacyLabel = legacyEl.previousElementSibling;
+                if (
+                    legacyLabel &&
+                    legacyLabel.tagName &&
+                    legacyLabel.tagName.toLowerCase() === "label"
+                ) {
+                    legacyLabel.classList.add("jyt-hidden");
+                }
+                legacyEl.classList.add("jyt-hidden");
+
+                const system = createPromptTextarea(
+                    cfg.systemKey,
+                    "系统提示词",
+                    "可用变量: {targetLang} {text} {glossary} {glossaryConstraint}",
+                );
+                const user = createPromptTextarea(
+                    cfg.userKey,
+                    "用户提示词",
+                    "留空则使用默认翻译输入。可用变量: {targetLang} {text} {glossary} {glossaryConstraint}",
+                );
+                const payload = createPromptTextarea(
+                    cfg.customPayloadKey,
+                    "额外请求体参数（JSON 对象）",
+                    '例如: {"temperature":0.2,"top_p":0.9}。Qwen 可用 {"parameters":{"temperature":0.2}}，Ollama 可用 {"options":{"temperature":0.2,"top_k":40}}。',
+                );
+
+                let anchor = legacyEl;
+                anchor = insertAfter(anchor, system.label);
+                anchor = insertAfter(anchor, system.textarea);
+                anchor = insertAfter(anchor, user.label);
+                anchor = insertAfter(anchor, user.textarea);
+                anchor = insertAfter(anchor, payload.label);
+                anchor = insertAfter(anchor, payload.textarea);
+
+                const headerLabel = document.createElement("label");
+                headerLabel.textContent = "自定义 Header";
+                const headerEditor = createHeaderEditor(
+                    `${cfg.customHeadersKey}_editor`,
+                    cfg.customHeadersKey,
+                );
+                anchor = insertAfter(anchor, headerLabel);
+                insertAfter(anchor, headerEditor.wrap);
+
+                els[cfg.systemKey] = system.textarea;
+                els[cfg.userKey] = user.textarea;
+                els[cfg.customPayloadKey] = payload.textarea;
+                els[cfg.customHeadersKey] = headerEditor.wrap;
+            }
+        }
+
+        function normalizeCustomHeaders(value) {
+            const input = Array.isArray(value) ? value : [];
+            return input
+                .map((item) => ({
+                    enabled: item?.enabled !== false,
+                    name: String(item?.name || "").trim(),
+                    value: String(item?.value || "").trim(),
+                }))
+                .filter((item) => item.name && item.value);
+        }
+
+        function renderCustomHeaders(customHeadersKey, value) {
+            const editor = document.querySelector(
+                `[data-custom-headers-key="${customHeadersKey}"]`,
+            );
+            const rows = editor?.querySelector("[data-header-rows]");
+            if (!rows) {
+                return;
+            }
+            rows.textContent = "";
+            for (const item of normalizeCustomHeaders(value)) {
+                createHeaderRow(rows, item);
+            }
+        }
+
+        function collectCustomHeaders(customHeadersKey) {
+            const editor = document.querySelector(
+                `[data-custom-headers-key="${customHeadersKey}"]`,
+            );
+            if (!editor) {
+                return { headers: [], blockedCount: 0 };
+            }
+
+            const headers = [];
+            let blockedCount = 0;
+            const seen = new Set();
+
+            for (const row of editor.querySelectorAll(".jyt-custom-header-row")) {
+                const enabledEl = row.querySelector("[data-header-enabled]");
+                const name = String(
+                    row.querySelector("[data-header-name]")?.value || "",
+                ).trim();
+                const value = String(
+                    row.querySelector("[data-header-value]")?.value || "",
+                ).trim();
+                if (!name || !value || !HEADER_NAME_RE.test(name)) {
+                    continue;
+                }
+
+                const normalizedName = name.toLowerCase();
+                let enabled =
+                    enabledEl?.checked !== false;
+                if (
+                    BLOCKED_CUSTOM_HEADER_NAMES.has(normalizedName) ||
+                    seen.has(normalizedName)
+                ) {
+                    enabled = false;
+                    if (enabledEl) {
+                        enabledEl.checked = false;
+                    }
+                    blockedCount += 1;
+                }
+                seen.add(normalizedName);
+                headers.push({ name, value, enabled });
+            }
+
+            return { headers, blockedCount };
+        }
+
+        function normalizeCustomPayload(value) {
+            const raw = String(value || "").trim();
+            if (!raw) {
+                return { ok: true, value: "" };
+            }
+
+            try {
+                const parsed = JSON.parse(raw);
+                if (
+                    !parsed ||
+                    typeof parsed !== "object" ||
+                    Array.isArray(parsed)
+                ) {
+                    return {
+                        ok: false,
+                        error: "额外请求体参数必须是 JSON 对象。",
+                    };
+                }
+                return {
+                    ok: true,
+                    value: JSON.stringify(parsed, null, 2),
+                };
+            } catch (err) {
+                return {
+                    ok: false,
+                    error: `额外请求体 JSON 格式不正确: ${err.message}`,
+                };
+            }
+        }
+
+        function loadAdvancedLLMFields(items) {
+            for (const cfg of PROMPT_UI_CONFIGS) {
+                if (els[cfg.systemKey]) {
+                    els[cfg.systemKey].value =
+                        items[cfg.systemKey] || items[cfg.legacyKey] || "";
+                }
+                if (els[cfg.userKey]) {
+                    els[cfg.userKey].value = items[cfg.userKey] || "";
+                }
+                if (els[cfg.customPayloadKey]) {
+                    els[cfg.customPayloadKey].value =
+                        items[cfg.customPayloadKey] || "";
+                }
+                renderCustomHeaders(
+                    cfg.customHeadersKey,
+                    items[cfg.customHeadersKey],
+                );
+            }
+        }
+
+        function collectAdvancedLLMFields(target) {
+            let blockedCount = 0;
+            for (const cfg of PROMPT_UI_CONFIGS) {
+                target[cfg.systemKey] = els[cfg.systemKey]?.value || "";
+                target[cfg.userKey] = els[cfg.userKey]?.value || "";
+                const customPayload = normalizeCustomPayload(
+                    els[cfg.customPayloadKey]?.value,
+                );
+                if (!customPayload.ok) {
+                    return {
+                        ok: false,
+                        error: customPayload.error,
+                    };
+                }
+                target[cfg.customPayloadKey] = customPayload.value;
+                if (els[cfg.customPayloadKey]) {
+                    els[cfg.customPayloadKey].value = customPayload.value;
+                }
+                const collected = collectCustomHeaders(cfg.customHeadersKey);
+                target[cfg.customHeadersKey] = collected.headers;
+                blockedCount += collected.blockedCount;
+            }
+            return {
+                ok: true,
+                blockedCustomHeaderCount: blockedCount,
+            };
+        }
+
+        ensureAdvancedLLMFields();
 
             function load() {
                 chrome.storage.sync.get(DEFAULT_SETTINGS, (syncItems) => {
@@ -99,6 +412,7 @@
                         if (els.llm_engine_select) {
                             els.llm_engine_select.value = llmEngine;
                         }
+                        loadAdvancedLLMFields(items);
                         els.translate_shortcut.value = normalizeShortcut(
                             items.translate_shortcut,
                         );
@@ -607,6 +921,17 @@
                         ),
                         config_updated_at: Date.now(),
                     };
+                    const advancedFields = collectAdvancedLLMFields(data);
+                    if (!advancedFields.ok) {
+                        showToast(advancedFields.error, true);
+                        return;
+                    }
+                    if (advancedFields.blockedCustomHeaderCount > 0) {
+                        showToast(
+                            `已禁用 ${advancedFields.blockedCustomHeaderCount} 个重复或受保护的自定义 Header。`,
+                            true,
+                        );
+                    }
                     if (effectiveEngine === "custom_openai") {
                         if (!data.custom_openai_api_key) {
                             showToast("请先填写自定义 OpenAI 兼容 API Key。", true);

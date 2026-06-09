@@ -16,15 +16,10 @@ export const streamXiaomiTranslate = createOpenAICompatTranslate({
         "api-key": key,
         Authorization: `Bearer ${key}`,
     }),
-    buildBody: ({ model, promptContent, showThoughts, settings }) => {
+    buildBody: ({ model, messages, showThoughts, settings }) => {
         const body = {
             model,
-            messages: [
-                {
-                    role: "user",
-                    content: promptContent,
-                },
-            ],
+            messages,
             temperature: 1.0,
             stream: true,
             thinking: {

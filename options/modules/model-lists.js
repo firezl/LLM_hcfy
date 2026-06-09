@@ -31,6 +31,36 @@
         const geminiModelRequestResolvers = messaging.resolvers.gemini;
         const specialModelRequestResolvers = messaging.resolvers.special;
 
+            function collectCustomHeaders(customHeadersKey) {
+                const key = String(customHeadersKey || "").trim();
+                if (!key) {
+                    return [];
+                }
+                const editor = document.querySelector(
+                    `[data-custom-headers-key="${key}"]`,
+                );
+                if (!editor) {
+                    return [];
+                }
+                return Array.from(
+                    editor.querySelectorAll(".jyt-custom-header-row"),
+                )
+                    .map((row) => ({
+                        enabled:
+                            row.querySelector("[data-header-enabled]")?.checked !==
+                            false,
+                        name:
+                            row.querySelector("[data-header-name]")?.value || "",
+                        value:
+                            row.querySelector("[data-header-value]")?.value || "",
+                    }))
+                    .filter(
+                        (item) =>
+                            String(item.name || "").trim() &&
+                            String(item.value || "").trim(),
+                    );
+            }
+
             function populateOllamaModelSelect(modelIds, selectedModel) {
                 if (!els.ollama_model_select) return;
 
@@ -331,7 +361,7 @@
                 els.special_translate_custom_model.disabled = false;
             }
 
-            async function requestOllamaModelList(apiUrl) {
+            async function requestOllamaModelList(apiUrl, customHeaders) {
                 return new Promise((resolve, reject) => {
                     const requestId = `ollama-models-${Date.now()}-${Math.random()}`;
                     const timer = setTimeout(() => {
@@ -351,6 +381,9 @@
                                 MESSAGE_TYPES.OLLAMA_GET_MODELS || "OLLAMA_GET_MODELS",
                             requestId,
                             apiUrl: String(apiUrl || "").trim(),
+                            customHeaders: Array.isArray(customHeaders)
+                                ? customHeaders
+                                : [],
                         });
                     } catch (err) {
                         clearTimeout(timer);
@@ -360,7 +393,11 @@
                 });
             }
 
-            async function requestOpenAICompatModelList(apiUrl, apiKey) {
+            async function requestOpenAICompatModelList(
+                apiUrl,
+                apiKey,
+                customHeaders,
+            ) {
                 return new Promise((resolve, reject) => {
                     const requestId = `openai-compat-models-${Date.now()}-${Math.random()}`;
                     const timer = setTimeout(() => {
@@ -382,6 +419,9 @@
                             requestId,
                             apiUrl: String(apiUrl || "").trim(),
                             apiKey: String(apiKey || "").trim(),
+                            customHeaders: Array.isArray(customHeaders)
+                                ? customHeaders
+                                : [],
                         });
                     } catch (err) {
                         clearTimeout(timer);
@@ -391,7 +431,11 @@
                 });
             }
 
-            async function requestOpenRouterModelList(apiUrl, apiKey) {
+            async function requestOpenRouterModelList(
+                apiUrl,
+                apiKey,
+                customHeaders,
+            ) {
                 return new Promise((resolve, reject) => {
                     const requestId = `openrouter-models-${Date.now()}-${Math.random()}`;
                     const timer = setTimeout(() => {
@@ -413,6 +457,9 @@
                             requestId,
                             apiUrl: String(apiUrl || "").trim(),
                             apiKey: String(apiKey || "").trim(),
+                            customHeaders: Array.isArray(customHeaders)
+                                ? customHeaders
+                                : [],
                         });
                     } catch (err) {
                         clearTimeout(timer);
@@ -422,7 +469,7 @@
                 });
             }
 
-            async function requestClaudeModelList(apiUrl, apiKey) {
+            async function requestClaudeModelList(apiUrl, apiKey, customHeaders) {
                 return new Promise((resolve, reject) => {
                     const requestId = `claude-models-${Date.now()}-${Math.random()}`;
                     const timer = setTimeout(() => {
@@ -443,6 +490,9 @@
                             requestId,
                             apiUrl: String(apiUrl || "").trim(),
                             apiKey: String(apiKey || "").trim(),
+                            customHeaders: Array.isArray(customHeaders)
+                                ? customHeaders
+                                : [],
                         });
                     } catch (err) {
                         clearTimeout(timer);
@@ -452,7 +502,7 @@
                 });
             }
 
-            async function requestGeminiModelList(apiUrl, apiKey) {
+            async function requestGeminiModelList(apiUrl, apiKey, customHeaders) {
                 return new Promise((resolve, reject) => {
                     const requestId = `gemini-models-${Date.now()}-${Math.random()}`;
                     const timer = setTimeout(() => {
@@ -473,6 +523,9 @@
                             requestId,
                             apiUrl: String(apiUrl || "").trim(),
                             apiKey: String(apiKey || "").trim(),
+                            customHeaders: Array.isArray(customHeaders)
+                                ? customHeaders
+                                : [],
                         });
                     } catch (err) {
                         clearTimeout(timer);
@@ -482,7 +535,12 @@
                 });
             }
 
-            async function requestSpecialTranslateModelList(provider, apiUrl, apiKey) {
+            async function requestSpecialTranslateModelList(
+                provider,
+                apiUrl,
+                apiKey,
+                customHeaders,
+            ) {
                 return new Promise((resolve, reject) => {
                     const requestId = `special-models-${Date.now()}-${Math.random()}`;
                     const timer = setTimeout(() => {
@@ -505,6 +563,9 @@
                             provider: normalizeSpecialProvider(provider),
                             apiUrl: String(apiUrl || "").trim(),
                             apiKey: String(apiKey || "").trim(),
+                            customHeaders: Array.isArray(customHeaders)
+                                ? customHeaders
+                                : [],
                         });
                     } catch (err) {
                         clearTimeout(timer);
@@ -529,6 +590,7 @@
                 return requestOpenAICompatModelList(
                     els[cfg.apiUrlId]?.value,
                     els[cfg.apiKeyId]?.value,
+                    collectCustomHeaders(cfg.customHeadersKey),
                 )
                     .then((res) => {
                         const modelIds = Array.isArray(res.modelIds)
@@ -561,6 +623,7 @@
                 return requestOpenRouterModelList(
                     els.openrouter_api_url.value,
                     els.openrouter_api_key.value,
+                    collectCustomHeaders("openrouter_custom_headers"),
                 )
                     .then((res) => {
                         const modelItems = Array.isArray(res.modelItems)
@@ -586,6 +649,7 @@
                 return requestClaudeModelList(
                     els.claude_api_url.value,
                     els.claude_api_key.value,
+                    collectCustomHeaders("claude_custom_headers"),
                 )
                     .then((res) => {
                         const modelIds = Array.isArray(res.modelIds)
@@ -621,6 +685,7 @@
                 return requestGeminiModelList(
                     els.gemini_api_url.value,
                     els.gemini_api_key.value,
+                    collectCustomHeaders("gemini_custom_headers"),
                 )
                     .then((res) => {
                         const modelIds = Array.isArray(res.modelIds)
@@ -656,6 +721,7 @@
                     els.special_translate_provider?.value,
                     els.special_translate_api_url?.value,
                     els.special_translate_api_key?.value,
+                    collectCustomHeaders("special_translate_custom_headers"),
                 )
                     .then((res) => {
                         const modelIds = Array.isArray(res.modelIds)
@@ -678,7 +744,10 @@
                     return Promise.resolve();
                 }
                 const selectedModel = (els.ollama_model_select?.value || "").trim();
-                return requestOllamaModelList(els.ollama_api_url.value)
+                return requestOllamaModelList(
+                    els.ollama_api_url.value,
+                    collectCustomHeaders("ollama_custom_headers"),
+                )
                     .then((res) => {
                         const modelIds = Array.isArray(res.modelIds)
                             ? res.modelIds

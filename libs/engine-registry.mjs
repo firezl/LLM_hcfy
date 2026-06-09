@@ -19,7 +19,11 @@
  * @property {string} id
  * @property {EngineKind} kind
  * @property {string} [handler] background handler key (defaults to id)
- * @property {string} [customPromptKey] settings key for custom prompt template
+ * @property {string} [customPromptKey] legacy settings key for custom prompt template
+ * @property {string} [systemPromptKey] settings key for system prompt template
+ * @property {string} [userPromptKey] settings key for user prompt template
+ * @property {string} [customHeadersKey] local settings key for custom HTTP headers
+ * @property {string} [customPayloadKey] settings key for extra JSON request payload
  * @property {string} [sectionId] options.html section element id
  * @property {boolean} [usesSharedOpenAiSection] show #openai_section when active
  * @property {OpenAICompatUiConfig} [openaiCompat] model list UI for OpenAI-compatible APIs
@@ -33,6 +37,10 @@ export const ENGINE_DEFINITIONS = [
         kind: "builtin",
         handler: "openai",
         customPromptKey: "openai_custom_prompt",
+        systemPromptKey: "openai_system_prompt",
+        userPromptKey: "openai_user_prompt",
+        customHeadersKey: "openai_custom_headers",
+        customPayloadKey: "openai_custom_payload",
         usesSharedOpenAiSection: true,
     },
     {
@@ -66,6 +74,10 @@ export const ENGINE_DEFINITIONS = [
         id: "openai",
         kind: "llm",
         customPromptKey: "openai_custom_prompt",
+        systemPromptKey: "openai_system_prompt",
+        userPromptKey: "openai_user_prompt",
+        customHeadersKey: "openai_custom_headers",
+        customPayloadKey: "openai_custom_payload",
         usesSharedOpenAiSection: true,
         openaiCompat: {
             apiUrlId: "openai_api_url",
@@ -79,6 +91,10 @@ export const ENGINE_DEFINITIONS = [
         id: "custom_openai",
         kind: "llm",
         customPromptKey: "custom_openai_custom_prompt",
+        systemPromptKey: "custom_openai_system_prompt",
+        userPromptKey: "custom_openai_user_prompt",
+        customHeadersKey: "custom_openai_custom_headers",
+        customPayloadKey: "custom_openai_custom_payload",
         sectionId: "custom_openai_section",
         openaiCompat: {
             apiUrlId: "custom_openai_api_url",
@@ -92,24 +108,40 @@ export const ENGINE_DEFINITIONS = [
         id: "openrouter",
         kind: "llm",
         customPromptKey: "openrouter_custom_prompt",
+        systemPromptKey: "openrouter_system_prompt",
+        userPromptKey: "openrouter_user_prompt",
+        customHeadersKey: "openrouter_custom_headers",
+        customPayloadKey: "openrouter_custom_payload",
         sectionId: "openrouter_section",
     },
     {
         id: "gemini",
         kind: "llm",
         customPromptKey: "gemini_custom_prompt",
+        systemPromptKey: "gemini_system_prompt",
+        userPromptKey: "gemini_user_prompt",
+        customHeadersKey: "gemini_custom_headers",
+        customPayloadKey: "gemini_custom_payload",
         sectionId: "gemini_section",
     },
     {
         id: "claude",
         kind: "llm",
         customPromptKey: "claude_custom_prompt",
+        systemPromptKey: "claude_system_prompt",
+        userPromptKey: "claude_user_prompt",
+        customHeadersKey: "claude_custom_headers",
+        customPayloadKey: "claude_custom_payload",
         sectionId: "claude_section",
     },
     {
         id: "deepseek",
         kind: "llm",
         customPromptKey: "deepseek_custom_prompt",
+        systemPromptKey: "deepseek_system_prompt",
+        userPromptKey: "deepseek_user_prompt",
+        customHeadersKey: "deepseek_custom_headers",
+        customPayloadKey: "deepseek_custom_payload",
         sectionId: "deepseek_section",
         openaiCompat: {
             apiUrlId: "deepseek_api_url",
@@ -123,6 +155,10 @@ export const ENGINE_DEFINITIONS = [
         id: "qwen",
         kind: "llm",
         customPromptKey: "qwen_custom_prompt",
+        systemPromptKey: "qwen_system_prompt",
+        userPromptKey: "qwen_user_prompt",
+        customHeadersKey: "qwen_custom_headers",
+        customPayloadKey: "qwen_custom_payload",
         sectionId: "qwen_section",
         openaiCompat: {
             apiUrlId: "qwen_api_url",
@@ -136,6 +172,10 @@ export const ENGINE_DEFINITIONS = [
         id: "glm",
         kind: "llm",
         customPromptKey: "glm_custom_prompt",
+        systemPromptKey: "glm_system_prompt",
+        userPromptKey: "glm_user_prompt",
+        customHeadersKey: "glm_custom_headers",
+        customPayloadKey: "glm_custom_payload",
         sectionId: "glm_section",
         openaiCompat: {
             apiUrlId: "glm_api_url",
@@ -149,6 +189,10 @@ export const ENGINE_DEFINITIONS = [
         id: "xiaomi",
         kind: "llm",
         customPromptKey: "xiaomi_custom_prompt",
+        systemPromptKey: "xiaomi_system_prompt",
+        userPromptKey: "xiaomi_user_prompt",
+        customHeadersKey: "xiaomi_custom_headers",
+        customPayloadKey: "xiaomi_custom_payload",
         sectionId: "xiaomi_section",
         openaiCompat: {
             apiUrlId: "xiaomi_api_url",
@@ -162,6 +206,10 @@ export const ENGINE_DEFINITIONS = [
         id: "grok",
         kind: "llm",
         customPromptKey: "grok_custom_prompt",
+        systemPromptKey: "grok_system_prompt",
+        userPromptKey: "grok_user_prompt",
+        customHeadersKey: "grok_custom_headers",
+        customPayloadKey: "grok_custom_payload",
         sectionId: "grok_section",
         openaiCompat: {
             apiUrlId: "grok_api_url",
@@ -175,6 +223,10 @@ export const ENGINE_DEFINITIONS = [
         id: "nim",
         kind: "llm",
         customPromptKey: "nim_custom_prompt",
+        systemPromptKey: "nim_system_prompt",
+        userPromptKey: "nim_user_prompt",
+        customHeadersKey: "nim_custom_headers",
+        customPayloadKey: "nim_custom_payload",
         sectionId: "nim_section",
         openaiCompat: {
             apiUrlId: "nim_api_url",
@@ -188,12 +240,20 @@ export const ENGINE_DEFINITIONS = [
         id: "ollama",
         kind: "llm",
         customPromptKey: "ollama_custom_prompt",
+        systemPromptKey: "ollama_system_prompt",
+        userPromptKey: "ollama_user_prompt",
+        customHeadersKey: "ollama_custom_headers",
+        customPayloadKey: "ollama_custom_payload",
         sectionId: "ollama_section",
     },
     {
         id: "special_translate",
         kind: "top",
         customPromptKey: "special_translate_custom_prompt",
+        systemPromptKey: "special_translate_system_prompt",
+        userPromptKey: "special_translate_user_prompt",
+        customHeadersKey: "special_translate_custom_headers",
+        customPayloadKey: "special_translate_custom_payload",
         sectionId: "special_translate_section",
     },
 ];
@@ -215,10 +275,47 @@ export const CUSTOM_PROMPT_SETTING_BY_ENGINE = Object.freeze(
     ),
 );
 
+export const SYSTEM_PROMPT_SETTING_BY_ENGINE = Object.freeze(
+    Object.fromEntries(
+        ENGINE_DEFINITIONS.filter((def) => def.systemPromptKey).map((def) => [
+            def.id,
+            def.systemPromptKey,
+        ]),
+    ),
+);
+
+export const USER_PROMPT_SETTING_BY_ENGINE = Object.freeze(
+    Object.fromEntries(
+        ENGINE_DEFINITIONS.filter((def) => def.userPromptKey).map((def) => [
+            def.id,
+            def.userPromptKey,
+        ]),
+    ),
+);
+
+export const CUSTOM_HEADERS_SETTING_BY_ENGINE = Object.freeze(
+    Object.fromEntries(
+        ENGINE_DEFINITIONS.filter((def) => def.customHeadersKey).map((def) => [
+            def.id,
+            def.customHeadersKey,
+        ]),
+    ),
+);
+
+export const CUSTOM_PAYLOAD_SETTING_BY_ENGINE = Object.freeze(
+    Object.fromEntries(
+        ENGINE_DEFINITIONS.filter((def) => def.customPayloadKey).map((def) => [
+            def.id,
+            def.customPayloadKey,
+        ]),
+    ),
+);
+
 /** OpenAI-compat model dropdown configs (options page). */
 export const OPENAI_COMPAT_MODEL_ENGINES = Object.freeze(
     ENGINE_DEFINITIONS.filter((def) => def.openaiCompat).map((def) => ({
         name: def.id,
+        customHeadersKey: def.customHeadersKey,
         ...def.openaiCompat,
     })),
 );
@@ -307,6 +404,22 @@ export function shouldHideSharedOpenAiSection(effectiveEngine) {
  */
 export function getCustomPromptSettingKey(engineId) {
     return CUSTOM_PROMPT_SETTING_BY_ENGINE[engineId] || null;
+}
+
+export function getPromptSettingKeys(engineId) {
+    return {
+        legacy: CUSTOM_PROMPT_SETTING_BY_ENGINE[engineId] || null,
+        system: SYSTEM_PROMPT_SETTING_BY_ENGINE[engineId] || null,
+        user: USER_PROMPT_SETTING_BY_ENGINE[engineId] || null,
+    };
+}
+
+export function getCustomHeadersSettingKey(engineId) {
+    return CUSTOM_HEADERS_SETTING_BY_ENGINE[engineId] || null;
+}
+
+export function getCustomPayloadSettingKey(engineId) {
+    return CUSTOM_PAYLOAD_SETTING_BY_ENGINE[engineId] || null;
 }
 
 /**
