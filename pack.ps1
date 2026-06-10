@@ -11,6 +11,7 @@ $includes = @(
     "background.js",
     "background",
     "content_script.js",
+    "content/modules",
     "pdf_local_open_helper.js",
     "libs",
     "options.html",
@@ -40,7 +41,14 @@ function Copy-IncludesTo($destDir) {
             Write-Warning "跳过不存在的路径: $item"
             continue
         }
-        Copy-Item -Path $item -Destination $destDir -Recurse -Force
+
+        $destPath = Join-Path $destDir $item
+        $destParent = Split-Path $destPath -Parent
+        if ($destParent -and -not (Test-Path $destParent)) {
+            New-Item -ItemType Directory -Path $destParent -Force | Out-Null
+        }
+
+        Copy-Item -Path $item -Destination $destPath -Recurse -Force
     }
 }
 

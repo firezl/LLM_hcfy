@@ -50,6 +50,10 @@ jobs:
         shell: pwsh
         run: ./pack.ps1
 
+      - name: Validate packages
+        shell: pwsh
+        run: ./scripts/validate-package.ps1 -IncludeFirefox
+
       - name: Verify packages
         shell: pwsh
         run: |
@@ -137,7 +141,9 @@ jobs:
           $sourceDir = "dist/firefox-source"
           $artifactsDir = "dist/firefox-signed"
           New-Item -ItemType Directory -Force -Path $sourceDir, $artifactsDir | Out-Null
-          Expand-Archive -Path "${{ steps.manifest.outputs.xpi }}" -DestinationPath $sourceDir -Force
+          $xpiZip = Join-Path $env:RUNNER_TEMP "firefox-package.zip"
+          Copy-Item -Path "${{ steps.manifest.outputs.xpi }}" -Destination $xpiZip -Force
+          Expand-Archive -Path $xpiZip -DestinationPath $sourceDir -Force
 
           $metadataArgs = @()
           if (Test-Path "store/firefox-amo-metadata.json") {
