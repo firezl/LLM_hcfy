@@ -36,6 +36,29 @@
         const { normalizeShortcut } = shortcutsModule;
         const modelListLoaded = deps.modelListLoaded;
         const registry = global.JYT_ENGINE_REGISTRY || {};
+
+        let loadedSettings = null;
+
+        function isDeepEqual(a, b) {
+            if (a === b) return true;
+            if (
+                typeof a !== "object" ||
+                a === null ||
+                typeof b !== "object" ||
+                b === null
+            ) {
+                return false;
+            }
+            const keysA = Object.keys(a);
+            const keysB = Object.keys(b);
+            if (keysA.length !== keysB.length) return false;
+            for (const key of keysA) {
+                if (!keysB.includes(key)) return false;
+                if (!isDeepEqual(a[key], b[key])) return false;
+            }
+            return true;
+        }
+
         const HEADER_NAME_RE = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/;
         const BLOCKED_CUSTOM_HEADER_NAMES = new Set([
             "accept",
@@ -718,6 +741,7 @@
                         );
                         updateEngineDependentUI();
                         applyTheme(items.theme_mode || "auto");
+                        loadedSettings = collectCurrentFormSettings();
                     });
                 });
             }
@@ -1163,6 +1187,7 @@
                             }
                             applyTheme(syncData.theme_mode);
                             showToast("已保存");
+                            loadedSettings = collectCurrentFormSettings();
                         });
                     });
                 });
@@ -1541,6 +1566,17 @@
                 els.special_translate_custom_model.disabled = !isCustom;
             });
 
+            window.addEventListener("beforeunload", (e) => {
+                if (loadedSettings) {
+                    const currentSettings = collectCurrentFormSettings();
+                    if (!isDeepEqual(loadedSettings, currentSettings)) {
+                        e.preventDefault();
+                        e.returnValue = "";
+                        return "";
+                    }
+                }
+            });
+
             bindConnectionTest();
         }
 
@@ -1549,6 +1585,7 @@
             bindSaveReset,
             bindGeneralEvents,
             clampPercent,
+            isDeepEqual,
         };
     }
 
