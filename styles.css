@@ -786,8 +786,16 @@ button#open_local_pdf {
 }
 
 .jyt-options-actions {
-    padding-top: 14px;
-    border-top: 1px solid var(--jyt-border);
+    position: sticky;
+    bottom: 16px;
+    z-index: 10;
+    background: var(--jyt-bg);
+    padding: 12px 20px;
+    border: 1px solid var(--jyt-border);
+    border-radius: var(--jyt-radius);
+    box-shadow: var(--jyt-shadow-md);
+    margin-top: 24px;
+    margin-bottom: 8px;
 }
 
 button#config_export,
@@ -1756,4 +1764,62 @@ button.jyt-custom-header-remove {
     .jyt-help-hero h1 {
         font-size: 22px;
     }
+}
+
+/* API Connection Test Styles */
+.jyt-connection-test-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 14px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--jyt-border);
+}
+
+.jyt-btn-connection-test {
+    min-height: 32px !important;
+    padding: 6px 14px !important;
+    font-size: 12px;
+    background: var(--jyt-bg);
+    color: var(--jyt-text);
+    border: 1px solid var(--jyt-border) !important;
+    border-radius: var(--jyt-radius-sm);
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.jyt-btn-connection-test:hover:not(:disabled) {
+    background: var(--jyt-secondary-bg);
+    border-color: var(--jyt-border-hover) !important;
+}
+
+.jyt-btn-connection-test:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.jyt-connection-test-status {
+    font-size: 12px;
+    line-height: 1.4;
+    word-break: break-all;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: var(--jyt-radius-sm);
+    padding: 4px 8px;
+}
+
+.jyt-connection-test-status.success {
+    color: var(--jyt-success-text);
+    background: var(--jyt-success-bg);
+}
+
+.jyt-connection-test-status.error {
+    color: var(--jyt-error-text);
+    background: var(--jyt-error-bg);
+    border: 1px solid rgba(220, 38, 38, 0.15);
+}
+
+.jyt-connection-test-status.testing {
+    color: var(--jyt-muted-text);
 }

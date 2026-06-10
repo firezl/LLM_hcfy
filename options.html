@@ -210,6 +210,10 @@
                         type="text"
                         placeholder="例如: gpt-4o-mini"
                     />
+                    <div class="jyt-connection-test-container">
+                        <button type="button" class="jyt-btn-connection-test" data-engine="openai">测试连接</button>
+                        <span class="jyt-connection-test-status"></span>
+                    </div>
                     <label>自定义翻译 Prompt（仅 OpenAI 生效）</label>
                     <textarea
                         id="openai_custom_prompt"
@@ -265,6 +269,10 @@
                         type="text"
                         placeholder="例如: gpt-4o-mini"
                     />
+                    <div class="jyt-connection-test-container">
+                        <button type="button" class="jyt-btn-connection-test" data-engine="custom_openai">测试连接</button>
+                        <span class="jyt-connection-test-status"></span>
+                    </div>
                     <label>自定义翻译 Prompt（仅自定义 OpenAI 生效）</label>
                     <textarea
                         id="custom_openai_custom_prompt"
@@ -322,6 +330,10 @@
                         type="text"
                         placeholder="例如: qwen/qwen3-14b:free"
                     />
+                    <div class="jyt-connection-test-container">
+                        <button type="button" class="jyt-btn-connection-test" data-engine="openrouter">测试连接</button>
+                        <span class="jyt-connection-test-status"></span>
+                    </div>
                     <label>自定义翻译 Prompt（仅 OpenRouter 生效）</label>
                     <textarea
                         id="openrouter_custom_prompt"
@@ -382,6 +394,10 @@
                         type="text"
                         placeholder="例如: deepseek-v4-flash"
                     />
+                    <div class="jyt-connection-test-container">
+                        <button type="button" class="jyt-btn-connection-test" data-engine="deepseek">测试连接</button>
+                        <span class="jyt-connection-test-status"></span>
+                    </div>
                     <label>自定义翻译 Prompt（仅 DeepSeek 生效）</label>
                     <textarea
                         id="deepseek_custom_prompt"
@@ -461,6 +477,10 @@
                         type="text"
                         placeholder="例如: qwen3.5-plus"
                     />
+                    <div class="jyt-connection-test-container">
+                        <button type="button" class="jyt-btn-connection-test" data-engine="qwen">测试连接</button>
+                        <span class="jyt-connection-test-status"></span>
+                    </div>
                     <label>自定义翻译 Prompt（仅 Qwen 生效）</label>
                     <textarea
                         id="qwen_custom_prompt"
@@ -512,6 +532,10 @@
                         type="text"
                         placeholder="例如: glm-5.1"
                     />
+                    <div class="jyt-connection-test-container">
+                        <button type="button" class="jyt-btn-connection-test" data-engine="glm">测试连接</button>
+                        <span class="jyt-connection-test-status"></span>
+                    </div>
                     <label>自定义翻译 Prompt（仅 GLM 生效）</label>
                     <textarea
                         id="glm_custom_prompt"
@@ -555,6 +579,10 @@
                         type="text"
                         placeholder="例如: mimo-v2.5"
                     />
+                    <div class="jyt-connection-test-container">
+                        <button type="button" class="jyt-btn-connection-test" data-engine="xiaomi">测试连接</button>
+                        <span class="jyt-connection-test-status"></span>
+                    </div>
                     <label>自定义翻译 Prompt（仅 Xiaomi 生效）</label>
                     <textarea
                         id="xiaomi_custom_prompt"
@@ -601,6 +629,10 @@
                         type="text"
                         placeholder="例如: meta/llama-3.1-70b-instruct"
                     />
+                    <div class="jyt-connection-test-container">
+                        <button type="button" class="jyt-btn-connection-test" data-engine="nim">测试连接</button>
+                        <span class="jyt-connection-test-status"></span>
+                    </div>
                     <label>自定义翻译 Prompt（仅 NVIDIA NIM 生效）</label>
                     <textarea
                         id="nim_custom_prompt"
@@ -649,6 +681,10 @@
                         type="text"
                         placeholder="例如: grok-4.3"
                     />
+                    <div class="jyt-connection-test-container">
+                        <button type="button" class="jyt-btn-connection-test" data-engine="grok">测试连接</button>
+                        <span class="jyt-connection-test-status"></span>
+                    </div>
                     <label>自定义翻译 Prompt（仅 Grok 生效）</label>
                     <textarea
                         id="grok_custom_prompt"
@@ -687,6 +723,10 @@
                         type="text"
                         placeholder="例如: claude-sonnet-4-6"
                     />
+                    <div class="jyt-connection-test-container">
+                        <button type="button" class="jyt-btn-connection-test" data-engine="claude">测试连接</button>
+                        <span class="jyt-connection-test-status"></span>
+                    </div>
                     <label>自定义翻译 Prompt（仅 Claude 生效）</label>
                     <textarea
                         id="claude_custom_prompt"
@@ -752,6 +792,10 @@
                         type="text"
                         placeholder="例如: gemini-flash-latest"
                     />
+                    <div class="jyt-connection-test-container">
+                        <button type="button" class="jyt-btn-connection-test" data-engine="gemini">测试连接</button>
+                        <span class="jyt-connection-test-status"></span>
+                    </div>
                     <label>自定义翻译 Prompt（仅 Gemini 生效）</label>
                     <textarea
                         id="gemini_custom_prompt"
@@ -802,6 +846,10 @@
                         type="text"
                         placeholder="例如: qwen3.5:latest"
                     />
+                    <div class="jyt-connection-test-container">
+                        <button type="button" class="jyt-btn-connection-test" data-engine="ollama">测试连接</button>
+                        <span class="jyt-connection-test-status"></span>
+                    </div>
                     <label>自定义翻译 Prompt（仅 Ollama 生效）</label>
                     <textarea
                         id="ollama_custom_prompt"
@@ -844,6 +892,10 @@
                         >
                         申请 API Key。
                     </div>
+                    <div class="jyt-connection-test-container">
+                        <button type="button" class="jyt-btn-connection-test" data-engine="deepl">测试连接</button>
+                        <span class="jyt-connection-test-status"></span>
+                    </div>
                 </div>
 
                 <div class="jyt-section jyt-hidden" id="deeplx_section">
@@ -865,6 +917,10 @@
                         <code>/translate</code> 端点；若填写
                         <code>/v2/translate</code> 则自动兼容官方 DeepL API
                         格式。本地服务通常不需要令牌。
+                    </div>
+                    <div class="jyt-connection-test-container">
+                        <button type="button" class="jyt-btn-connection-test" data-engine="deeplx">测试连接</button>
+                        <span class="jyt-connection-test-status"></span>
                     </div>
                 </div>
 
@@ -905,6 +961,10 @@
                         type="text"
                         placeholder="例如: translategemma:4b"
                     />
+                    <div class="jyt-connection-test-container">
+                        <button type="button" class="jyt-btn-connection-test" data-engine="special_translate">测试连接</button>
+                        <span class="jyt-connection-test-status"></span>
+                    </div>
                     <label>自定义翻译 Prompt（仅非 translategemma 生效）</label>
                     <textarea
                         id="special_translate_custom_prompt"

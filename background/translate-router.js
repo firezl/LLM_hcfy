@@ -81,3 +81,82 @@ export async function handleTranslateStart(message, port, state) {
 
     await handler(requestWithGlossary, port, state);
 }
+
+export async function handleTestConnection(message) {
+    const { engine, settings } = message;
+    const handlerKey = getTranslateHandlerKey(engine);
+    const handler = TRANSLATE_HANDLERS[handlerKey];
+    if (!handler) {
+        return { ok: false, error: `未支持的测试引擎: ${engine}` };
+    }
+
+    const requestId = "connection-test-" + Date.now();
+    const request = {
+        requestId,
+        text: "Hello",
+        from: "en",
+        to: "zh",
+        settings,
+        glossaryTerms: [],
+        customPromptTemplate: "",
+        promptTemplates: {
+            legacy: "",
+            system: "",
+            user: "",
+        },
+        customHeaders: [],
+        customPayload: "",
+    };
+
+    const responseChunks = [];
+    let responseError = null;
+    let resolvePromise;
+    const promise = new Promise((resolve) => {
+        resolvePromise = resolve;
+    });
+
+    const mockPort = {
+        postMessage(msg) {
+            if (!msg) return;
+            if (msg.type === "TRANSLATE_CHUNK") {
+                responseChunks.push(msg.content);
+            } else if (msg.type === "TRANSLATE_ERROR") {
+                responseError = msg.error;
+                resolvePromise();
+            } else if (msg.type === "TRANSLATE_DONE") {
+                resolvePromise();
+            }
+        }
+    };
+
+    const mockState = {
+        connected: true,
+        controllers: new Map()
+    };
+
+    const timeoutId = setTimeout(() => {
+        if (mockState.connected) {
+            const controller = mockState.controllers.get(requestId);
+            if (controller) {
+                controller.abort();
+            }
+            responseError = "连接测试超时 (15s)";
+            resolvePromise();
+        }
+    }, 15000);
+
+    try {
+        await handler(request, mockPort, mockState);
+    } catch (err) {
+        responseError = err && err.message ? err.message : String(err);
+        resolvePromise();
+    }
+
+    clearTimeout(timeoutId);
+    await promise;
+
+    if (responseError) {
+        return { ok: false, error: responseError };
+    }
+    return { ok: true };
+}

@@ -36,6 +36,29 @@
         const { normalizeShortcut } = shortcutsModule;
         const modelListLoaded = deps.modelListLoaded;
         const registry = global.JYT_ENGINE_REGISTRY || {};
+
+        let loadedSettings = null;
+
+        function isDeepEqual(a, b) {
+            if (a === b) return true;
+            if (
+                typeof a !== "object" ||
+                a === null ||
+                typeof b !== "object" ||
+                b === null
+            ) {
+                return false;
+            }
+            const keysA = Object.keys(a);
+            const keysB = Object.keys(b);
+            if (keysA.length !== keysB.length) return false;
+            for (const key of keysA) {
+                if (!keysB.includes(key)) return false;
+                if (!isDeepEqual(a[key], b[key])) return false;
+            }
+            return true;
+        }
+
         const HEADER_NAME_RE = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/;
         const BLOCKED_CUSTOM_HEADER_NAMES = new Set([
             "accept",
@@ -732,6 +755,7 @@
                         );
                         updateEngineDependentUI();
                         applyTheme(items.theme_mode || "auto");
+                        loadedSettings = collectCurrentFormSettings();
                     });
                 });
             }
@@ -1206,6 +1230,7 @@
                             }
                             applyTheme(syncData.theme_mode);
                             showToast("已保存");
+                            loadedSettings = collectCurrentFormSettings();
                         });
                     });
                 });
@@ -1232,6 +1257,340 @@
                 });
         }
 
+        function collectCurrentFormSettings() {
+            const selectedOpenAIModel = getSelectedOpenAICompatModel(
+                els.openai_model,
+                els.openai_custom_model,
+            );
+            const selectedCustomOpenAIModel = getSelectedOpenAICompatModel(
+                els.custom_openai_model,
+                els.custom_openai_custom_model,
+            );
+            const selectedOpenRouterModel = getSelectedOpenRouterModel();
+            const selectedDeepSeekModel = getSelectedOpenAICompatModel(
+                els.deepseek_model,
+                els.deepseek_custom_model,
+            );
+            const selectedQwenModel = getSelectedOpenAICompatModel(
+                els.qwen_model,
+                els.qwen_custom_model,
+            );
+            const selectedGLMModel = getSelectedOpenAICompatModel(
+                els.glm_model,
+                els.glm_custom_model,
+            );
+            const selectedXiaomiModel = getSelectedOpenAICompatModel(
+                els.xiaomi_model,
+                els.xiaomi_custom_model,
+            );
+            const selectedGrokModel = getSelectedOpenAICompatModel(
+                els.grok_model,
+                els.grok_custom_model,
+            );
+            const selectedNimModel = getSelectedOpenAICompatModel(
+                els.nim_model,
+                els.nim_custom_model,
+            );
+            const selectedClaudeModel = getSelectedOpenAICompatModel(
+                els.claude_model,
+                els.claude_custom_model,
+            );
+            const selectedGeminiModel = getSelectedOpenAICompatModel(
+                els.gemini_model,
+                els.gemini_custom_model,
+            );
+            const data = {
+                enabled: els.enable_select.value,
+                engine: els.engine_select.value,
+                llm_engine: (els.llm_engine_select?.value || "openai").trim() || "openai",
+                translate_shortcut: normalizeShortcut(els.translate_shortcut.value),
+                source_lang: els.source_lang.value,
+                target_lang: els.target_lang.value,
+                openai_api_url: els.openai_api_url.value,
+                openai_api_key: els.openai_api_key.value,
+                openai_model: selectedOpenAIModel,
+                openai_custom_model: (els.openai_custom_model.value || "").trim(),
+                openai_custom_prompt: els.openai_custom_prompt.value || "",
+                show_thoughts: els.show_thoughts.value === "true",
+                openai_reasoning_effort: els.openai_reasoning_effort.value,
+                openai_max_completion_tokens: Number(
+                    els.openai_max_completion_tokens.value || 0,
+                ),
+                custom_openai_api_url: (
+                    els.custom_openai_api_url.value || ""
+                ).trim(),
+                custom_openai_api_key: els.custom_openai_api_key.value,
+                custom_openai_model: selectedCustomOpenAIModel,
+                custom_openai_custom_model: (
+                    els.custom_openai_custom_model.value || ""
+                ).trim(),
+                custom_openai_custom_prompt:
+                    els.custom_openai_custom_prompt.value || "",
+                custom_openai_show_thoughts:
+                    els.custom_openai_show_thoughts.value === "true",
+                custom_openai_reasoning_effort:
+                    els.custom_openai_reasoning_effort.value,
+                custom_openai_max_completion_tokens: Number(
+                    els.custom_openai_max_completion_tokens.value || 0,
+                ),
+                openrouter_api_url: (
+                    els.openrouter_api_url.value || ""
+                ).trim(),
+                openrouter_api_key: els.openrouter_api_key.value,
+                openrouter_model: selectedOpenRouterModel,
+                openrouter_custom_model: (
+                    els.openrouter_custom_model.value || ""
+                ).trim(),
+                openrouter_custom_prompt:
+                    els.openrouter_custom_prompt.value || "",
+                openrouter_show_thoughts:
+                    els.openrouter_show_thoughts.value === "true",
+                openrouter_reasoning_effort:
+                    els.openrouter_reasoning_effort.value,
+                openrouter_max_completion_tokens: Number(
+                    els.openrouter_max_completion_tokens.value || 0,
+                ),
+                deepseek_api_url: (els.deepseek_api_url.value || "").trim(),
+                deepseek_api_key: els.deepseek_api_key.value,
+                deepseek_model: selectedDeepSeekModel,
+                deepseek_custom_model: (
+                    els.deepseek_custom_model.value || ""
+                ).trim(),
+                deepseek_custom_prompt: els.deepseek_custom_prompt.value || "",
+                deepseek_show_thoughts:
+                    els.deepseek_show_thoughts.value === "true",
+                qwen_api_url: (els.qwen_api_url.value || "").trim(),
+                qwen_api_key: els.qwen_api_key.value,
+                qwen_model: selectedQwenModel,
+                qwen_custom_model: (els.qwen_custom_model.value || "").trim(),
+                qwen_custom_prompt: els.qwen_custom_prompt.value || "",
+                qwen_show_thoughts: els.qwen_show_thoughts.value === "true",
+                qwen_thinking_budget: Number(
+                    els.qwen_thinking_budget.value || 0,
+                ),
+                qwen_preserve_thinking:
+                    els.qwen_preserve_thinking.value === "true",
+                glm_api_url: (els.glm_api_url.value || "").trim(),
+                glm_api_key: els.glm_api_key.value,
+                glm_model: selectedGLMModel,
+                glm_custom_model: (els.glm_custom_model.value || "").trim(),
+                glm_custom_prompt: els.glm_custom_prompt.value || "",
+                glm_show_thoughts: els.glm_show_thoughts.value === "true",
+                glm_clear_thinking: els.glm_clear_thinking.value !== "false",
+                xiaomi_api_url: (els.xiaomi_api_url.value || "").trim(),
+                xiaomi_api_key: els.xiaomi_api_key.value,
+                xiaomi_model: selectedXiaomiModel,
+                xiaomi_custom_model: (
+                    els.xiaomi_custom_model.value || ""
+                ).trim(),
+                xiaomi_custom_prompt: els.xiaomi_custom_prompt.value || "",
+                xiaomi_show_thoughts: els.xiaomi_show_thoughts.value === "true",
+                xiaomi_max_completion_tokens: Number(
+                    els.xiaomi_max_completion_tokens.value || 0,
+                ),
+                grok_api_url: (els.grok_api_url.value || "").trim(),
+                grok_api_key: els.grok_api_key.value,
+                grok_model: selectedGrokModel,
+                grok_custom_model: (els.grok_custom_model.value || "").trim(),
+                grok_custom_prompt: els.grok_custom_prompt.value || "",
+                grok_show_thoughts: els.grok_show_thoughts.value === "true",
+                nim_api_url: (els.nim_api_url.value || "").trim(),
+                nim_api_key: els.nim_api_key.value,
+                nim_model: selectedNimModel,
+                nim_custom_model: (els.nim_custom_model.value || "").trim(),
+                nim_custom_prompt: els.nim_custom_prompt.value || "",
+                nim_show_thoughts: els.nim_show_thoughts.value === "true",
+                nim_max_tokens: Number(els.nim_max_tokens.value || 0),
+                claude_api_url: (els.claude_api_url.value || "").trim(),
+                claude_api_key: els.claude_api_key.value,
+                claude_model: selectedClaudeModel,
+                claude_custom_model: (
+                    els.claude_custom_model.value || ""
+                ).trim(),
+                claude_custom_prompt: els.claude_custom_prompt.value || "",
+                claude_show_thoughts: els.claude_show_thoughts.value === "true",
+                claude_max_tokens: Number(els.claude_max_tokens.value || 4096),
+                claude_thinking_mode: els.claude_thinking_mode.value,
+                claude_thinking_budget: Number(
+                    els.claude_thinking_budget.value || 2048,
+                ),
+                claude_thinking_effort: els.claude_thinking_effort.value,
+                gemini_api_url: (els.gemini_api_url.value || "").trim(),
+                gemini_api_key: els.gemini_api_key.value,
+                gemini_model: selectedGeminiModel,
+                gemini_custom_model: (
+                    els.gemini_custom_model.value || ""
+                ).trim(),
+                gemini_custom_prompt: els.gemini_custom_prompt.value || "",
+                gemini_show_thoughts: els.gemini_show_thoughts.value === "true",
+                gemini_thinking_level: els.gemini_thinking_level.value,
+                gemini_thinking_budget: Number(
+                    els.gemini_thinking_budget.value || -1,
+                ),
+                ollama_api_url: (els.ollama_api_url.value || "").trim(),
+                ollama_model: els.ollama_model_select.value,
+                ollama_custom_model: (
+                    els.ollama_custom_model.value || ""
+                ).trim(),
+                ollama_custom_prompt: els.ollama_custom_prompt.value || "",
+                ollama_show_thoughts: els.ollama_show_thoughts.value === "true",
+                special_translate_provider: els.special_translate_provider.value,
+                special_translate_api_url: (
+                    els.special_translate_api_url.value || ""
+                ).trim(),
+                special_translate_api_key: els.special_translate_api_key.value,
+                special_translate_model: els.special_translate_model_select.value,
+                special_translate_custom_model: (
+                    els.special_translate_custom_model.value || ""
+                ).trim(),
+                special_translate_custom_prompt:
+                    els.special_translate_custom_prompt.value || "",
+                special_translate_show_thoughts:
+                    els.special_translate_show_thoughts.value === "true",
+                deepl_api_url: (els.deepl_api_url.value || "").trim(),
+                deepl_api_key: els.deepl_api_key.value,
+                deeplx_api_url: (els.deeplx_api_url.value || "").trim(),
+                deeplx_api_key: els.deeplx_api_key.value,
+            };
+            collectAdvancedLLMFields(data);
+            return data;
+        }
+
+        function validateEngineFields(engine, settings) {
+            if (engine === "openai" && !settings.openai_api_key) {
+                return "请先填写 OpenAI API Key。";
+            }
+            if (engine === "custom_openai") {
+                if (!settings.custom_openai_api_key) return "请先填写 API Key。";
+                if (!settings.custom_openai_model) return "请先填写/选择模型名称。";
+            }
+            if (engine === "openrouter") {
+                if (!settings.openrouter_api_key) return "请先填写 OpenRouter API Key。";
+                if (!settings.openrouter_model) return "请先选择 OpenRouter 模型。";
+            }
+            if (engine === "deepseek") {
+                if (!settings.deepseek_api_key) return "请先填写 DeepSeek API Key。";
+                if (!settings.deepseek_model) return "请先填写/选择模型名称。";
+            }
+            if (engine === "qwen") {
+                if (!settings.qwen_api_key) return "请先填写 Qwen API Key。";
+                if (!settings.qwen_model) return "请先填写/选择模型名称。";
+            }
+            if (engine === "glm") {
+                if (!settings.glm_api_key) return "请先填写 GLM API Key。";
+                if (!settings.glm_model) return "请先填写/选择模型名称。";
+            }
+            if (engine === "xiaomi") {
+                if (!settings.xiaomi_api_key) return "请先填写 Xiaomi API Key。";
+                if (!settings.xiaomi_model) return "请先填写/选择模型名称。";
+            }
+            if (engine === "grok") {
+                if (!settings.grok_api_key) return "请先填写 Grok API Key。";
+                if (!settings.grok_model) return "请先填写/选择模型名称。";
+            }
+            if (engine === "nim") {
+                if (!settings.nim_api_key) return "请先填写 NVIDIA NIM API Key。";
+                if (!settings.nim_model) return "请先填写/选择模型名称。";
+            }
+            if (engine === "claude") {
+                if (!settings.claude_api_key) return "请先填写 Claude API Key。";
+                if (!settings.claude_model) return "请先填写/选择模型名称。";
+            }
+            if (engine === "gemini") {
+                if (!settings.gemini_api_key) return "请先填写 Gemini API Key。";
+                if (!settings.gemini_model) return "请先填写/选择模型名称。";
+            }
+            if (engine === "ollama") {
+                const ollamaModel = settings.ollama_model === "custom" ? settings.ollama_custom_model : settings.ollama_model;
+                if (!ollamaModel) return "请先填写/选择 Ollama 模型。";
+            }
+            if (engine === "deepl" && !settings.deepl_api_key) {
+                return "请先填写 DeepL API Key。";
+            }
+            if (engine === "special_translate") {
+                const specialModel = settings.special_translate_model === "custom" ? settings.special_translate_custom_model : settings.special_translate_model;
+                if (!specialModel) return "请先填写/选择专用模型。";
+            }
+            return null;
+        }
+
+        function getModelDisplay(engine, settings) {
+            if (engine === "openai") return settings.openai_model === "custom" ? settings.openai_custom_model : settings.openai_model;
+            if (engine === "custom_openai") return settings.custom_openai_model === "custom" ? settings.custom_openai_custom_model : settings.custom_openai_model;
+            if (engine === "openrouter") return settings.openrouter_model === "custom" ? settings.openrouter_custom_model : settings.openrouter_model;
+            if (engine === "deepseek") return settings.deepseek_model === "custom" ? settings.deepseek_custom_model : settings.deepseek_model;
+            if (engine === "qwen") return settings.qwen_model === "custom" ? settings.qwen_custom_model : settings.qwen_model;
+            if (engine === "glm") return settings.glm_model === "custom" ? settings.glm_custom_model : settings.glm_model;
+            if (engine === "xiaomi") return settings.xiaomi_model === "custom" ? settings.xiaomi_custom_model : settings.xiaomi_model;
+            if (engine === "grok") return settings.grok_model === "custom" ? settings.grok_custom_model : settings.grok_model;
+            if (engine === "nim") return settings.nim_model === "custom" ? settings.nim_custom_model : settings.nim_model;
+            if (engine === "claude") return settings.claude_model === "custom" ? settings.claude_custom_model : settings.claude_model;
+            if (engine === "gemini") return settings.gemini_model === "custom" ? settings.gemini_custom_model : settings.gemini_model;
+            if (engine === "ollama") return settings.ollama_model === "custom" ? settings.ollama_custom_model : settings.ollama_model;
+            if (engine === "special_translate") return settings.special_translate_model === "custom" ? settings.special_translate_custom_model : settings.special_translate_model;
+            if (engine === "deepl") return "DeepL";
+            if (engine === "deeplx") return "DeepLX";
+            return "";
+        }
+
+        function bindConnectionTest() {
+            const testButtons = document.querySelectorAll(".jyt-btn-connection-test");
+            testButtons.forEach((btn) => {
+                btn.addEventListener("click", async () => {
+                    const engine = btn.getAttribute("data-engine");
+                    const statusSpan = btn.nextElementSibling;
+                    if (!engine || !statusSpan) return;
+
+                    statusSpan.textContent = "⏳ 测试中...";
+                    statusSpan.className = "jyt-connection-test-status testing";
+                    btn.disabled = true;
+
+                    try {
+                        const settings = collectCurrentFormSettings();
+                        const validationError = validateEngineFields(engine, settings);
+                        if (validationError) {
+                            statusSpan.textContent = `❌ ${validationError}`;
+                            statusSpan.className = "jyt-connection-test-status error";
+                            return;
+                        }
+
+                        const MESSAGE_TYPES = globalThis.JYT_SHARED?.MESSAGE_TYPES || {};
+                        const msgType = MESSAGE_TYPES.API_CONNECTION_TEST || "API_CONNECTION_TEST";
+
+                        const resp = await new Promise((resolve, reject) => {
+                            chrome.runtime.sendMessage({
+                                type: msgType,
+                                engine,
+                                settings
+                            }, (response) => {
+                                const err = chrome.runtime.lastError;
+                                if (err) {
+                                    reject(new Error(err.message || "发送测试请求失败"));
+                                } else {
+                                    resolve(response);
+                                }
+                            });
+                        });
+
+                        if (resp && resp.ok) {
+                            const modelName = getModelDisplay(engine, settings);
+                            statusSpan.textContent = `✅ 连接成功${modelName ? ` (${modelName})` : ""}`;
+                            statusSpan.className = "jyt-connection-test-status success";
+                        } else {
+                            const errMsg = resp && resp.error ? resp.error : "未知错误";
+                            statusSpan.textContent = `❌ 连接失败: ${errMsg}`;
+                            statusSpan.className = "jyt-connection-test-status error";
+                        }
+                    } catch (err) {
+                        statusSpan.textContent = `❌ 发生错误: ${err.message || String(err)}`;
+                        statusSpan.className = "jyt-connection-test-status error";
+                    } finally {
+                        btn.disabled = false;
+                    }
+                });
+            });
+        }
+
         function bindGeneralEvents() {
             els.engine_select.addEventListener("change", updateEngineDependentUI);
             els.llm_engine_select?.addEventListener("change", updateEngineDependentUI);
@@ -1249,6 +1608,19 @@
                 const isCustom = els.special_translate_model_select.value === "custom";
                 els.special_translate_custom_model.disabled = !isCustom;
             });
+
+            window.addEventListener("beforeunload", (e) => {
+                if (loadedSettings) {
+                    const currentSettings = collectCurrentFormSettings();
+                    if (!isDeepEqual(loadedSettings, currentSettings)) {
+                        e.preventDefault();
+                        e.returnValue = "";
+                        return "";
+                    }
+                }
+            });
+
+            bindConnectionTest();
         }
 
         return {
@@ -1256,6 +1628,7 @@
             bindSaveReset,
             bindGeneralEvents,
             clampPercent,
+            isDeepEqual,
         };
     }
 
