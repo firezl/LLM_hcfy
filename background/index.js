@@ -29,13 +29,14 @@ import {
     MESSAGE_TYPE_OPENROUTER_GET_MODELS,
     MESSAGE_TYPE_CLAUDE_GET_MODELS,
     MESSAGE_TYPE_GEMINI_GET_MODELS,
+    MESSAGE_TYPE_API_CONNECTION_TEST,
 } from "./constants.js";
 import {
     handlePdfRuntimeMessage,
     handleTabRemoved,
     handleTabUpdated,
 } from "./pdf-redirect.js";
-import { handleTranslateStart } from "./translate-router.js";
+import { handleTranslateStart, handleTestConnection } from "./translate-router.js";
 import { handleOllamaGetModels } from "./engines/ollama.js";
 import { handleOpenAICompatGetModels } from "./engines/openai-compat-models.js";
 import { handleOpenRouterGetModels } from "./engines/openrouter.js";
@@ -162,8 +163,9 @@ extensionApi.runtime.onMessage.addListener((message, sender, sendResponse) => {
         type === MESSAGE_TYPE_HISTORY_UPDATE_FAVORITE ||
         type === MESSAGE_TYPE_HISTORY_DELETE ||
         type === MESSAGE_TYPE_HISTORY_CLEAR;
+    const isTestMessage = type === MESSAGE_TYPE_API_CONNECTION_TEST;
 
-    if (!isPdfMessage && !isTermMessage && !isSyncMessage && !isHistoryMessage) {
+    if (!isPdfMessage && !isTermMessage && !isSyncMessage && !isHistoryMessage && !isTestMessage) {
         return false;
     }
 
@@ -173,7 +175,9 @@ extensionApi.runtime.onMessage.addListener((message, sender, sendResponse) => {
           ? handleBackgroundTermMessage
           : isHistoryMessage
             ? handleHistoryMessage
-            : handleSyncMessage;
+            : isSyncMessage
+              ? handleSyncMessage
+              : handleTestConnection;
 
     void handler(message)
         .then((result) => {
