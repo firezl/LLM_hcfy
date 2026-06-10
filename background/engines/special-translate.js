@@ -248,6 +248,11 @@ export async function handleSpecialTranslateGetModels(message, port, state) {
     const apiUrl = String(message?.apiUrl || "").trim();
     const apiKey = String(message?.apiKey || "").trim();
 
+    if (!apiUrl && provider === "openai_compatible") {
+        buildSpecialModelsError(port, state, requestId, "请先填写 API 地址");
+        return;
+    }
+
     const endpoint =
         provider === "openai_compatible"
             ? normalizeOpenAICompatChatEndpoint(apiUrl)

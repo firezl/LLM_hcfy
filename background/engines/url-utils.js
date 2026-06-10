@@ -205,7 +205,11 @@ export function normalizeOpenAICompatEndpoint(rawUrl, fallbackUrl) {
     parsed.hash = "";
 
     const modelsUrl = new URL(parsed.toString());
-    modelsUrl.pathname = buildOpenAIModelsPath(parsed.pathname);
+    if (parsed.host.includes("dashscope") && parsed.pathname.includes("/services/aigc/text-generation/generation")) {
+        modelsUrl.pathname = "/compatible-mode/v1/models";
+    } else {
+        modelsUrl.pathname = buildOpenAIModelsPath(parsed.pathname);
+    }
 
     return {
         ok: true,

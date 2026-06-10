@@ -29,6 +29,18 @@ describe("url-utils", () => {
         );
     });
 
+    it("normalizes Qwen DashScope native endpoint to compatible mode models URL", () => {
+        const result = normalizeOpenAICompatEndpoint(
+            "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation",
+            "https://api.openai.com/v1/chat/completions",
+        );
+        assert.equal(result.ok, true);
+        assert.equal(
+            result.modelsUrl,
+            "https://dashscope.aliyuncs.com/compatible-mode/v1/models",
+        );
+    });
+
     it("rejects non-http protocols", () => {
         const result = normalizeOpenAICompatEndpoint(
             "ftp://example.com/v1",

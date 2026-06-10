@@ -544,7 +544,7 @@
                             items.siliconflow_show_thoughts ? "true" : "false";
                         els.qwen_api_url.value =
                             items.qwen_api_url ||
-                            "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation";
+                            "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
                         els.qwen_api_key.value = items.qwen_api_key || "";
                         const savedQwenModel = items.qwen_model || "qwen3.5-plus";
                         els.qwen_custom_model.value = items.qwen_custom_model || "";
@@ -1054,7 +1054,7 @@
                         }
                         if (!data.qwen_api_url) {
                             data.qwen_api_url =
-                                "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation";
+                                "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
                         }
                     }
 
@@ -1299,6 +1299,10 @@
                 els.gemini_model,
                 els.gemini_custom_model,
             );
+            const selectedSiliconFlowModel = getSelectedOpenAICompatModel(
+                els.siliconflow_model,
+                els.siliconflow_custom_model,
+            );
             const data = {
                 enabled: els.enable_select.value,
                 engine: els.engine_select.value,
@@ -1359,6 +1363,15 @@
                 deepseek_custom_prompt: els.deepseek_custom_prompt.value || "",
                 deepseek_show_thoughts:
                     els.deepseek_show_thoughts.value === "true",
+                siliconflow_api_url: (els.siliconflow_api_url.value || "").trim(),
+                siliconflow_api_key: els.siliconflow_api_key.value,
+                siliconflow_model: selectedSiliconFlowModel,
+                siliconflow_custom_model: (
+                    els.siliconflow_custom_model.value || ""
+                ).trim(),
+                siliconflow_custom_prompt: els.siliconflow_custom_prompt.value || "",
+                siliconflow_show_thoughts:
+                    els.siliconflow_show_thoughts.value === "true",
                 qwen_api_url: (els.qwen_api_url.value || "").trim(),
                 qwen_api_key: els.qwen_api_key.value,
                 qwen_model: selectedQwenModel,
@@ -1472,6 +1485,10 @@
                 if (!settings.deepseek_api_key) return "请先填写 DeepSeek API Key。";
                 if (!settings.deepseek_model) return "请先填写/选择模型名称。";
             }
+            if (engine === "siliconflow") {
+                if (!settings.siliconflow_api_key) return "请先填写 SiliconFlow API Key。";
+                if (!settings.siliconflow_model) return "请先填写/选择模型名称。";
+            }
             if (engine === "qwen") {
                 if (!settings.qwen_api_key) return "请先填写 Qwen API Key。";
                 if (!settings.qwen_model) return "请先填写/选择模型名称。";
@@ -1519,6 +1536,7 @@
             if (engine === "custom_openai") return settings.custom_openai_model === "custom" ? settings.custom_openai_custom_model : settings.custom_openai_model;
             if (engine === "openrouter") return settings.openrouter_model === "custom" ? settings.openrouter_custom_model : settings.openrouter_model;
             if (engine === "deepseek") return settings.deepseek_model === "custom" ? settings.deepseek_custom_model : settings.deepseek_model;
+            if (engine === "siliconflow") return settings.siliconflow_model === "custom" ? settings.siliconflow_custom_model : settings.siliconflow_model;
             if (engine === "qwen") return settings.qwen_model === "custom" ? settings.qwen_custom_model : settings.qwen_model;
             if (engine === "glm") return settings.glm_model === "custom" ? settings.glm_custom_model : settings.glm_model;
             if (engine === "xiaomi") return settings.xiaomi_model === "custom" ? settings.xiaomi_custom_model : settings.xiaomi_model;

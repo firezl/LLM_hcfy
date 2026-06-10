@@ -64,7 +64,7 @@ export const DEFAULT_SETTINGS = {
     siliconflow_custom_payload: "",
     siliconflow_show_thoughts: false,
     qwen_api_url:
-        "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation",
+        "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
     qwen_api_key: "",
     qwen_model: "qwen3.5-plus",
     qwen_custom_model: "",

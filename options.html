@@ -436,6 +436,10 @@
                         type="text"
                         placeholder="例如: deepseek-ai/DeepSeek-V3"
                     />
+                    <div class="jyt-connection-test-container">
+                        <button type="button" class="jyt-btn-connection-test" data-engine="siliconflow">测试连接</button>
+                        <span class="jyt-connection-test-status"></span>
+                    </div>
                     <label>自定义翻译 Prompt（仅硅基流动生效）</label>
                     <textarea
                         id="siliconflow_custom_prompt"
@@ -458,7 +462,7 @@
                     <input
                         id="qwen_api_url"
                         type="text"
-                        placeholder="https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation"
+                        placeholder="https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
                     />
                     <label>API Key</label>
                     <input

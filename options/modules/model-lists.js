@@ -394,6 +394,7 @@
             }
 
             async function requestOpenAICompatModelList(
+                engine,
                 apiUrl,
                 apiKey,
                 customHeaders,
@@ -417,6 +418,7 @@
                                 MESSAGE_TYPES.OPENAI_COMPAT_GET_MODELS ||
                                 "OPENAI_COMPAT_GET_MODELS",
                             requestId,
+                            engine,
                             apiUrl: String(apiUrl || "").trim(),
                             apiKey: String(apiKey || "").trim(),
                             customHeaders: Array.isArray(customHeaders)
@@ -588,6 +590,7 @@
 
                 const selectedModel = getSelectedOpenAICompatModel(selectEl, customEl);
                 return requestOpenAICompatModelList(
+                    cfg.name,
                     els[cfg.apiUrlId]?.value,
                     els[cfg.apiKeyId]?.value,
                     collectCustomHeaders(cfg.customHeadersKey),

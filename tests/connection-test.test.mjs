@@ -73,4 +73,37 @@ describe("handleTestConnection", () => {
         assert.equal(result.ok, false);
         assert.ok(result.error.includes("Invalid API Key") || result.error.includes("401"));
     });
+
+    it("succeeds when fetch returns a mock SSE stream for siliconflow", async () => {
+        globalThis.fetch = async (url, options) => {
+            assert.equal(url, "https://api.siliconflow.cn/v1/chat/completions");
+            assert.equal(options.method, "POST");
+            assert.ok(options.headers["Authorization"].includes("sk-sf-12345"));
+
+            const stream = new ReadableStream({
+                start(controller) {
+                    controller.enqueue(new TextEncoder().encode('data: {"choices":[{"delta":{"content":"你好"}}]}\n\n'));
+                    controller.enqueue(new TextEncoder().encode('data: [DONE]\n\n'));
+                    controller.close();
+                }
+            });
+
+            return {
+                ok: true,
+                status: 200,
+                body: stream
+            };
+        };
+
+        const result = await handleTestConnection({
+            engine: "siliconflow",
+            settings: {
+                siliconflow_api_url: "https://api.siliconflow.cn/v1/chat/completions",
+                siliconflow_api_key: "sk-sf-12345",
+                siliconflow_model: "deepseek-ai/DeepSeek-V3"
+            }
+        });
+
+        assert.deepEqual(result, { ok: true });
+    });
 });

@@ -33,4 +33,14 @@ describe("openai-compat-stream", () => {
         assert.equal(delta.content, "x");
         assert.equal(delta.reasoning_content, "y");
     });
+
+    it("throws error for error payload in parseSseJsonLine", () => {
+        assert.throws(() => {
+            parseSseJsonLine('data: {"error":{"message":"API key invalid"}}');
+        }, /API key invalid/);
+
+        assert.throws(() => {
+            parseSseJsonLine('data: {"code":"InvalidParameter","message":"url error"}');
+        }, /InvalidParameter: url error/);
+    });
 });

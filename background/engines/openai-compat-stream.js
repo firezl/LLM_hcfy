@@ -12,9 +12,19 @@ export function parseSseJsonLine(line) {
     }
 
     try {
-        return JSON.parse(payload);
+        const parsed = JSON.parse(payload);
+        if (parsed?.error) {
+            throw new Error(parsed.error.message || JSON.stringify(parsed.error));
+        }
+        if (parsed?.code && parsed?.message) {
+            throw new Error(`${parsed.code}: ${parsed.message}`);
+        }
+        return parsed;
     } catch (err) {
-        return null;
+        if (err instanceof SyntaxError) {
+            return null;
+        }
+        throw err;
     }
 }
 
