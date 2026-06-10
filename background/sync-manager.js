@@ -68,6 +68,7 @@ function normalizeConfigPayload(raw) {
             key === "show_thoughts" ||
             key === "custom_openai_show_thoughts" ||
             key === "deepseek_show_thoughts" ||
+            key === "siliconflow_show_thoughts" ||
             key === "qwen_show_thoughts" ||
             key === "qwen_preserve_thinking" ||
             key === "glm_show_thoughts" ||

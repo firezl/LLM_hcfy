@@ -4,6 +4,7 @@ import { streamCustomOpenAITranslate } from "./engines/custom-openai.js";
 import { streamDeepLTranslate } from "./engines/deepl.js";
 import { streamDeepLXTranslate } from "./engines/deeplx.js";
 import { streamDeepSeekTranslate } from "./engines/deepseek.js";
+import { streamSiliconFlowTranslate } from "./engines/siliconflow.js";
 import { streamGeminiTranslate } from "./engines/gemini.js";
 import { streamGrokTranslate } from "./engines/grok.js";
 import { streamNimTranslate } from "./engines/nim.js";
@@ -25,6 +26,7 @@ export const TRANSLATE_HANDLERS = Object.freeze({
     claude: streamClaudeTranslate,
     custom_openai: streamCustomOpenAITranslate,
     deepseek: streamDeepSeekTranslate,
+    siliconflow: streamSiliconFlowTranslate,
     qwen: streamQwenTranslate,
     glm: streamGLMTranslate,
     xiaomi: streamXiaomiTranslate,

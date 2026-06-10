@@ -107,6 +107,7 @@
                     claude: "claude_show_thoughts",
                     gemini: "gemini_show_thoughts",
                     deepseek: "deepseek_show_thoughts",
+                    siliconflow: "siliconflow_show_thoughts",
                     qwen: "qwen_show_thoughts",
                     glm: "glm_show_thoughts",
                     xiaomi: "xiaomi_show_thoughts",

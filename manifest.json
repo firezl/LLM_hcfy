@@ -8,6 +8,8 @@
         "https://api.openai.com/*",
         "https://openrouter.ai/*",
         "https://api.deepseek.com/*",
+        "https://api.siliconflow.cn/*",
+        "https://api.siliconflow.com/*",
         "https://dashscope.aliyuncs.com/*",
         "https://open.bigmodel.cn/*",
         "https://api.xiaomimimo.com/*",

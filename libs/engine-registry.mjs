@@ -152,6 +152,23 @@ export const ENGINE_DEFINITIONS = [
         },
     },
     {
+        id: "siliconflow",
+        kind: "llm",
+        customPromptKey: "siliconflow_custom_prompt",
+        systemPromptKey: "siliconflow_system_prompt",
+        userPromptKey: "siliconflow_user_prompt",
+        customHeadersKey: "siliconflow_custom_headers",
+        customPayloadKey: "siliconflow_custom_payload",
+        sectionId: "siliconflow_section",
+        openaiCompat: {
+            apiUrlId: "siliconflow_api_url",
+            apiKeyId: "siliconflow_api_key",
+            modelId: "siliconflow_model",
+            customModelId: "siliconflow_custom_model",
+            defaultModel: "deepseek-ai/DeepSeek-V3",
+        },
+    },
+    {
         id: "qwen",
         kind: "llm",
         customPromptKey: "qwen_custom_prompt",

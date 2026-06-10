@@ -173,6 +173,7 @@
                         <option value="claude">Claude</option>
                         <option value="qwen">Qwen</option>
                         <option value="deepseek">DeepSeek</option>
+                        <option value="siliconflow">硅基流动 SiliconFlow</option>
                         <option value="glm">GLM</option>
                         <option value="xiaomi">Xiaomi Mimo</option>
                         <option value="grok">xAI Grok</option>
@@ -392,6 +393,47 @@
                         <option value="false">否</option>
                         <option value="true">是</option>
                     </select>
+                </div>
+
+                <div class="jyt-section jyt-hidden" id="siliconflow_section">
+                    <div class="jyt-section-title">硅基流动 SiliconFlow 配置</div>
+                    <label>API 地址</label>
+                    <input
+                        id="siliconflow_api_url"
+                        type="text"
+                        placeholder="https://api.siliconflow.cn/v1/chat/completions"
+                    />
+                    <label>API Key</label>
+                    <input
+                        id="siliconflow_api_key"
+                        type="password"
+                        placeholder="sk-..."
+                    />
+                    <label>模型</label>
+                    <select id="siliconflow_model">
+                        <option value="">正在加载模型列表...</option>
+                        <option value="custom">自定义模型名</option>
+                    </select>
+                    <label>自定义模型名</label>
+                    <input
+                        id="siliconflow_custom_model"
+                        type="text"
+                        placeholder="例如: deepseek-ai/DeepSeek-V3"
+                    />
+                    <label>自定义翻译 Prompt（仅硅基流动生效）</label>
+                    <textarea
+                        id="siliconflow_custom_prompt"
+                        rows="4"
+                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。"
+                    ></textarea>
+                    <label>显示思考过程</label>
+                    <select id="siliconflow_show_thoughts">
+                        <option value="false">否</option>
+                        <option value="true">是</option>
+                    </select>
+                    <div class="jyt-hint">
+                        推理模型（如 DeepSeek-R1）可开启思考过程；普通对话模型请保持关闭。
+                    </div>
                 </div>
 
                 <div class="jyt-section jyt-hidden" id="qwen_section">

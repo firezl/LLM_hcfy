@@ -185,6 +185,9 @@ export function getThinkingEnabledByEngine(engine, settings) {
     if (engine === "deepseek") {
         return !!settings?.deepseek_show_thoughts;
     }
+    if (engine === "siliconflow") {
+        return !!settings?.siliconflow_show_thoughts;
+    }
     if (engine === "qwen") {
         return !!settings?.qwen_show_thoughts;
     }

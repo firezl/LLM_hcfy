@@ -506,6 +506,19 @@
                         els.deepseek_show_thoughts.value = items.deepseek_show_thoughts
                             ? "true"
                             : "false";
+                        els.siliconflow_api_url.value =
+                            items.siliconflow_api_url ||
+                            "https://api.siliconflow.cn/v1/chat/completions";
+                        els.siliconflow_api_key.value =
+                            items.siliconflow_api_key || "";
+                        const savedSiliconFlowModel =
+                            items.siliconflow_model || "deepseek-ai/DeepSeek-V3";
+                        els.siliconflow_custom_model.value =
+                            items.siliconflow_custom_model || "";
+                        els.siliconflow_custom_prompt.value =
+                            items.siliconflow_custom_prompt || "";
+                        els.siliconflow_show_thoughts.value =
+                            items.siliconflow_show_thoughts ? "true" : "false";
                         els.qwen_api_url.value =
                             items.qwen_api_url ||
                             "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation";
@@ -586,6 +599,7 @@
                             openai: savedOpenAIModel,
                             custom_openai: savedCustomOpenAIModel,
                             deepseek: savedDeepSeekModel,
+                            siliconflow: savedSiliconFlowModel,
                             qwen: savedQwenModel,
                             glm: savedGLMModel,
                             xiaomi: savedXiaomiModel,
@@ -742,6 +756,10 @@
                         els.deepseek_model,
                         els.deepseek_custom_model,
                     );
+                    const selectedSiliconFlowModel = getSelectedOpenAICompatModel(
+                        els.siliconflow_model,
+                        els.siliconflow_custom_model,
+                    );
                     const selectedQwenModel = getSelectedOpenAICompatModel(
                         els.qwen_model,
                         els.qwen_custom_model,
@@ -826,6 +844,16 @@
                         ).trim(),
                         deepseek_custom_prompt: els.deepseek_custom_prompt.value || "",
                         deepseek_show_thoughts: els.deepseek_show_thoughts.value === "true",
+                        siliconflow_api_url: (els.siliconflow_api_url.value || "").trim(),
+                        siliconflow_api_key: els.siliconflow_api_key.value,
+                        siliconflow_model: selectedSiliconFlowModel,
+                        siliconflow_custom_model: (
+                            els.siliconflow_custom_model.value || ""
+                        ).trim(),
+                        siliconflow_custom_prompt:
+                            els.siliconflow_custom_prompt.value || "",
+                        siliconflow_show_thoughts:
+                            els.siliconflow_show_thoughts.value === "true",
                         qwen_api_url: (els.qwen_api_url.value || "").trim(),
                         qwen_api_key: els.qwen_api_key.value,
                         qwen_model: selectedQwenModel,
@@ -973,6 +1001,21 @@
                         if (!data.deepseek_api_url) {
                             data.deepseek_api_url =
                                 "https://api.deepseek.com/chat/completions";
+                        }
+                    }
+
+                    if (effectiveEngine === "siliconflow") {
+                        if (!data.siliconflow_api_key) {
+                            showToast("请先填写硅基流动 API Key。", true);
+                            return;
+                        }
+                        if (!data.siliconflow_model) {
+                            showToast("请先选择硅基流动模型或填写自定义模型名。", true);
+                            return;
+                        }
+                        if (!data.siliconflow_api_url) {
+                            data.siliconflow_api_url =
+                                "https://api.siliconflow.cn/v1/chat/completions";
                         }
                     }
 
