@@ -2,16 +2,45 @@
 (function (global) {
     function install(app) {
         app.ui = {
+            root: null,
+            shadow: null,
             btn: null,
             bubble: null,
         };
 
+        function ensureUiRoot() {
+            if (app.ui.shadow && app.ui.root?.isConnected) {
+                return app.ui.shadow;
+            }
+
+            const stale = document.getElementById(app.ROOT_ID);
+            if (stale) {
+                stale.remove();
+            }
+
+            const host = document.createElement("div");
+            host.id = app.ROOT_ID;
+            host.dataset.jytUi = "root";
+            (document.body || document.documentElement).appendChild(host);
+
+            const shadow = host.attachShadow({ mode: "closed" });
+            const style = document.createElement("style");
+            style.textContent = app.CONTENT_UI_CSS || "";
+            shadow.appendChild(style);
+
+            app.ui.root = host;
+            app.ui.shadow = shadow;
+            app.ui.btn = null;
+            app.ui.bubble = null;
+            return shadow;
+        }
+
         function getUiMount() {
-            return document.documentElement || document.body;
+            return ensureUiRoot();
         }
 
         function ensureUiHost() {
-            return app.ui;
+            return ensureUiRoot();
         }
 
         function getTranslateBtn() {
@@ -32,9 +61,22 @@
                     ? target.composedPath()
                     : [target];
 
-            return path.some(
-                (node) => node === app.ui.btn || node === app.ui.bubble,
-            );
+            const root = app.ui.root;
+            const shadow = app.ui.shadow;
+            if (!root) {
+                return false;
+            }
+
+            return path.some((node) => {
+                if (node === root) {
+                    return true;
+                }
+                return (
+                    shadow instanceof ShadowRoot &&
+                    node instanceof Node &&
+                    shadow.contains(node)
+                );
+            });
         }
 
         Object.assign(app, {

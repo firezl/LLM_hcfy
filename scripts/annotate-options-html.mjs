@@ -25,6 +25,8 @@ const EXTRA_SETTING_IDS = new Set([
     "bubble_width_percent",
     "bubble_height_percent",
     "show_thoughts",
+    "ollama_model_select",
+    "special_translate_model_select",
 ]);
 
 const SETTING_IDS = new Set([
@@ -119,6 +121,15 @@ if (checkOnly) {
             "options.html is missing data-jyt-* attributes. Run: npm run annotate:options",
         );
         process.exit(1);
+    }
+    const { spawnSync } = await import("node:child_process");
+    const domCheck = spawnSync(
+        process.execPath,
+        ["scripts/check-options-dom-refs.mjs"],
+        { cwd: ROOT, stdio: "inherit" },
+    );
+    if (domCheck.status !== 0) {
+        process.exit(domCheck.status || 1);
     }
     console.log("options.html data-jyt annotations are up to date");
     process.exit(0);

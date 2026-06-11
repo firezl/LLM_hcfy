@@ -37,6 +37,7 @@ $requiredPaths = @(
     "options.html",
     "options.js",
     "styles.css",
+    "styles/content-ui.css",
     "icons/icon-128.png",
     "vendor/pdfjs/web/viewer.html",
     "vendor/pdfjs/build/pdf.mjs"
@@ -52,7 +53,7 @@ npm run build:content
 if ($LASTEXITCODE -ne 0) {
     throw "content script bundle 构建失败"
 }
-node scripts/annotate-options-html.mjs --check
+npm run check:options
 if ($LASTEXITCODE -ne 0) {
     throw "options.html 缺少 data-jyt-* 标注，请运行 npm run annotate:options"
 }

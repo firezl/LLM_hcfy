@@ -19,6 +19,9 @@ await esbuild.build({
     format: "iife",
     platform: "browser",
     target: ["chrome109", "firefox140"],
+    loader: {
+        ".css": "text",
+    },
     minify: false,
     keepNames: true,
     legalComments: "inline",

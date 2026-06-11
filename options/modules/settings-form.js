@@ -99,6 +99,26 @@
             return Math.max(5, Math.min(95, Math.round(n)));
         }
 
+        function fieldValue(key, fallback = "") {
+            const el = els[key];
+            if (!el) {
+                return fallback;
+            }
+            return el.value;
+        }
+
+        function fieldTrim(key, fallback = "") {
+            return String(fieldValue(key, fallback)).trim();
+        }
+
+        function fieldBool(key) {
+            return fieldValue(key) === "true";
+        }
+
+        function fieldNumber(key, fallback = 0) {
+            return Number(fieldValue(key, fallback) || fallback);
+        }
+
         function insertAfter(referenceEl, newEl) {
             referenceEl.parentNode.insertBefore(newEl, referenceEl.nextSibling);
             return newEl;
@@ -763,217 +783,11 @@
 
         function bindSaveReset() {
                 document.getElementById("save").addEventListener("click", async () => {
-                    const selectedEngine = els.engine_select.value;
-                    const selectedLlmEngine =
-                        (els.llm_engine_select?.value || "openai").trim() || "openai";
+                    const data = buildFormSettings();
+                    const selectedEngine = data.engine;
+                    const selectedLlmEngine = data.llm_engine;
                     const effectiveEngine =
                         selectedEngine === "llm" ? selectedLlmEngine : selectedEngine;
-                    const selectedOpenAIModel = getSelectedOpenAICompatModel(
-                        els.openai_model,
-                        els.openai_custom_model,
-                    );
-                    const selectedCustomOpenAIModel = getSelectedOpenAICompatModel(
-                        els.custom_openai_model,
-                        els.custom_openai_custom_model,
-                    );
-                    const selectedOpenRouterModel = getSelectedOpenRouterModel();
-                    const selectedDeepSeekModel = getSelectedOpenAICompatModel(
-                        els.deepseek_model,
-                        els.deepseek_custom_model,
-                    );
-                    const selectedSiliconFlowModel = getSelectedOpenAICompatModel(
-                        els.siliconflow_model,
-                        els.siliconflow_custom_model,
-                    );
-                    const selectedQwenModel = getSelectedOpenAICompatModel(
-                        els.qwen_model,
-                        els.qwen_custom_model,
-                    );
-                    const selectedGLMModel = getSelectedOpenAICompatModel(
-                        els.glm_model,
-                        els.glm_custom_model,
-                    );
-                    const selectedXiaomiModel = getSelectedOpenAICompatModel(
-                        els.xiaomi_model,
-                        els.xiaomi_custom_model,
-                    );
-                    const selectedGrokModel = getSelectedOpenAICompatModel(
-                        els.grok_model,
-                        els.grok_custom_model,
-                    );
-                    const selectedNimModel = getSelectedOpenAICompatModel(
-                        els.nim_model,
-                        els.nim_custom_model,
-                    );
-                    const selectedClaudeModel = getSelectedOpenAICompatModel(
-                        els.claude_model,
-                        els.claude_custom_model,
-                    );
-                    const selectedGeminiModel = getSelectedOpenAICompatModel(
-                        els.gemini_model,
-                        els.gemini_custom_model,
-                    );
-                    const data = {
-                        enabled: els.enable_select.value,
-                        engine: selectedEngine,
-                        llm_engine: selectedLlmEngine,
-                        translate_shortcut: normalizeShortcut(els.translate_shortcut.value),
-                        source_lang: els.source_lang.value,
-                        target_lang: els.target_lang.value,
-                        openai_api_url: els.openai_api_url.value,
-                        openai_api_key: els.openai_api_key.value,
-                        openai_model: selectedOpenAIModel,
-                        openai_custom_model: (els.openai_custom_model.value || "").trim(),
-                        openai_custom_prompt: els.openai_custom_prompt.value || "",
-                        show_thoughts: els.show_thoughts.value === "true",
-                        openai_reasoning_effort: els.openai_reasoning_effort.value,
-                        openai_max_completion_tokens: Number(
-                            els.openai_max_completion_tokens.value || 0,
-                        ),
-                        custom_openai_api_url: (
-                            els.custom_openai_api_url.value || ""
-                        ).trim(),
-                        custom_openai_api_key: els.custom_openai_api_key.value,
-                        custom_openai_model: selectedCustomOpenAIModel,
-                        custom_openai_custom_model: (
-                            els.custom_openai_custom_model.value || ""
-                        ).trim(),
-                        custom_openai_custom_prompt:
-                            els.custom_openai_custom_prompt.value || "",
-                        custom_openai_show_thoughts:
-                            els.custom_openai_show_thoughts.value === "true",
-                        custom_openai_reasoning_effort:
-                            els.custom_openai_reasoning_effort.value,
-                        custom_openai_max_completion_tokens: Number(
-                            els.custom_openai_max_completion_tokens.value || 0,
-                        ),
-                        openrouter_api_url: (els.openrouter_api_url.value || "").trim(),
-                        openrouter_api_key: els.openrouter_api_key.value,
-                        openrouter_model: selectedOpenRouterModel,
-                        openrouter_custom_model: (
-                            els.openrouter_custom_model.value || ""
-                        ).trim(),
-                        openrouter_custom_prompt: els.openrouter_custom_prompt.value || "",
-                        openrouter_show_thoughts:
-                            els.openrouter_show_thoughts.value === "true",
-                        openrouter_reasoning_effort:
-                            els.openrouter_reasoning_effort.value,
-                        openrouter_max_completion_tokens: Number(
-                            els.openrouter_max_completion_tokens.value || 0,
-                        ),
-                        deepseek_api_url: (els.deepseek_api_url.value || "").trim(),
-                        deepseek_api_key: els.deepseek_api_key.value,
-                        deepseek_model: selectedDeepSeekModel,
-                        deepseek_custom_model: (
-                            els.deepseek_custom_model.value || ""
-                        ).trim(),
-                        deepseek_custom_prompt: els.deepseek_custom_prompt.value || "",
-                        deepseek_show_thoughts: els.deepseek_show_thoughts.value === "true",
-                        siliconflow_api_url: (els.siliconflow_api_url.value || "").trim(),
-                        siliconflow_api_key: els.siliconflow_api_key.value,
-                        siliconflow_model: selectedSiliconFlowModel,
-                        siliconflow_custom_model: (
-                            els.siliconflow_custom_model.value || ""
-                        ).trim(),
-                        siliconflow_custom_prompt:
-                            els.siliconflow_custom_prompt.value || "",
-                        siliconflow_show_thoughts:
-                            els.siliconflow_show_thoughts.value === "true",
-                        qwen_api_url: (els.qwen_api_url.value || "").trim(),
-                        qwen_api_key: els.qwen_api_key.value,
-                        qwen_model: selectedQwenModel,
-                        qwen_custom_model: (els.qwen_custom_model.value || "").trim(),
-                        qwen_custom_prompt: els.qwen_custom_prompt.value || "",
-                        qwen_show_thoughts: els.qwen_show_thoughts.value === "true",
-                        qwen_thinking_budget: Number(els.qwen_thinking_budget.value || 0),
-                        qwen_preserve_thinking: els.qwen_preserve_thinking.value === "true",
-                        glm_api_url: (els.glm_api_url.value || "").trim(),
-                        glm_api_key: els.glm_api_key.value,
-                        glm_model: selectedGLMModel,
-                        glm_custom_model: (els.glm_custom_model.value || "").trim(),
-                        glm_custom_prompt: els.glm_custom_prompt.value || "",
-                        glm_show_thoughts: els.glm_show_thoughts.value === "true",
-                        glm_clear_thinking: els.glm_clear_thinking.value === "true",
-                        xiaomi_api_url: (els.xiaomi_api_url.value || "").trim(),
-                        xiaomi_api_key: els.xiaomi_api_key.value,
-                        xiaomi_model: selectedXiaomiModel,
-                        xiaomi_custom_model: (els.xiaomi_custom_model.value || "").trim(),
-                        xiaomi_custom_prompt: els.xiaomi_custom_prompt.value || "",
-                        xiaomi_show_thoughts: els.xiaomi_show_thoughts.value === "true",
-                        xiaomi_max_completion_tokens: Number(
-                            els.xiaomi_max_completion_tokens.value || 0,
-                        ),
-                        grok_api_url: (els.grok_api_url.value || "").trim(),
-                        grok_api_key: els.grok_api_key.value,
-                        grok_model: selectedGrokModel,
-                        grok_custom_model: (els.grok_custom_model.value || "").trim(),
-                        grok_custom_prompt: els.grok_custom_prompt.value || "",
-                        grok_show_thoughts: els.grok_show_thoughts.value === "true",
-                        nim_api_url: (els.nim_api_url.value || "").trim(),
-                        nim_api_key: els.nim_api_key.value,
-                        nim_model: selectedNimModel,
-                        nim_custom_model: (els.nim_custom_model.value || "").trim(),
-                        nim_custom_prompt: els.nim_custom_prompt.value || "",
-                        nim_show_thoughts: els.nim_show_thoughts.value === "true",
-                        nim_max_tokens: Number(els.nim_max_tokens.value || 0),
-                        claude_api_url: (els.claude_api_url.value || "").trim(),
-                        claude_api_key: els.claude_api_key.value,
-                        claude_model: selectedClaudeModel,
-                        claude_custom_model: (els.claude_custom_model.value || "").trim(),
-                        claude_custom_prompt: els.claude_custom_prompt.value || "",
-                        claude_show_thoughts: els.claude_show_thoughts.value === "true",
-                        claude_max_tokens: Number(els.claude_max_tokens.value || 4096),
-                        claude_thinking_mode: els.claude_thinking_mode.value,
-                        claude_thinking_budget: Number(
-                            els.claude_thinking_budget.value || 2048,
-                        ),
-                        claude_thinking_effort: els.claude_thinking_effort.value,
-                        gemini_api_url: (els.gemini_api_url.value || "").trim(),
-                        gemini_api_key: els.gemini_api_key.value,
-                        gemini_model: selectedGeminiModel,
-                        gemini_custom_model: (els.gemini_custom_model.value || "").trim(),
-                        gemini_custom_prompt: els.gemini_custom_prompt.value || "",
-                        gemini_show_thoughts: els.gemini_show_thoughts.value === "true",
-                        gemini_thinking_level: els.gemini_thinking_level.value,
-                        gemini_thinking_budget: Number(
-                            els.gemini_thinking_budget.value || -1,
-                        ),
-                        ollama_api_url: (els.ollama_api_url.value || "").trim(),
-                        ollama_model: els.ollama_model_select.value,
-                        ollama_custom_model: (els.ollama_custom_model.value || "").trim(),
-                        ollama_custom_prompt: els.ollama_custom_prompt.value || "",
-                        ollama_show_thoughts: els.ollama_show_thoughts.value === "true",
-                        special_translate_provider: normalizeSpecialProvider(
-                            els.special_translate_provider.value,
-                        ),
-                        special_translate_api_url: (
-                            els.special_translate_api_url.value || ""
-                        ).trim(),
-                        special_translate_api_key: els.special_translate_api_key.value,
-                        special_translate_model: els.special_translate_model_select.value,
-                        special_translate_custom_model: (
-                            els.special_translate_custom_model.value || ""
-                        ).trim(),
-                        special_translate_custom_prompt:
-                            els.special_translate_custom_prompt.value || "",
-                        special_translate_show_thoughts:
-                            els.special_translate_show_thoughts.value === "true",
-                        deepl_api_url: (els.deepl_api_url.value || "").trim(),
-                        deepl_api_key: els.deepl_api_key.value,
-                        deeplx_api_url: (els.deeplx_api_url.value || "").trim(),
-                        deeplx_api_key: els.deeplx_api_key.value,
-                        theme_mode: els.theme_mode.value,
-                        font_family: els.font_family.value,
-                        bubble_width_percent: clampPercent(
-                            els.bubble_width_percent.value,
-                            20,
-                        ),
-                        bubble_height_percent: clampPercent(
-                            els.bubble_height_percent.value,
-                            40,
-                        ),
-                        config_updated_at: Date.now(),
-                    };
                     const advancedFields = collectAdvancedLLMFields(data);
                     if (!advancedFields.ok) {
                         showToast(advancedFields.error, true);
@@ -1199,6 +1013,8 @@
                         }
                     }
 
+                    data.config_updated_at = Date.now();
+
                     const permissionUrls = Object.entries(data)
                         .filter(([key, value]) => key.endsWith("_api_url") && value)
                         .map(([, value]) => value);
@@ -1258,214 +1074,185 @@
                 });
         }
 
-        function collectCurrentFormSettings() {
-            const selectedOpenAIModel = getSelectedOpenAICompatModel(
-                els.openai_model,
-                els.openai_custom_model,
-            );
-            const selectedCustomOpenAIModel = getSelectedOpenAICompatModel(
-                els.custom_openai_model,
-                els.custom_openai_custom_model,
-            );
-            const selectedOpenRouterModel = getSelectedOpenRouterModel();
-            const selectedDeepSeekModel = getSelectedOpenAICompatModel(
-                els.deepseek_model,
-                els.deepseek_custom_model,
-            );
-            const selectedQwenModel = getSelectedOpenAICompatModel(
-                els.qwen_model,
-                els.qwen_custom_model,
-            );
-            const selectedGLMModel = getSelectedOpenAICompatModel(
-                els.glm_model,
-                els.glm_custom_model,
-            );
-            const selectedXiaomiModel = getSelectedOpenAICompatModel(
-                els.xiaomi_model,
-                els.xiaomi_custom_model,
-            );
-            const selectedGrokModel = getSelectedOpenAICompatModel(
-                els.grok_model,
-                els.grok_custom_model,
-            );
-            const selectedNimModel = getSelectedOpenAICompatModel(
-                els.nim_model,
-                els.nim_custom_model,
-            );
-            const selectedClaudeModel = getSelectedOpenAICompatModel(
-                els.claude_model,
-                els.claude_custom_model,
-            );
-            const selectedGeminiModel = getSelectedOpenAICompatModel(
-                els.gemini_model,
-                els.gemini_custom_model,
-            );
-            const selectedSiliconFlowModel = getSelectedOpenAICompatModel(
-                els.siliconflow_model,
-                els.siliconflow_custom_model,
-            );
-            const data = {
-                enabled: els.enable_select.value,
-                engine: els.engine_select.value,
-                llm_engine: (els.llm_engine_select?.value || "openai").trim() || "openai",
-                translate_shortcut: normalizeShortcut(els.translate_shortcut.value),
-                source_lang: els.source_lang.value,
-                target_lang: els.target_lang.value,
-                openai_api_url: els.openai_api_url.value,
-                openai_api_key: els.openai_api_key.value,
-                openai_model: selectedOpenAIModel,
-                openai_custom_model: (els.openai_custom_model.value || "").trim(),
-                openai_custom_prompt: els.openai_custom_prompt.value || "",
-                show_thoughts: els.show_thoughts.value === "true",
-                openai_reasoning_effort: els.openai_reasoning_effort.value,
-                openai_max_completion_tokens: Number(
-                    els.openai_max_completion_tokens.value || 0,
+        function buildFormSettings() {
+            return {
+                enabled: fieldValue("enable_select"),
+                engine: fieldValue("engine_select"),
+                llm_engine: fieldTrim("llm_engine_select", "openai") || "openai",
+                translate_shortcut: normalizeShortcut(fieldValue("translate_shortcut")),
+                source_lang: fieldValue("source_lang"),
+                target_lang: fieldValue("target_lang"),
+                theme_mode: fieldValue("theme_mode", "auto"),
+                font_family: fieldValue("font_family"),
+                bubble_width_percent: clampPercent(
+                    fieldValue("bubble_width_percent"),
+                    20,
                 ),
-                custom_openai_api_url: (
-                    els.custom_openai_api_url.value || ""
-                ).trim(),
-                custom_openai_api_key: els.custom_openai_api_key.value,
-                custom_openai_model: selectedCustomOpenAIModel,
-                custom_openai_custom_model: (
-                    els.custom_openai_custom_model.value || ""
-                ).trim(),
-                custom_openai_custom_prompt:
-                    els.custom_openai_custom_prompt.value || "",
-                custom_openai_show_thoughts:
-                    els.custom_openai_show_thoughts.value === "true",
-                custom_openai_reasoning_effort:
-                    els.custom_openai_reasoning_effort.value,
-                custom_openai_max_completion_tokens: Number(
-                    els.custom_openai_max_completion_tokens.value || 0,
+                bubble_height_percent: clampPercent(
+                    fieldValue("bubble_height_percent"),
+                    40,
                 ),
-                openrouter_api_url: (
-                    els.openrouter_api_url.value || ""
-                ).trim(),
-                openrouter_api_key: els.openrouter_api_key.value,
-                openrouter_model: selectedOpenRouterModel,
-                openrouter_custom_model: (
-                    els.openrouter_custom_model.value || ""
-                ).trim(),
-                openrouter_custom_prompt:
-                    els.openrouter_custom_prompt.value || "",
-                openrouter_show_thoughts:
-                    els.openrouter_show_thoughts.value === "true",
-                openrouter_reasoning_effort:
-                    els.openrouter_reasoning_effort.value,
-                openrouter_max_completion_tokens: Number(
-                    els.openrouter_max_completion_tokens.value || 0,
+                openai_api_url: fieldValue("openai_api_url"),
+                openai_api_key: fieldValue("openai_api_key"),
+                openai_model: getSelectedOpenAICompatModel(
+                    els.openai_model,
+                    els.openai_custom_model,
                 ),
-                deepseek_api_url: (els.deepseek_api_url.value || "").trim(),
-                deepseek_api_key: els.deepseek_api_key.value,
-                deepseek_model: selectedDeepSeekModel,
-                deepseek_custom_model: (
-                    els.deepseek_custom_model.value || ""
-                ).trim(),
-                deepseek_custom_prompt: els.deepseek_custom_prompt.value || "",
-                deepseek_show_thoughts:
-                    els.deepseek_show_thoughts.value === "true",
-                siliconflow_api_url: (els.siliconflow_api_url.value || "").trim(),
-                siliconflow_api_key: els.siliconflow_api_key.value,
-                siliconflow_model: selectedSiliconFlowModel,
-                siliconflow_custom_model: (
-                    els.siliconflow_custom_model.value || ""
-                ).trim(),
-                siliconflow_custom_prompt: els.siliconflow_custom_prompt.value || "",
-                siliconflow_show_thoughts:
-                    els.siliconflow_show_thoughts.value === "true",
-                qwen_api_url: (els.qwen_api_url.value || "").trim(),
-                qwen_api_key: els.qwen_api_key.value,
-                qwen_model: selectedQwenModel,
-                qwen_custom_model: (els.qwen_custom_model.value || "").trim(),
-                qwen_custom_prompt: els.qwen_custom_prompt.value || "",
-                qwen_show_thoughts: els.qwen_show_thoughts.value === "true",
-                qwen_thinking_budget: Number(
-                    els.qwen_thinking_budget.value || 0,
+                openai_custom_model: fieldTrim("openai_custom_model"),
+                openai_custom_prompt: fieldValue("openai_custom_prompt"),
+                show_thoughts: fieldBool("show_thoughts"),
+                openai_reasoning_effort: fieldValue("openai_reasoning_effort"),
+                openai_max_completion_tokens: fieldNumber(
+                    "openai_max_completion_tokens",
                 ),
-                qwen_preserve_thinking:
-                    els.qwen_preserve_thinking.value === "true",
-                glm_api_url: (els.glm_api_url.value || "").trim(),
-                glm_api_key: els.glm_api_key.value,
-                glm_model: selectedGLMModel,
-                glm_custom_model: (els.glm_custom_model.value || "").trim(),
-                glm_custom_prompt: els.glm_custom_prompt.value || "",
-                glm_show_thoughts: els.glm_show_thoughts.value === "true",
-                glm_clear_thinking: els.glm_clear_thinking.value !== "false",
-                xiaomi_api_url: (els.xiaomi_api_url.value || "").trim(),
-                xiaomi_api_key: els.xiaomi_api_key.value,
-                xiaomi_model: selectedXiaomiModel,
-                xiaomi_custom_model: (
-                    els.xiaomi_custom_model.value || ""
-                ).trim(),
-                xiaomi_custom_prompt: els.xiaomi_custom_prompt.value || "",
-                xiaomi_show_thoughts: els.xiaomi_show_thoughts.value === "true",
-                xiaomi_max_completion_tokens: Number(
-                    els.xiaomi_max_completion_tokens.value || 0,
+                custom_openai_api_url: fieldTrim("custom_openai_api_url"),
+                custom_openai_api_key: fieldValue("custom_openai_api_key"),
+                custom_openai_model: getSelectedOpenAICompatModel(
+                    els.custom_openai_model,
+                    els.custom_openai_custom_model,
                 ),
-                grok_api_url: (els.grok_api_url.value || "").trim(),
-                grok_api_key: els.grok_api_key.value,
-                grok_model: selectedGrokModel,
-                grok_custom_model: (els.grok_custom_model.value || "").trim(),
-                grok_custom_prompt: els.grok_custom_prompt.value || "",
-                grok_show_thoughts: els.grok_show_thoughts.value === "true",
-                nim_api_url: (els.nim_api_url.value || "").trim(),
-                nim_api_key: els.nim_api_key.value,
-                nim_model: selectedNimModel,
-                nim_custom_model: (els.nim_custom_model.value || "").trim(),
-                nim_custom_prompt: els.nim_custom_prompt.value || "",
-                nim_show_thoughts: els.nim_show_thoughts.value === "true",
-                nim_max_tokens: Number(els.nim_max_tokens.value || 0),
-                claude_api_url: (els.claude_api_url.value || "").trim(),
-                claude_api_key: els.claude_api_key.value,
-                claude_model: selectedClaudeModel,
-                claude_custom_model: (
-                    els.claude_custom_model.value || ""
-                ).trim(),
-                claude_custom_prompt: els.claude_custom_prompt.value || "",
-                claude_show_thoughts: els.claude_show_thoughts.value === "true",
-                claude_max_tokens: Number(els.claude_max_tokens.value || 4096),
-                claude_thinking_mode: els.claude_thinking_mode.value,
-                claude_thinking_budget: Number(
-                    els.claude_thinking_budget.value || 2048,
+                custom_openai_custom_model: fieldTrim("custom_openai_custom_model"),
+                custom_openai_custom_prompt: fieldValue("custom_openai_custom_prompt"),
+                custom_openai_show_thoughts: fieldBool("custom_openai_show_thoughts"),
+                custom_openai_reasoning_effort: fieldValue(
+                    "custom_openai_reasoning_effort",
                 ),
-                claude_thinking_effort: els.claude_thinking_effort.value,
-                gemini_api_url: (els.gemini_api_url.value || "").trim(),
-                gemini_api_key: els.gemini_api_key.value,
-                gemini_model: selectedGeminiModel,
-                gemini_custom_model: (
-                    els.gemini_custom_model.value || ""
-                ).trim(),
-                gemini_custom_prompt: els.gemini_custom_prompt.value || "",
-                gemini_show_thoughts: els.gemini_show_thoughts.value === "true",
-                gemini_thinking_level: els.gemini_thinking_level.value,
-                gemini_thinking_budget: Number(
-                    els.gemini_thinking_budget.value || -1,
+                custom_openai_max_completion_tokens: fieldNumber(
+                    "custom_openai_max_completion_tokens",
                 ),
-                ollama_api_url: (els.ollama_api_url.value || "").trim(),
-                ollama_model: els.ollama_model_select.value,
-                ollama_custom_model: (
-                    els.ollama_custom_model.value || ""
-                ).trim(),
-                ollama_custom_prompt: els.ollama_custom_prompt.value || "",
-                ollama_show_thoughts: els.ollama_show_thoughts.value === "true",
-                special_translate_provider: els.special_translate_provider.value,
-                special_translate_api_url: (
-                    els.special_translate_api_url.value || ""
-                ).trim(),
-                special_translate_api_key: els.special_translate_api_key.value,
-                special_translate_model: els.special_translate_model_select.value,
-                special_translate_custom_model: (
-                    els.special_translate_custom_model.value || ""
-                ).trim(),
-                special_translate_custom_prompt:
-                    els.special_translate_custom_prompt.value || "",
-                special_translate_show_thoughts:
-                    els.special_translate_show_thoughts.value === "true",
-                deepl_api_url: (els.deepl_api_url.value || "").trim(),
-                deepl_api_key: els.deepl_api_key.value,
-                deeplx_api_url: (els.deeplx_api_url.value || "").trim(),
-                deeplx_api_key: els.deeplx_api_key.value,
+                openrouter_api_url: fieldTrim("openrouter_api_url"),
+                openrouter_api_key: fieldValue("openrouter_api_key"),
+                openrouter_model: getSelectedOpenRouterModel(),
+                openrouter_custom_model: fieldTrim("openrouter_custom_model"),
+                openrouter_custom_prompt: fieldValue("openrouter_custom_prompt"),
+                openrouter_show_thoughts: fieldBool("openrouter_show_thoughts"),
+                openrouter_reasoning_effort: fieldValue("openrouter_reasoning_effort"),
+                openrouter_max_completion_tokens: fieldNumber(
+                    "openrouter_max_completion_tokens",
+                ),
+                deepseek_api_url: fieldTrim("deepseek_api_url"),
+                deepseek_api_key: fieldValue("deepseek_api_key"),
+                deepseek_model: getSelectedOpenAICompatModel(
+                    els.deepseek_model,
+                    els.deepseek_custom_model,
+                ),
+                deepseek_custom_model: fieldTrim("deepseek_custom_model"),
+                deepseek_custom_prompt: fieldValue("deepseek_custom_prompt"),
+                deepseek_show_thoughts: fieldBool("deepseek_show_thoughts"),
+                siliconflow_api_url: fieldTrim("siliconflow_api_url"),
+                siliconflow_api_key: fieldValue("siliconflow_api_key"),
+                siliconflow_model: getSelectedOpenAICompatModel(
+                    els.siliconflow_model,
+                    els.siliconflow_custom_model,
+                ),
+                siliconflow_custom_model: fieldTrim("siliconflow_custom_model"),
+                siliconflow_custom_prompt: fieldValue("siliconflow_custom_prompt"),
+                siliconflow_show_thoughts: fieldBool("siliconflow_show_thoughts"),
+                qwen_api_url: fieldTrim("qwen_api_url"),
+                qwen_api_key: fieldValue("qwen_api_key"),
+                qwen_model: getSelectedOpenAICompatModel(
+                    els.qwen_model,
+                    els.qwen_custom_model,
+                ),
+                qwen_custom_model: fieldTrim("qwen_custom_model"),
+                qwen_custom_prompt: fieldValue("qwen_custom_prompt"),
+                qwen_show_thoughts: fieldBool("qwen_show_thoughts"),
+                qwen_thinking_budget: fieldNumber("qwen_thinking_budget"),
+                qwen_preserve_thinking: fieldBool("qwen_preserve_thinking"),
+                glm_api_url: fieldTrim("glm_api_url"),
+                glm_api_key: fieldValue("glm_api_key"),
+                glm_model: getSelectedOpenAICompatModel(
+                    els.glm_model,
+                    els.glm_custom_model,
+                ),
+                glm_custom_model: fieldTrim("glm_custom_model"),
+                glm_custom_prompt: fieldValue("glm_custom_prompt"),
+                glm_show_thoughts: fieldBool("glm_show_thoughts"),
+                glm_clear_thinking: fieldValue("glm_clear_thinking") !== "false",
+                xiaomi_api_url: fieldTrim("xiaomi_api_url"),
+                xiaomi_api_key: fieldValue("xiaomi_api_key"),
+                xiaomi_model: getSelectedOpenAICompatModel(
+                    els.xiaomi_model,
+                    els.xiaomi_custom_model,
+                ),
+                xiaomi_custom_model: fieldTrim("xiaomi_custom_model"),
+                xiaomi_custom_prompt: fieldValue("xiaomi_custom_prompt"),
+                xiaomi_show_thoughts: fieldBool("xiaomi_show_thoughts"),
+                xiaomi_max_completion_tokens: fieldNumber(
+                    "xiaomi_max_completion_tokens",
+                ),
+                grok_api_url: fieldTrim("grok_api_url"),
+                grok_api_key: fieldValue("grok_api_key"),
+                grok_model: getSelectedOpenAICompatModel(
+                    els.grok_model,
+                    els.grok_custom_model,
+                ),
+                grok_custom_model: fieldTrim("grok_custom_model"),
+                grok_custom_prompt: fieldValue("grok_custom_prompt"),
+                grok_show_thoughts: fieldBool("grok_show_thoughts"),
+                nim_api_url: fieldTrim("nim_api_url"),
+                nim_api_key: fieldValue("nim_api_key"),
+                nim_model: getSelectedOpenAICompatModel(
+                    els.nim_model,
+                    els.nim_custom_model,
+                ),
+                nim_custom_model: fieldTrim("nim_custom_model"),
+                nim_custom_prompt: fieldValue("nim_custom_prompt"),
+                nim_show_thoughts: fieldBool("nim_show_thoughts"),
+                nim_max_tokens: fieldNumber("nim_max_tokens"),
+                claude_api_url: fieldTrim("claude_api_url"),
+                claude_api_key: fieldValue("claude_api_key"),
+                claude_model: getSelectedOpenAICompatModel(
+                    els.claude_model,
+                    els.claude_custom_model,
+                ),
+                claude_custom_model: fieldTrim("claude_custom_model"),
+                claude_custom_prompt: fieldValue("claude_custom_prompt"),
+                claude_show_thoughts: fieldBool("claude_show_thoughts"),
+                claude_max_tokens: fieldNumber("claude_max_tokens", 4096),
+                claude_thinking_mode: fieldValue("claude_thinking_mode"),
+                claude_thinking_budget: fieldNumber("claude_thinking_budget", 2048),
+                claude_thinking_effort: fieldValue("claude_thinking_effort"),
+                gemini_api_url: fieldTrim("gemini_api_url"),
+                gemini_api_key: fieldValue("gemini_api_key"),
+                gemini_model: getSelectedOpenAICompatModel(
+                    els.gemini_model,
+                    els.gemini_custom_model,
+                ),
+                gemini_custom_model: fieldTrim("gemini_custom_model"),
+                gemini_custom_prompt: fieldValue("gemini_custom_prompt"),
+                gemini_show_thoughts: fieldBool("gemini_show_thoughts"),
+                gemini_thinking_level: fieldValue("gemini_thinking_level"),
+                gemini_thinking_budget: fieldNumber("gemini_thinking_budget", -1),
+                ollama_api_url: fieldTrim("ollama_api_url"),
+                ollama_model: fieldValue("ollama_model_select"),
+                ollama_custom_model: fieldTrim("ollama_custom_model"),
+                ollama_custom_prompt: fieldValue("ollama_custom_prompt"),
+                ollama_show_thoughts: fieldBool("ollama_show_thoughts"),
+                special_translate_provider: normalizeSpecialProvider(
+                    fieldValue("special_translate_provider"),
+                ),
+                special_translate_api_url: fieldTrim("special_translate_api_url"),
+                special_translate_api_key: fieldValue("special_translate_api_key"),
+                special_translate_model: fieldValue("special_translate_model_select"),
+                special_translate_custom_model: fieldTrim(
+                    "special_translate_custom_model",
+                ),
+                special_translate_custom_prompt: fieldValue(
+                    "special_translate_custom_prompt",
+                ),
+                special_translate_show_thoughts: fieldBool(
+                    "special_translate_show_thoughts",
+                ),
+                deepl_api_url: fieldTrim("deepl_api_url"),
+                deepl_api_key: fieldValue("deepl_api_key"),
+                deeplx_api_url: fieldTrim("deeplx_api_url"),
+                deeplx_api_key: fieldValue("deeplx_api_key"),
             };
+        }
+
+        function collectCurrentFormSettings() {
+            const data = buildFormSettings();
             collectAdvancedLLMFields(data);
             return data;
         }

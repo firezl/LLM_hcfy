@@ -1,4 +1,5 @@
 // content/entry.js — esbuild entry for the content script bundle (do not load in manifest).
+import contentUiCss from "../styles/content-ui.css";
 import "./modules/state.js";
 import "./modules/utils.js";
 import "./modules/runtime.js";
@@ -18,8 +19,10 @@ import "./modules/bootstrap.js";
     const MESSAGE_TYPES = shared.MESSAGE_TYPES || {};
 
     const app = {
+        ROOT_ID: "jyt-translate-root",
         BUTTON_ID: "jyt-translate-btn",
         BUBBLE_ID: "jyt-translate-bubble",
+        CONTENT_UI_CSS: contentUiCss,
         MESSAGE_TYPES,
         DEFAULT_SETTINGS,
         PDF_PROMPT_AUTO_CLOSE_MS: 10 * 1000,

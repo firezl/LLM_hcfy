@@ -41,6 +41,7 @@ const STATE_VARS = [
 ];
 
 const CONST_REFS = [
+    "ROOT_ID",
     "BUTTON_ID",
     "BUBBLE_ID",
     "MESSAGE_TYPES",
@@ -481,6 +482,7 @@ import "./modules/bootstrap.js";
     const MESSAGE_TYPES = shared.MESSAGE_TYPES || {};
 
     const app = {
+        ROOT_ID: "jyt-translate-root",
         BUTTON_ID: "jyt-translate-btn",
         BUBBLE_ID: "jyt-translate-bubble",
         MESSAGE_TYPES,

@@ -3,8 +3,9 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "build:content": "node scripts/build-content.mjs",
+        "build:content": "node scripts/extract-content-ui-css.mjs && node scripts/build-content.mjs",
         "annotate:options": "node scripts/annotate-options-html.mjs",
+        "check:options": "node scripts/annotate-options-html.mjs --check",
         "extract:content-ui-css": "node scripts/extract-content-ui-css.mjs",
         "sync:config": "node scripts/sync-shared-config.mjs",
         "check:config": "node scripts/sync-shared-config.mjs --check",

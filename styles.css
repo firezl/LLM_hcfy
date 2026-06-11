@@ -90,6 +90,8 @@
     --jyt-muted-text: #71717a;
 }
 
+/* Translate button/bubble render inside #jyt-translate-root closed Shadow DOM. */
+
 #jyt-translate-btn.jyt-btn {
     position: fixed;
     z-index: 2147483647;
