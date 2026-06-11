@@ -60,18 +60,7 @@
             "matches": ["<all_urls>"],
             "js": [
                 "libs/shared-config.js",
-                "content/modules/state.js",
-                "content/modules/utils.js",
-                "content/modules/runtime.js",
-                "content/modules/settings.js",
-                "content/modules/lang-detect.js",
-                "content/modules/browser-translate.js",
-                "content/modules/pdf-prompt.js",
-                "content/modules/ui.js",
-                "content/modules/translate-port.js",
-                "content/modules/translate-orchestrator.js",
-                "content/modules/bootstrap.js",
-                "content_script.js"
+                "dist/content.bundle.js"
             ],
             "css": ["styles.css"],
             "run_at": "document_idle",

@@ -111,6 +111,7 @@
 
             const textarea = document.createElement("textarea");
             textarea.id = id;
+            textarea.dataset.jytSetting = id;
             textarea.rows = 4;
             textarea.placeholder = placeholder;
 

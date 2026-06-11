@@ -1,183 +1,46 @@
 // options/modules/dom-refs.js — DOM element references for the options page
 (function (global) {
-    const FORM_FIELD_IDS = [
-        "enable_select",
-        "engine_select",
-        "llm_engine_select",
-        "translate_shortcut",
-        "source_lang",
-        "target_lang",
-        "openai_api_url",
-        "openai_api_key",
-        "openai_model",
-        "openai_custom_model",
-        "openai_custom_prompt",
-        "show_thoughts",
-        "openai_reasoning_effort",
-        "openai_max_completion_tokens",
-        "custom_openai_api_url",
-        "custom_openai_api_key",
-        "custom_openai_model",
-        "custom_openai_custom_model",
-        "custom_openai_custom_prompt",
-        "custom_openai_show_thoughts",
-        "custom_openai_reasoning_effort",
-        "custom_openai_max_completion_tokens",
-        "openrouter_api_url",
-        "openrouter_api_key",
-        "openrouter_model",
-        "openrouter_custom_model",
-        "openrouter_custom_prompt",
-        "openrouter_show_thoughts",
-        "openrouter_reasoning_effort",
-        "openrouter_max_completion_tokens",
-        "deepseek_api_url",
-        "deepseek_api_key",
-        "deepseek_model",
-        "deepseek_custom_model",
-        "deepseek_custom_prompt",
-        "deepseek_show_thoughts",
-        "siliconflow_api_url",
-        "siliconflow_api_key",
-        "siliconflow_model",
-        "siliconflow_custom_model",
-        "siliconflow_custom_prompt",
-        "siliconflow_show_thoughts",
-        "qwen_api_url",
-        "qwen_api_key",
-        "qwen_model",
-        "qwen_custom_model",
-        "qwen_custom_prompt",
-        "qwen_show_thoughts",
-        "qwen_thinking_budget",
-        "qwen_preserve_thinking",
-        "glm_api_url",
-        "glm_api_key",
-        "glm_model",
-        "glm_custom_model",
-        "glm_custom_prompt",
-        "glm_show_thoughts",
-        "glm_clear_thinking",
-        "xiaomi_api_url",
-        "xiaomi_api_key",
-        "xiaomi_model",
-        "xiaomi_custom_model",
-        "xiaomi_custom_prompt",
-        "xiaomi_show_thoughts",
-        "xiaomi_max_completion_tokens",
-        "grok_api_url",
-        "grok_api_key",
-        "grok_model",
-        "grok_custom_model",
-        "grok_custom_prompt",
-        "grok_show_thoughts",
-        "nim_api_url",
-        "nim_api_key",
-        "nim_model",
-        "nim_custom_model",
-        "nim_custom_prompt",
-        "nim_show_thoughts",
-        "nim_max_tokens",
-        "claude_api_url",
-        "claude_api_key",
-        "claude_model",
-        "claude_custom_model",
-        "claude_custom_prompt",
-        "claude_show_thoughts",
-        "claude_max_tokens",
-        "claude_thinking_mode",
-        "claude_thinking_budget",
-        "claude_thinking_effort",
-        "gemini_api_url",
-        "gemini_api_key",
-        "gemini_model",
-        "gemini_custom_model",
-        "gemini_custom_prompt",
-        "gemini_show_thoughts",
-        "gemini_thinking_level",
-        "gemini_thinking_budget",
-        "ollama_api_url",
-        "ollama_model_select",
-        "ollama_custom_model",
-        "ollama_custom_prompt",
-        "ollama_show_thoughts",
-        "deepl_api_url",
-        "deepl_api_key",
-        "deeplx_api_url",
-        "deeplx_api_key",
-        "special_translate_provider",
-        "special_translate_api_url",
-        "special_translate_api_key",
-        "special_translate_model_select",
-        "special_translate_custom_model",
-        "special_translate_custom_prompt",
-        "special_translate_show_thoughts",
-        "theme_mode",
-        "font_family",
-        "bubble_width_percent",
-        "bubble_height_percent",
-    ];
+    const registry = global.JYT_ENGINE_REGISTRY || {};
+    const LLM_ENGINES = new Set(registry.LLM_ENGINE_IDS || []);
 
-    const LLM_ENGINES = new Set([
-        "openai",
-        "custom_openai",
-        "openrouter",
-        "gemini",
-        "claude",
-        "qwen",
-        "deepseek",
-        "siliconflow",
-        "glm",
-        "xiaomi",
-        "grok",
-        "nim",
-        "ollama",
-    ]);
+    function collectSettingFields() {
+        const els = {};
+        for (const el of document.querySelectorAll("[data-jyt-setting]")) {
+            els[el.dataset.jytSetting] = el;
+        }
+        return els;
+    }
+
+    function collectEngineSections() {
+        const byEngine = new Map();
+        for (const el of document.querySelectorAll("[data-jyt-engine]")) {
+            byEngine.set(el.dataset.jytEngine, el);
+        }
+        return byEngine;
+    }
 
     function createDomRefs() {
-        const els = {};
-        FORM_FIELD_IDS.forEach((id) => (els[id] = document.getElementById(id)));
+        const els = collectSettingFields();
+        const engineSectionsById = collectEngineSections();
 
         const sections = {
-            openai: document.getElementById("openai_section"),
-            customOpenAI: document.getElementById("custom_openai_section"),
-            openrouter: document.getElementById("openrouter_section"),
-            deepseek: document.getElementById("deepseek_section"),
-            siliconflow: document.getElementById("siliconflow_section"),
-            qwen: document.getElementById("qwen_section"),
-            glm: document.getElementById("glm_section"),
-            xiaomi: document.getElementById("xiaomi_section"),
-            grok: document.getElementById("grok_section"),
-            nim: document.getElementById("nim_section"),
-            claude: document.getElementById("claude_section"),
-            gemini: document.getElementById("gemini_section"),
-            ollama: document.getElementById("ollama_section"),
-            deepl: document.getElementById("deepl_section"),
-            deeplx: document.getElementById("deeplx_section"),
-            specialTranslate: document.getElementById(
-                "special_translate_section",
-            ),
+            openai: engineSectionsById.get("openai") || null,
+            customOpenAI: engineSectionsById.get("custom_openai") || null,
+            openrouter: engineSectionsById.get("openrouter") || null,
+            deepseek: engineSectionsById.get("deepseek") || null,
+            siliconflow: engineSectionsById.get("siliconflow") || null,
+            qwen: engineSectionsById.get("qwen") || null,
+            glm: engineSectionsById.get("glm") || null,
+            xiaomi: engineSectionsById.get("xiaomi") || null,
+            grok: engineSectionsById.get("grok") || null,
+            nim: engineSectionsById.get("nim") || null,
+            claude: engineSectionsById.get("claude") || null,
+            gemini: engineSectionsById.get("gemini") || null,
+            ollama: engineSectionsById.get("ollama") || null,
+            deepl: engineSectionsById.get("deepl") || null,
+            deeplx: engineSectionsById.get("deeplx") || null,
+            specialTranslate: engineSectionsById.get("special_translate") || null,
         };
-
-        const engineSectionsById = new Map(
-            [
-                ["custom_openai_section", sections.customOpenAI],
-                ["openrouter_section", sections.openrouter],
-                ["deepseek_section", sections.deepseek],
-                ["siliconflow_section", sections.siliconflow],
-                ["qwen_section", sections.qwen],
-                ["glm_section", sections.glm],
-                ["xiaomi_section", sections.xiaomi],
-                ["grok_section", sections.grok],
-                ["nim_section", sections.nim],
-                ["claude_section", sections.claude],
-                ["gemini_section", sections.gemini],
-                ["ollama_section", sections.ollama],
-                ["deepl_section", sections.deepl],
-                ["deeplx_section", sections.deeplx],
-                ["special_translate_section", sections.specialTranslate],
-            ].filter(([, el]) => el),
-        );
 
         const glossary = {
             exportBtn: document.getElementById("glossary_export"),
@@ -249,7 +112,7 @@
 
     global.JYT_OPTION_DOM = {
         createDomRefs,
-        FORM_FIELD_IDS,
+        collectSettingFields,
         LLM_ENGINES,
     };
 })(globalThis);

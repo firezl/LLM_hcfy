@@ -3,7 +3,7 @@
     function install(app) {
         const state = app.state;
             function getCleanTranslatedText() {
-                const bubble = document.getElementById(app.BUBBLE_ID);
+                const bubble = app.getTranslateBubble?.();
                 if (!bubble) return "";
                 const streamEl = bubble.querySelector("#jyt-stream");
                 if (!streamEl) return "";

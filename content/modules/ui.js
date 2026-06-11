@@ -76,8 +76,16 @@
                     });
             }
 
+            function getUiBubble() {
+                return app.getTranslateBubble?.() || null;
+            }
+
+            function getUiButton() {
+                return app.getTranslateBtn?.() || null;
+            }
+
             function setTermTip(message, isError) {
-                const bubble = document.getElementById(app.BUBBLE_ID);
+                const bubble = getUiBubble();
                 if (!bubble) return;
                 let tipEl = bubble.querySelector(".jyt-term-tip");
                 if (!tipEl) {
@@ -90,7 +98,7 @@
             }
 
             function clearTermEditorUI(clearTip) {
-                const bubble = document.getElementById(app.BUBBLE_ID);
+                const bubble = getUiBubble();
                 if (!bubble) return;
 
                 const editor = bubble.querySelector(".jyt-term-editor");
@@ -122,7 +130,7 @@
                 const sourceLang = app.normalizeGlossaryLang(context?.sourceLang);
                 const targetLang = app.normalizeGlossaryLang(context?.targetLang);
 
-                const bubble = document.getElementById(app.BUBBLE_ID);
+                const bubble = getUiBubble();
                 if (!bubble) return;
                 const contentEl = bubble.querySelector(".jyt-content");
                 if (!contentEl) return;
@@ -218,8 +226,8 @@
             }
 
             function applyTheme(theme) {
-                const bubble = document.getElementById(app.BUBBLE_ID);
-                const btn = document.getElementById(app.BUTTON_ID);
+                const bubble = getUiBubble();
+                const btn = getUiButton();
                 let currentTheme = theme;
 
                 if (theme === "auto") {
@@ -233,20 +241,19 @@
                 if (btn) btn.setAttribute("data-theme", currentTheme);
             }
 
-            function getUiRoot() {
-                return document.documentElement || document.body;
-            }
-
             function createButton() {
-                let btn = document.getElementById(app.BUTTON_ID);
-                if (btn) return btn;
+                if (app.ui?.btn) {
+                    return app.ui.btn;
+                }
 
-                btn = document.createElement("div");
+                const mount = app.getUiMount?.() || document.body;
+                const btn = document.createElement("div");
                 btn.id = app.BUTTON_ID;
-                btn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.87,15.07L10.33,12.56L10.36,12.53C12.1,10.59 13.34,8.36 14.07,6H17V4H10V2H8V4H1V6H12.17C11.5,7.92 10.44,9.75 9,11.35C8.07,10.32 7.3,9.19 6.69,8H4.69C5.42,9.63 6.42,11.17 7.67,12.56L2.58,17.58L4,19L9,14L12.11,17.11L12.87,15.07M18.5,10H16.5L12,22H14L15.12,19H19.87L21,22H23L18.5,10M15.88,17L17.5,12.67L19.12,17H15.88Z"/></svg>`;
                 btn.className = "jyt-btn";
                 btn.style.display = "none";
-                getUiRoot().appendChild(btn);
+                btn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.87,15.07L10.33,12.56L10.36,12.53C12.1,10.59 13.34,8.36 14.07,6H17V4H10V2H8V4H1V6H12.17C11.5,7.92 10.44,9.75 9,11.35C8.07,10.32 7.3,9.19 6.69,8H4.69C5.42,9.63 6.42,11.17 7.67,12.56L2.58,17.58L4,19L9,14L12.11,17.11L12.87,15.07M18.5,10H16.5L12,22H14L15.12,19H19.87L21,22H23L18.5,10M15.88,17L17.5,12.67L19.12,17H15.88Z"/></svg>`;
+                mount.appendChild(btn);
+                app.ui.btn = btn;
                 btn.addEventListener("click", (e) => {
                     e.stopPropagation();
                     app.onTranslateClick(e);
@@ -255,10 +262,12 @@
             }
 
             function createBubble() {
-                let bubble = document.getElementById(app.BUBBLE_ID);
-                if (bubble) return bubble;
+                if (app.ui?.bubble) {
+                    return app.ui.bubble;
+                }
 
-                bubble = document.createElement("div");
+                const mount = app.getUiMount?.() || document.body;
+                const bubble = document.createElement("div");
                 bubble.id = app.BUBBLE_ID;
                 bubble.className = "jyt-bubble";
                 bubble.innerHTML = `
@@ -282,7 +291,8 @@
                 <details class="jyt-thought" id="jyt-thought"><summary>思考（展开）</summary><div id="jyt-thought-content"></div></details>
               </div>
             `;
-                getUiRoot().appendChild(bubble);
+                mount.appendChild(bubble);
+                app.ui.bubble = bubble;
 
                 bubble.addEventListener("mousedown", (e) => {
                     e.stopPropagation();
@@ -406,7 +416,7 @@
             }
 
             function hideButton() {
-                const btn = document.getElementById(app.BUTTON_ID);
+                const btn = getUiButton();
                 if (btn) btn.style.display = "none";
             }
         Object.assign(app, {

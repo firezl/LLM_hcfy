@@ -460,8 +460,21 @@ fs.writeFileSync(
 `,
 );
 
-// content_script.js bootstrap
-const contentBootstrap = `// content_script.js — bootstrap entry for content script modules
+// content/entry.js bootstrap
+const contentEntry = `// content/entry.js — esbuild entry for the content script bundle (do not load in manifest).
+import "./modules/state.js";
+import "./modules/utils.js";
+import "./modules/runtime.js";
+import "./modules/settings.js";
+import "./modules/lang-detect.js";
+import "./modules/browser-translate.js";
+import "./modules/pdf-prompt.js";
+import "./modules/ui-host.js";
+import "./modules/ui.js";
+import "./modules/translate-port.js";
+import "./modules/translate-orchestrator.js";
+import "./modules/bootstrap.js";
+
 (function () {
     const shared = globalThis.JYT_SHARED || {};
     const DEFAULT_SETTINGS = shared.DEFAULT_SETTINGS;
@@ -488,6 +501,7 @@ const contentBootstrap = `// content_script.js — bootstrap entry for content s
         globalThis.JYT_CS_SETTINGS,
         globalThis.JYT_CS_LANG,
         globalThis.JYT_CS_BROWSER_AI,
+        globalThis.JYT_CS_UI_HOST,
         globalThis.JYT_CS_UI,
         globalThis.JYT_CS_PORT,
         globalThis.JYT_CS_ORCHESTRATOR,
@@ -503,6 +517,6 @@ const contentBootstrap = `// content_script.js — bootstrap entry for content s
 })();
 `;
 
-fs.writeFileSync(path.join(root, "content_script.js"), contentBootstrap);
+fs.writeFileSync(path.join(root, "content/entry.js"), contentEntry);
 
-console.log("Generated content modules and content_script.js bootstrap");
+console.log("Generated content modules and content/entry.js bootstrap");

@@ -3,10 +3,19 @@
  * Background handlers are wired in background/translate-handlers.js.
  */
 
+import {
+    enrichEngineDefinition,
+    engineSectionId,
+} from "./engine-conventions.mjs";
+
 /** @typedef {'builtin' | 'llm' | 'top'} EngineKind */
 
 /**
  * @typedef {object} OpenAICompatUiConfig
+ * @property {string} [apiUrl]
+ * @property {string} [apiKey]
+ * @property {string} [model]
+ * @property {string} [customModel]
  * @property {string} apiUrlId
  * @property {string} apiKeyId
  * @property {string} modelId
@@ -19,261 +28,87 @@
  * @property {string} id
  * @property {EngineKind} kind
  * @property {string} [handler] background handler key (defaults to id)
- * @property {string} [customPromptKey] legacy settings key for custom prompt template
- * @property {string} [systemPromptKey] settings key for system prompt template
- * @property {string} [userPromptKey] settings key for user prompt template
- * @property {string} [customHeadersKey] local settings key for custom HTTP headers
- * @property {string} [customPayloadKey] settings key for extra JSON request payload
- * @property {string} [sectionId] options.html section element id
- * @property {boolean} [usesSharedOpenAiSection] show #openai_section when active
- * @property {OpenAICompatUiConfig} [openaiCompat] model list UI for OpenAI-compatible APIs
- * @property {'content'} [runtime] translate runs in content script only
+ * @property {string} [promptPrefix] settings key prefix (defaults to id; auto → openai)
+ * @property {string} [customPromptKey]
+ * @property {string} [systemPromptKey]
+ * @property {string} [userPromptKey]
+ * @property {string} [customHeadersKey]
+ * @property {string} [customPayloadKey]
+ * @property {string} [sectionId]
+ * @property {boolean} [usesSharedOpenAiSection]
+ * @property {OpenAICompatUiConfig} [openaiCompat]
+ * @property {'content'} [runtime]
  */
 
 /** @type {EngineDefinition[]} */
-export const ENGINE_DEFINITIONS = [
+const RAW_ENGINE_DEFINITIONS = [
     {
         id: "auto",
         kind: "builtin",
         handler: "openai",
-        customPromptKey: "openai_custom_prompt",
-        systemPromptKey: "openai_system_prompt",
-        userPromptKey: "openai_user_prompt",
-        customHeadersKey: "openai_custom_headers",
-        customPayloadKey: "openai_custom_payload",
         usesSharedOpenAiSection: true,
     },
-    {
-        id: "google",
-        kind: "builtin",
-        handler: "google",
-    },
-    {
-        id: "bing",
-        kind: "builtin",
-        handler: "bing",
-    },
-    {
-        id: "deepl",
-        kind: "builtin",
-        handler: "deepl",
-        sectionId: "deepl_section",
-    },
-    {
-        id: "deeplx",
-        kind: "builtin",
-        handler: "deeplx",
-        sectionId: "deeplx_section",
-    },
-    {
-        id: "browser",
-        kind: "builtin",
-        runtime: "content",
-    },
+    { id: "google", kind: "builtin", handler: "google" },
+    { id: "bing", kind: "builtin", handler: "bing" },
+    { id: "deepl", kind: "builtin", handler: "deepl" },
+    { id: "deeplx", kind: "builtin", handler: "deeplx" },
+    { id: "browser", kind: "builtin", runtime: "content" },
     {
         id: "openai",
         kind: "llm",
-        customPromptKey: "openai_custom_prompt",
-        systemPromptKey: "openai_system_prompt",
-        userPromptKey: "openai_user_prompt",
-        customHeadersKey: "openai_custom_headers",
-        customPayloadKey: "openai_custom_payload",
         usesSharedOpenAiSection: true,
-        openaiCompat: {
-            apiUrlId: "openai_api_url",
-            apiKeyId: "openai_api_key",
-            modelId: "openai_model",
-            customModelId: "openai_custom_model",
-            defaultModel: "gpt-5.4-mini",
-        },
+        openaiCompat: { defaultModel: "gpt-5.4-mini" },
     },
     {
         id: "custom_openai",
         kind: "llm",
-        customPromptKey: "custom_openai_custom_prompt",
-        systemPromptKey: "custom_openai_system_prompt",
-        userPromptKey: "custom_openai_user_prompt",
-        customHeadersKey: "custom_openai_custom_headers",
-        customPayloadKey: "custom_openai_custom_payload",
-        sectionId: "custom_openai_section",
-        openaiCompat: {
-            apiUrlId: "custom_openai_api_url",
-            apiKeyId: "custom_openai_api_key",
-            modelId: "custom_openai_model",
-            customModelId: "custom_openai_custom_model",
-            defaultModel: "gpt-4o-mini",
-        },
+        openaiCompat: { defaultModel: "gpt-4o-mini" },
     },
-    {
-        id: "openrouter",
-        kind: "llm",
-        customPromptKey: "openrouter_custom_prompt",
-        systemPromptKey: "openrouter_system_prompt",
-        userPromptKey: "openrouter_user_prompt",
-        customHeadersKey: "openrouter_custom_headers",
-        customPayloadKey: "openrouter_custom_payload",
-        sectionId: "openrouter_section",
-    },
-    {
-        id: "gemini",
-        kind: "llm",
-        customPromptKey: "gemini_custom_prompt",
-        systemPromptKey: "gemini_system_prompt",
-        userPromptKey: "gemini_user_prompt",
-        customHeadersKey: "gemini_custom_headers",
-        customPayloadKey: "gemini_custom_payload",
-        sectionId: "gemini_section",
-    },
-    {
-        id: "claude",
-        kind: "llm",
-        customPromptKey: "claude_custom_prompt",
-        systemPromptKey: "claude_system_prompt",
-        userPromptKey: "claude_user_prompt",
-        customHeadersKey: "claude_custom_headers",
-        customPayloadKey: "claude_custom_payload",
-        sectionId: "claude_section",
-    },
+    { id: "openrouter", kind: "llm" },
+    { id: "gemini", kind: "llm" },
+    { id: "claude", kind: "llm" },
     {
         id: "deepseek",
         kind: "llm",
-        customPromptKey: "deepseek_custom_prompt",
-        systemPromptKey: "deepseek_system_prompt",
-        userPromptKey: "deepseek_user_prompt",
-        customHeadersKey: "deepseek_custom_headers",
-        customPayloadKey: "deepseek_custom_payload",
-        sectionId: "deepseek_section",
-        openaiCompat: {
-            apiUrlId: "deepseek_api_url",
-            apiKeyId: "deepseek_api_key",
-            modelId: "deepseek_model",
-            customModelId: "deepseek_custom_model",
-            defaultModel: "deepseek-v4-flash",
-        },
+        openaiCompat: { defaultModel: "deepseek-v4-flash" },
     },
     {
         id: "siliconflow",
         kind: "llm",
-        customPromptKey: "siliconflow_custom_prompt",
-        systemPromptKey: "siliconflow_system_prompt",
-        userPromptKey: "siliconflow_user_prompt",
-        customHeadersKey: "siliconflow_custom_headers",
-        customPayloadKey: "siliconflow_custom_payload",
-        sectionId: "siliconflow_section",
-        openaiCompat: {
-            apiUrlId: "siliconflow_api_url",
-            apiKeyId: "siliconflow_api_key",
-            modelId: "siliconflow_model",
-            customModelId: "siliconflow_custom_model",
-            defaultModel: "deepseek-ai/DeepSeek-V3",
-        },
+        openaiCompat: { defaultModel: "deepseek-ai/DeepSeek-V3" },
     },
     {
         id: "qwen",
         kind: "llm",
-        customPromptKey: "qwen_custom_prompt",
-        systemPromptKey: "qwen_system_prompt",
-        userPromptKey: "qwen_user_prompt",
-        customHeadersKey: "qwen_custom_headers",
-        customPayloadKey: "qwen_custom_payload",
-        sectionId: "qwen_section",
-        openaiCompat: {
-            apiUrlId: "qwen_api_url",
-            apiKeyId: "qwen_api_key",
-            modelId: "qwen_model",
-            customModelId: "qwen_custom_model",
-            defaultModel: "qwen3.5-plus",
-        },
+        openaiCompat: { defaultModel: "qwen3.5-plus" },
     },
     {
         id: "glm",
         kind: "llm",
-        customPromptKey: "glm_custom_prompt",
-        systemPromptKey: "glm_system_prompt",
-        userPromptKey: "glm_user_prompt",
-        customHeadersKey: "glm_custom_headers",
-        customPayloadKey: "glm_custom_payload",
-        sectionId: "glm_section",
-        openaiCompat: {
-            apiUrlId: "glm_api_url",
-            apiKeyId: "glm_api_key",
-            modelId: "glm_model",
-            customModelId: "glm_custom_model",
-            defaultModel: "glm-5.1",
-        },
+        openaiCompat: { defaultModel: "glm-5.1" },
     },
     {
         id: "xiaomi",
         kind: "llm",
-        customPromptKey: "xiaomi_custom_prompt",
-        systemPromptKey: "xiaomi_system_prompt",
-        userPromptKey: "xiaomi_user_prompt",
-        customHeadersKey: "xiaomi_custom_headers",
-        customPayloadKey: "xiaomi_custom_payload",
-        sectionId: "xiaomi_section",
-        openaiCompat: {
-            apiUrlId: "xiaomi_api_url",
-            apiKeyId: "xiaomi_api_key",
-            modelId: "xiaomi_model",
-            customModelId: "xiaomi_custom_model",
-            defaultModel: "mimo-v2.5",
-        },
+        openaiCompat: { defaultModel: "mimo-v2.5" },
     },
     {
         id: "grok",
         kind: "llm",
-        customPromptKey: "grok_custom_prompt",
-        systemPromptKey: "grok_system_prompt",
-        userPromptKey: "grok_user_prompt",
-        customHeadersKey: "grok_custom_headers",
-        customPayloadKey: "grok_custom_payload",
-        sectionId: "grok_section",
-        openaiCompat: {
-            apiUrlId: "grok_api_url",
-            apiKeyId: "grok_api_key",
-            modelId: "grok_model",
-            customModelId: "grok_custom_model",
-            defaultModel: "grok-4.3",
-        },
+        openaiCompat: { defaultModel: "grok-4.3" },
     },
     {
         id: "nim",
         kind: "llm",
-        customPromptKey: "nim_custom_prompt",
-        systemPromptKey: "nim_system_prompt",
-        userPromptKey: "nim_user_prompt",
-        customHeadersKey: "nim_custom_headers",
-        customPayloadKey: "nim_custom_payload",
-        sectionId: "nim_section",
-        openaiCompat: {
-            apiUrlId: "nim_api_url",
-            apiKeyId: "nim_api_key",
-            modelId: "nim_model",
-            customModelId: "nim_custom_model",
-            defaultModel: "meta/llama-3.1-70b-instruct",
-        },
+        openaiCompat: { defaultModel: "meta/llama-3.1-70b-instruct" },
     },
-    {
-        id: "ollama",
-        kind: "llm",
-        customPromptKey: "ollama_custom_prompt",
-        systemPromptKey: "ollama_system_prompt",
-        userPromptKey: "ollama_user_prompt",
-        customHeadersKey: "ollama_custom_headers",
-        customPayloadKey: "ollama_custom_payload",
-        sectionId: "ollama_section",
-    },
-    {
-        id: "special_translate",
-        kind: "top",
-        customPromptKey: "special_translate_custom_prompt",
-        systemPromptKey: "special_translate_system_prompt",
-        userPromptKey: "special_translate_user_prompt",
-        customHeadersKey: "special_translate_custom_headers",
-        customPayloadKey: "special_translate_custom_payload",
-        sectionId: "special_translate_section",
-    },
+    { id: "ollama", kind: "llm" },
+    { id: "special_translate", kind: "top" },
 ];
+
+export const ENGINE_DEFINITIONS = Object.freeze(
+    RAW_ENGINE_DEFINITIONS.map((def) => enrichEngineDefinition(def)),
+);
 
 export const LLM_ENGINE_IDS = Object.freeze(
     ENGINE_DEFINITIONS.filter((def) => def.kind === "llm").map((def) => def.id),
@@ -343,6 +178,8 @@ export const ENGINE_SECTION_IDS = Object.freeze(
         (def) => def.sectionId,
     ),
 );
+
+export { engineSectionId };
 
 /**
  * Resolves persisted settings to a concrete engine id.

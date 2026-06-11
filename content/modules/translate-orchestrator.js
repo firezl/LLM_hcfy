@@ -208,6 +208,10 @@
                 app.hideButton();
 
                 const bubble = app.createBubble();
+                if (!bubble) {
+                    console.warn("LLM划词翻译: 无法创建翻译气泡");
+                    return;
+                }
                 app.clearTermEditorUI(true);
                 bubble.style.display = "block";
                 state.isPinned = false;

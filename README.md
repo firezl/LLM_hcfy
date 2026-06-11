@@ -98,8 +98,16 @@
 
 _如果你有意进行二次修改或对源码感兴趣：_
 
+```bash
+npm install
+npm run build:content   # 修改 content/modules 后重新打包
+npm run annotate:options  # 修改 options.html 表单后补 data-jyt-* 标注
+npm test
+```
+
 - **\manifest.json**: Chrome Extension MV3 核心配置文件。
-- **\content_script.js**: 控制页面高亮渲染、划词事件监听、弹窗 UI 管理以及流式消息的 DOM 拼装。
+- **\content/modules/**: 划词翻译 content script 源码（页面高亮、事件监听、弹窗 UI、流式消息拼装等）。
+- **\content/entry.js**: content script 的 esbuild 入口；修改模块后需运行 `npm run build:content` 生成 `dist/content.bundle.js`。
 - **\background 目录**: 整个翻译流程的后方调度中枢（Service Worker），负责各家 LLM 请求适配封装及 WebDAV 远端网络同步任务等。
 - **\vendor**: 集成的 PDF.js 等相关核心第三方依赖，用于提供脱离原生的统一 PDF 文档解析界面。
 - **\options**: 用户交互式偏好配置大本营逻辑（依靠 \chrome.storage.sync/local\ 分割存储策略）。

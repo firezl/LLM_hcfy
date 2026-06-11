@@ -21,9 +21,10 @@ Assert-True ($manifest.background.service_worker -eq "background/index.js") "Chr
 $requiredPaths = @(
     "background.js",
     "background/index.js",
-    "content_script.js",
+    "content/entry.js",
     "content/modules/state.js",
     "content/modules/bootstrap.js",
+    "dist/content.bundle.js",
     "libs/shared-config.js",
     "options/modules/dom-refs.js",
     "options/modules/ui-shell.js",
@@ -47,15 +48,23 @@ foreach ($path in $requiredPaths) {
 
 $nodeCommand = Get-Command node -ErrorAction SilentlyContinue
 Assert-True ($null -ne $nodeCommand) "缺少 node，无法执行共享配置校验"
+npm run build:content
+if ($LASTEXITCODE -ne 0) {
+    throw "content script bundle 构建失败"
+}
+node scripts/annotate-options-html.mjs --check
+if ($LASTEXITCODE -ne 0) {
+    throw "options.html 缺少 data-jyt-* 标注，请运行 npm run annotate:options"
+}
 node scripts/sync-shared-config.mjs --check
 node scripts/validate-shared-config.mjs
 node --test tests/*.test.mjs
 
 $contentScript = @($manifest.content_scripts)[0]
 Assert-True ($contentScript.matches -contains "<all_urls>") "content_scripts 需要覆盖 <all_urls>"
-Assert-True ($contentScript.js[0] -eq "libs/shared-config.js") "libs/shared-config.js 必须先于 content_script.js 加载"
-Assert-True ($contentScript.js[-1] -eq "content_script.js") "content_script.js 必须为 content_scripts 最后一项"
-Assert-True ($contentScript.js -contains "content/modules/bootstrap.js") "manifest 必须加载 content/modules/bootstrap.js"
+Assert-True ($contentScript.js[0] -eq "libs/shared-config.js") "libs/shared-config.js 必须先于 content bundle 加载"
+Assert-True ($contentScript.js[-1] -eq "dist/content.bundle.js") "dist/content.bundle.js 必须为 content_scripts 最后一项"
+Assert-True ($contentScript.js.Count -eq 2) "content_scripts 应只加载 shared-config 与 content bundle"
 
 $optionsHtml = Get-Content "options.html" -Raw
 $optionsScriptMatches = [regex]::Matches($optionsHtml, '<script\s+src="([^"]+)"')

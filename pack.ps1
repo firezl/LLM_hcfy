@@ -10,8 +10,10 @@ $includes = @(
     "manifest.json",
     "background.js",
     "background",
-    "content_script.js",
+    "content",
     "content/modules",
+    "dist",
+    "styles",
     "pdf_local_open_helper.js",
     "libs",
     "options.html",
@@ -75,6 +77,12 @@ function Build-Archive($sourceDir, $archivePath) {
 }
 
 try {
+    Write-Host "构建 content script bundle..."
+    npm run build:content
+    if ($LASTEXITCODE -ne 0) {
+        throw "content script bundle 构建失败"
+    }
+
     Reset-Dir $chromeTempDir
     Reset-Dir $firefoxTempDir
 

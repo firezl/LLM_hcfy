@@ -16,6 +16,9 @@ node_modules/
 .eslintcache
 .web-ext/
 
+# esbuild output (run: npm run build:content)
+dist/
+
 # Vendored PDF.js development-only files
 vendor/pdfjs/**/*.map
 vendor/pdfjs/web/compressed.tracemonkey-pldi-09.pdf

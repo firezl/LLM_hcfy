@@ -4,17 +4,9 @@
     const ENGINE_DEFINITIONS = registry.ENGINE_DEFINITIONS || [];
     const OPENAI_COMPAT_MODEL_ENGINES =
         registry.OPENAI_COMPAT_MODEL_ENGINES || [];
-    const ENGINE_SECTION_IDS = registry.ENGINE_SECTION_IDS || [];
 
     const OPENAI_COMPAT_ENGINE_BY_NAME = Object.fromEntries(
         OPENAI_COMPAT_MODEL_ENGINES.map((cfg) => [cfg.name, cfg]),
-    );
-
-    const SECTION_ID_BY_ENGINE = Object.fromEntries(
-        ENGINE_DEFINITIONS.filter((def) => def.sectionId).map((def) => [
-            def.id,
-            def.sectionId,
-        ]),
     );
 
     function resolveEffectiveEngine(engineSelect, llmEngineSelect) {
@@ -56,19 +48,9 @@
      * @param {HTMLElement} options.engineSelect
      * @param {HTMLElement} [options.llmEngineSelect]
      * @param {HTMLElement} options.openaiSection
-     * @param {Map<string, HTMLElement>} [options.sectionsById]
      */
     function updateEngineDependentUI(options) {
-        const {
-            engineSelect,
-            llmEngineSelect,
-            openaiSection,
-            sectionsById = new Map(),
-        } = options || {};
-
-        if (!openaiSection) {
-            return;
-        }
+        const { engineSelect, llmEngineSelect } = options || {};
 
         const selectedEngine = engineSelect?.value || "auto";
         const effectiveEngine = resolveEffectiveEngine(
@@ -76,7 +58,7 @@
             llmEngineSelect,
         );
 
-        const llmEngineSection = document.getElementById("llm_engine_section");
+        const llmEngineSection = document.querySelector('[data-jyt-panel="llm"]');
         if (llmEngineSection) {
             llmEngineSection.classList.toggle(
                 "jyt-hidden",
@@ -84,23 +66,12 @@
             );
         }
 
-        openaiSection.classList.toggle(
-            "jyt-hidden",
-            shouldHideSharedOpenAiSection(effectiveEngine),
-        );
-
-        for (const sectionId of ENGINE_SECTION_IDS) {
-            const sectionEl =
-                sectionsById.get(sectionId) ||
-                document.getElementById(sectionId);
-            if (!sectionEl) {
-                continue;
-            }
-            const ownerEngine = Object.entries(SECTION_ID_BY_ENGINE).find(
-                ([, id]) => id === sectionId,
-            )?.[0];
-            const visible =
-                ownerEngine && effectiveEngine === ownerEngine;
+        for (const sectionEl of document.querySelectorAll("[data-jyt-engine]")) {
+            const engineId = sectionEl.dataset.jytEngine || "";
+            const isSharedOpenAi = sectionEl.dataset.jytSharedOpenai === "true";
+            const visible = isSharedOpenAi
+                ? !shouldHideSharedOpenAiSection(effectiveEngine)
+                : engineId === effectiveEngine;
             sectionEl.classList.toggle("jyt-hidden", !visible);
         }
     }
@@ -178,7 +149,6 @@
         ENGINE_DEFINITIONS,
         OPENAI_COMPAT_MODEL_ENGINES,
         OPENAI_COMPAT_ENGINE_BY_NAME,
-        ENGINE_SECTION_IDS,
         resolveEffectiveEngine,
         updateEngineDependentUI,
         applyBrowserEngineOptionUX,

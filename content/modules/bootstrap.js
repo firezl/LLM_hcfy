@@ -66,7 +66,7 @@
             const text = sel.toString();
             if (text && text.trim().length > 0) {
                 state.lastSelection = text;
-                const btn = document.getElementById(app.BUTTON_ID);
+                const btn = app.getTranslateBtn?.();
                 if (btn) {
                     let x;
                     let y;
@@ -99,7 +99,7 @@
                 return;
             }
 
-            const btnEl = document.getElementById(app.BUTTON_ID);
+            const btnEl = app.getTranslateBtn?.();
             if (btnEl && (e.target === btnEl || btnEl.contains(e.target))) {
                 return;
             }
@@ -194,15 +194,12 @@
         );
 
         document.addEventListener("click", (e) => {
-            const btnEl = document.getElementById(app.BUTTON_ID);
-            const bubble = document.getElementById(app.BUBBLE_ID);
-
-            if (btnEl && (e.target === btnEl || btnEl.contains(e.target))) {
+            if (app.isUiEventTarget?.(e.target)) {
                 return;
             }
-            if (bubble && bubble.contains(e.target)) return;
 
             app.hideButton();
+            const bubble = app.getTranslateBubble?.();
             if (bubble && !state.isPinned) {
                 app.clearTermEditorUI(true);
                 bubble.style.display = "none";
