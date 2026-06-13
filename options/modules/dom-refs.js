@@ -68,10 +68,25 @@
             statusEl: document.getElementById("history_status"),
         };
 
-        const wizard = {
-            toggleBtn: document.getElementById("setup_wizard_toggle"),
-            panelEl: document.getElementById("setup_wizard_panel"),
-            statusEl: document.getElementById("setup_wizard_status"),
+        const onboarding = {
+            root: document.getElementById("onboarding_overlay"),
+            skipBtn: document.getElementById("onboarding_skip"),
+            backBtn: document.getElementById("onboarding_back"),
+            nextBtn: document.getElementById("onboarding_next"),
+            statusEl: document.getElementById("onboarding_status"),
+            stepWelcome: document.getElementById("onboarding_step_welcome"),
+            stepCredentials: document.getElementById("onboarding_step_credentials"),
+            stepTest: document.getElementById("onboarding_step_test"),
+            stepDone: document.getElementById("onboarding_step_done"),
+            apiKeyInput: document.getElementById("onboarding_api_key"),
+            apiKeyLabel: document.getElementById("onboarding_api_key_label"),
+            apiKeyHint: document.getElementById("onboarding_api_key_hint"),
+            testStatusEl: document.getElementById("onboarding_test_status"),
+            testBtn: document.getElementById("onboarding_test_btn"),
+            doneTitleEl: document.getElementById("onboarding_done_title"),
+            presetButtons: Array.from(
+                document.querySelectorAll("#onboarding_step_welcome [data-preset]"),
+            ),
         };
 
         const sync = {
@@ -103,7 +118,7 @@
             engineSectionsById,
             glossary,
             history,
-            wizard,
+            onboarding,
             sync,
             pdf,
             LLM_ENGINES,

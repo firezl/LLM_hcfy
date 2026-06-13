@@ -62,7 +62,7 @@
                 "libs/shared-config.js",
                 "dist/content.bundle.js"
             ],
-            "css": ["styles.css"],
+            "css": ["styles/content-light.css"],
             "run_at": "document_idle",
             "all_frames": true,
             "match_about_blank": true

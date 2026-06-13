@@ -51,9 +51,11 @@ import { extensionApi } from "./extension-api.js";
 import { handleHistoryMessage } from "./history.js";
 import { handleSyncMessage } from "./sync-manager.js";
 import { initContextMenu } from "./context-menu.js";
+import { initOnboarding } from "./onboarding.js";
 
 void ensureTermStoreReady();
 initContextMenu();
+initOnboarding();
 
 extensionApi.runtime.onConnect.addListener((port) => {
     if (port.name !== PORT_NAME) {

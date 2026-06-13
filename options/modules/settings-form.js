@@ -401,7 +401,7 @@
 
         ensureAdvancedLLMFields();
 
-            function load() {
+            function load(onReady) {
                 chrome.storage.sync.get(DEFAULT_SETTINGS, (syncItems) => {
                     const syncErr = chrome.runtime.lastError;
                     if (syncErr) {
@@ -777,6 +777,9 @@
                         updateEngineDependentUI();
                         applyTheme(items.theme_mode || "auto");
                         loadedSettings = collectCurrentFormSettings();
+                        if (typeof onReady === "function") {
+                            onReady();
+                        }
                     });
                 });
             }
@@ -1339,6 +1342,47 @@
             return "";
         }
 
+        async function testEngineConnection(engine) {
+            const settings = collectCurrentFormSettings();
+            const validationError = validateEngineFields(engine, settings);
+            if (validationError) {
+                return { ok: false, error: validationError };
+            }
+
+            const MESSAGE_TYPES = globalThis.JYT_SHARED?.MESSAGE_TYPES || {};
+            const msgType = MESSAGE_TYPES.API_CONNECTION_TEST || "API_CONNECTION_TEST";
+
+            const resp = await new Promise((resolve, reject) => {
+                chrome.runtime.sendMessage(
+                    {
+                        type: msgType,
+                        engine,
+                        settings,
+                    },
+                    (response) => {
+                        const err = chrome.runtime.lastError;
+                        if (err) {
+                            reject(new Error(err.message || "发送测试请求失败"));
+                            return;
+                        }
+                        resolve(response);
+                    },
+                );
+            });
+
+            if (resp && resp.ok) {
+                return {
+                    ok: true,
+                    model: getModelDisplay(engine, settings),
+                };
+            }
+
+            return {
+                ok: false,
+                error: resp && resp.error ? resp.error : "未知错误",
+            };
+        }
+
         function bindConnectionTest() {
             const testButtons = document.querySelectorAll(".jyt-btn-connection-test");
             testButtons.forEach((btn) => {
@@ -1352,39 +1396,13 @@
                     btn.disabled = true;
 
                     try {
-                        const settings = collectCurrentFormSettings();
-                        const validationError = validateEngineFields(engine, settings);
-                        if (validationError) {
-                            statusSpan.textContent = `❌ ${validationError}`;
-                            statusSpan.className = "jyt-connection-test-status error";
-                            return;
-                        }
-
-                        const MESSAGE_TYPES = globalThis.JYT_SHARED?.MESSAGE_TYPES || {};
-                        const msgType = MESSAGE_TYPES.API_CONNECTION_TEST || "API_CONNECTION_TEST";
-
-                        const resp = await new Promise((resolve, reject) => {
-                            chrome.runtime.sendMessage({
-                                type: msgType,
-                                engine,
-                                settings
-                            }, (response) => {
-                                const err = chrome.runtime.lastError;
-                                if (err) {
-                                    reject(new Error(err.message || "发送测试请求失败"));
-                                } else {
-                                    resolve(response);
-                                }
-                            });
-                        });
-
-                        if (resp && resp.ok) {
-                            const modelName = getModelDisplay(engine, settings);
+                        const result = await testEngineConnection(engine);
+                        if (result?.ok) {
+                            const modelName = result.model || "";
                             statusSpan.textContent = `✅ 连接成功${modelName ? ` (${modelName})` : ""}`;
                             statusSpan.className = "jyt-connection-test-status success";
                         } else {
-                            const errMsg = resp && resp.error ? resp.error : "未知错误";
-                            statusSpan.textContent = `❌ 连接失败: ${errMsg}`;
+                            statusSpan.textContent = `❌ 连接失败: ${result?.error || "未知错误"}`;
                             statusSpan.className = "jyt-connection-test-status error";
                         }
                     } catch (err) {
@@ -1435,6 +1453,9 @@
             bindGeneralEvents,
             clampPercent,
             isDeepEqual,
+            collectCurrentFormSettings,
+            validateEngineFields,
+            testEngineConnection,
         };
     }
 

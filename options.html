@@ -10,42 +10,10 @@
             <div class="jyt-options-heading">
                 <h2>LLM划词翻译 设置</h2>
                 <div class="jyt-heading-actions">
-                    <button id="setup_wizard_toggle" type="button">
-                        配置向导
-                    </button>
                     <a class="jyt-help-link" href="help.html" target="_blank"
                         >快速上手</a
                     >
                 </div>
-            </div>
-
-            <div
-                id="setup_wizard_panel"
-                class="jyt-setup-wizard jyt-hidden"
-            >
-                <div class="jyt-section-title">模型配置向导</div>
-                <div class="jyt-hint">
-                    选择一个使用场景，向导会填入推荐的引擎、接口和模型。需要密钥的方案请补全 API Key 后保存。
-                </div>
-                <div class="jyt-wizard-grid">
-                    <button type="button" data-preset="cloud">
-                        <strong>云端高质量</strong>
-                        <span>OpenAI 兼容模型，适合稳定高质量翻译。</span>
-                    </button>
-                    <button type="button" data-preset="local">
-                        <strong>本地隐私</strong>
-                        <span>Ollama 本地服务，文本不离开本机。</span>
-                    </button>
-                    <button type="button" data-preset="free">
-                        <strong>免费保底</strong>
-                        <span>OpenRouter 免费路由，适合轻量试用。</span>
-                    </button>
-                    <button type="button" data-preset="special">
-                        <strong>专用翻译模型</strong>
-                        <span>Translationgemma 等专用翻译模型。</span>
-                    </button>
-                </div>
-                <div id="setup_wizard_status" class="jyt-current-pdf-status"></div>
             </div>
 
             <div class="jyt-tabs" id="options_tabs">
@@ -1100,6 +1068,133 @@
 
         <div id="toast_container" class="jyt-toast-container"></div>
 
+        <div
+            id="onboarding_overlay"
+            class="jyt-onboarding jyt-hidden"
+            hidden
+        >
+            <div
+                class="jyt-onboarding-dialog"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="onboarding_title"
+            >
+                <div class="jyt-onboarding-header">
+                    <h3 id="onboarding_title">欢迎使用 LLM 划词翻译</h3>
+                    <button
+                        type="button"
+                        id="onboarding_skip"
+                        class="jyt-onboarding-skip"
+                    >
+                        跳过
+                    </button>
+                </div>
+
+                <div
+                    id="onboarding_step_welcome"
+                    class="jyt-onboarding-step"
+                >
+                    <p class="jyt-hint">
+                        首次安装，请选择一个使用方案。我们会自动填入推荐的引擎与模型，你只需补全
+                        API Key（如需要）并保存。
+                    </p>
+                    <div class="jyt-onboarding-grid">
+                        <button type="button" data-preset="cloud">
+                            <strong>云端高质量</strong>
+                            <span>OpenAI 兼容模型，适合稳定高质量翻译。</span>
+                        </button>
+                        <button type="button" data-preset="local">
+                            <strong>本地隐私</strong>
+                            <span>Ollama 本地服务，文本不离开本机。</span>
+                        </button>
+                        <button type="button" data-preset="free">
+                            <strong>免费保底</strong>
+                            <span>OpenRouter 免费路由，适合轻量试用。</span>
+                        </button>
+                        <button type="button" data-preset="special">
+                            <strong>专用翻译模型</strong>
+                            <span>Translationgemma 等专用翻译模型。</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div
+                    id="onboarding_step_credentials"
+                    class="jyt-onboarding-step jyt-hidden"
+                >
+                    <p class="jyt-hint">
+                        填写 API Key 后即可测试连接并保存。密钥仅保存在本机，不会同步到云端。
+                    </p>
+                    <label id="onboarding_api_key_label" for="onboarding_api_key"
+                        >API Key</label
+                    >
+                    <input
+                        id="onboarding_api_key"
+                        type="password"
+                        autocomplete="off"
+                        spellcheck="false"
+                    />
+                    <div
+                        id="onboarding_api_key_hint"
+                        class="jyt-hint jyt-onboarding-key-hint"
+                    ></div>
+                </div>
+
+                <div
+                    id="onboarding_step_test"
+                    class="jyt-onboarding-step jyt-hidden"
+                >
+                    <p class="jyt-hint">
+                        建议先测试连接，确认配置无误后再保存。本地 Ollama
+                        方案请确保服务已在运行。
+                    </p>
+                    <div class="jyt-onboarding-test-row">
+                        <button
+                            type="button"
+                            id="onboarding_test_btn"
+                            class="jyt-onboarding-test-btn"
+                        >
+                            测试连接
+                        </button>
+                        <span
+                            id="onboarding_test_status"
+                            class="jyt-onboarding-test-status"
+                        ></span>
+                    </div>
+                </div>
+
+                <div
+                    id="onboarding_step_done"
+                    class="jyt-onboarding-step jyt-hidden"
+                >
+                    <p id="onboarding_done_title" class="jyt-onboarding-done-title">
+                        配置完成
+                    </p>
+                    <p class="jyt-hint">
+                        去任意网页选中文字，点击翻译按钮即可体验。更多选项可在设置页各标签中调整。
+                    </p>
+                </div>
+
+                <div
+                    id="onboarding_status"
+                    class="jyt-current-pdf-status jyt-onboarding-status"
+                ></div>
+
+                <div class="jyt-onboarding-footer">
+                    <button
+                        type="button"
+                        id="onboarding_back"
+                        class="jyt-onboarding-back jyt-hidden"
+                    >
+                        上一步
+                    </button>
+                    <button type="button" id="onboarding_next">
+                        请选择上方方案
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <script src="libs/shared-config.js"></script>
         <script src="options/modules/engines.js"></script>
         <script src="options/modules/config-storage.js"></script>
@@ -1110,7 +1205,7 @@
         <script src="options/modules/shortcuts.js"></script>
         <script src="options/modules/model-lists.js"></script>
         <script src="options/modules/pdf-context.js"></script>
-        <script src="options/modules/setup-wizard.js"></script>
+        <script src="options/modules/onboarding.js"></script>
         <script src="options/modules/settings-form.js"></script>
         <script src="options/modules/glossary.js"></script>
         <script src="options/modules/history.js"></script>

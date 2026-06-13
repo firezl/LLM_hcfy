@@ -3,7 +3,8 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "build:content": "node scripts/extract-content-ui-css.mjs && node scripts/build-content.mjs",
+        "build:content": "node scripts/extract-content-ui-css.mjs && node scripts/extract-content-light-css.mjs && node scripts/build-content.mjs",
+        "extract:content-light-css": "node scripts/extract-content-light-css.mjs",
         "annotate:options": "node scripts/annotate-options-html.mjs",
         "check:options": "node scripts/annotate-options-html.mjs --check",
         "extract:content-ui-css": "node scripts/extract-content-ui-css.mjs",

@@ -38,6 +38,7 @@ $requiredPaths = @(
     "options.js",
     "styles.css",
     "styles/content-ui.css",
+    "styles/content-light.css",
     "icons/icon-128.png",
     "vendor/pdfjs/web/viewer.html",
     "vendor/pdfjs/build/pdf.mjs"
@@ -66,6 +67,8 @@ Assert-True ($contentScript.matches -contains "<all_urls>") "content_scripts 需
 Assert-True ($contentScript.js[0] -eq "libs/shared-config.js") "libs/shared-config.js 必须先于 content bundle 加载"
 Assert-True ($contentScript.js[-1] -eq "dist/content.bundle.js") "dist/content.bundle.js 必须为 content_scripts 最后一项"
 Assert-True ($contentScript.js.Count -eq 2) "content_scripts 应只加载 shared-config 与 content bundle"
+Assert-True ($contentScript.css.Count -eq 1) "content_scripts 应只注入一份 CSS"
+Assert-True ($contentScript.css[0] -eq "styles/content-light.css") "content_scripts 应注入 styles/content-light.css，而非完整 styles.css"
 
 $optionsHtml = Get-Content "options.html" -Raw
 $optionsScriptMatches = [regex]::Matches($optionsHtml, '<script\s+src="([^"]+)"')

@@ -31,7 +31,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const shortcutsModule = globalThis.JYT_OPTION_SHORTCUTS || {};
     const modelListsModule = globalThis.JYT_OPTION_MODEL_LISTS || {};
     const pdfModule = globalThis.JYT_OPTION_PDF || {};
-    const wizardModule = globalThis.JYT_OPTION_WIZARD || {};
+    const onboardingModule = globalThis.JYT_OPTION_ONBOARDING || {};
     const settingsModule = globalThis.JYT_OPTION_SETTINGS || {};
 
     function requireSharedConfig(name) {
@@ -76,7 +76,7 @@ document.addEventListener("DOMContentLoaded", () => {
         engineSectionsById,
         glossary: glossaryEls,
         history: historyEls,
-        wizard,
+        onboarding,
         sync: syncEls,
         pdf: pdfEls,
         LLM_ENGINES,
@@ -327,12 +327,13 @@ document.addEventListener("DOMContentLoaded", () => {
         isFirefoxRuntime,
     });
 
-    const setupWizard = wizardModule.createSetupWizard({
-        wizard,
+    const onboardingController = onboardingModule.createOnboarding({
+        overlay: onboarding,
         els,
         modelLists,
         updateEngineDependentUI,
-        activateOptionsTab,
+        showToast,
+        settingsForm,
     });
 
     shortcutsModule.bindShortcutInput(els.translate_shortcut);
@@ -340,7 +341,6 @@ document.addEventListener("DOMContentLoaded", () => {
     settingsForm.bindGeneralEvents();
     modelLists.bindModelListEvents();
     pdfContext.bindOpenPdfButton();
-    setupWizard.bindEvents();
 
     glossaryController.bindEvents();
     historyController.bindEvents();
@@ -355,7 +355,9 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    settingsForm.load();
+    settingsForm.load(() => {
+        onboardingController.maybeAutoStart();
+    });
     void pdfContext.refreshActivePdfContext();
     syncDataController.init();
     glossaryController.resetEditor();
