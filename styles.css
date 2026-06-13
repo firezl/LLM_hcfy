@@ -24,6 +24,8 @@
     --jyt-muted-text: #71717a;
     --jyt-border-hover: #d4d4d8;
     --jyt-transition: 0.15s ease;
+    --jyt-link: #2563eb;
+    color-scheme: light;
 }
 
 /* Dark mode — options page */
@@ -48,6 +50,8 @@
     --jyt-danger: #f87171;
     --jyt-muted-text: #a1a1aa;
     --jyt-border-hover: #3f3f46;
+    --jyt-link: #93c5fd;
+    color-scheme: dark;
 }
 
 /* Dark mode — translation bubble (softer charcoal, not pure black) */
@@ -1603,6 +1607,9 @@ button.jyt-custom-header-remove {
         Arial,
         sans-serif;
     -webkit-font-smoothing: antialiased;
+    transition:
+        background-color 0.2s ease,
+        color 0.2s ease;
 }
 
 .jyt-help-shell {
@@ -1841,9 +1848,14 @@ button.jyt-custom-header-remove {
 
 .jyt-help-table a,
 .jyt-help-section a {
-    color: var(--jyt-text);
+    color: var(--jyt-link);
     text-decoration: underline;
     text-underline-offset: 2px;
+}
+
+.jyt-help-table a:hover,
+.jyt-help-section a:hover {
+    opacity: 0.88;
 }
 
 .jyt-help-shell code {
