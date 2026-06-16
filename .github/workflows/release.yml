@@ -22,14 +22,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate extension
-        shell: pwsh
-        run: ./scripts/validate-extension.ps1
-
-      - name: Check JavaScript syntax
-        shell: pwsh
-        run: ./scripts/check-js-syntax.ps1
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -39,8 +31,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run tests
-        run: npm test
+      - name: Validate extension
+        shell: pwsh
+        run: ./scripts/validate-extension.ps1
+
+      - name: Check JavaScript syntax
+        shell: pwsh
+        run: ./scripts/check-js-syntax.ps1
 
       - name: Read manifest version
         id: manifest

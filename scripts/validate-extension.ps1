@@ -24,7 +24,6 @@ $requiredPaths = @(
     "content/entry.js",
     "content/modules/state.js",
     "content/modules/bootstrap.js",
-    "dist/content.bundle.js",
     "libs/shared-config.js",
     "options/modules/dom-refs.js",
     "options/modules/ui-shell.js",
@@ -54,6 +53,7 @@ npm run build:content
 if ($LASTEXITCODE -ne 0) {
     throw "content script bundle 构建失败"
 }
+Assert-PathExists "dist/content.bundle.js"
 npm run check:options
 if ($LASTEXITCODE -ne 0) {
     throw "options.html 缺少 data-jyt-* 标注，请运行 npm run annotate:options"
