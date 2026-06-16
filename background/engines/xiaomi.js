@@ -1,4 +1,5 @@
 import { createOpenAICompatTranslate } from "./openai-compat-engine.js";
+import { detectThinkingModelType } from "./thinking-utils.js";
 
 const DEFAULT_XIAOMI_API_URL = "https://api.xiaomimimo.com/v1/chat/completions";
 const DEFAULT_XIAOMI_MODEL = "mimo-v2.5";
@@ -16,16 +17,23 @@ export const streamXiaomiTranslate = createOpenAICompatTranslate({
         "api-key": key,
         Authorization: `Bearer ${key}`,
     }),
-    buildBody: ({ model, messages, showThoughts, settings }) => {
+    thinkingModelTypeKey: "xiaomi_thinking_model_type",
+    buildBody: ({ model, messages, showThoughts, settings, thinkingModelType }) => {
         const body = {
             model,
             messages,
             temperature: 1.0,
             stream: true,
-            thinking: {
-                type: showThoughts ? "enabled" : "disabled",
-            },
         };
+        const resolved =
+            thinkingModelType === "auto"
+                ? detectThinkingModelType(model)
+                : thinkingModelType;
+        if (resolved !== "none") {
+            body.thinking = {
+                type: showThoughts ? "enabled" : "disabled",
+            };
+        }
 
         const maxCompletionTokens = Number(
             settings?.xiaomi_max_completion_tokens,

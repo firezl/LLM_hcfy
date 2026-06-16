@@ -160,6 +160,33 @@ export async function streamChatToPort(options) {
             }
         }
 
+        // 处理流结束后 carry 中可能残留的最后一行（无尾部换行的 SSE data 行）
+        if (carry.trim()) {
+            const parsed = parseLine(carry);
+            if (parsed) {
+                const deltas = Array.isArray(parsed) ? parsed : [parsed];
+                for (const delta of deltas) {
+                    if (!delta) {
+                        continue;
+                    }
+                    if (delta.thought) {
+                        safePostMessage(port, state, {
+                            type: "TRANSLATE_THOUGHT",
+                            requestId,
+                            content: delta.thought,
+                        });
+                    }
+                    if (delta.content) {
+                        safePostMessage(port, state, {
+                            type: "TRANSLATE_CHUNK",
+                            requestId,
+                            content: delta.content,
+                        });
+                    }
+                }
+            }
+        }
+
         safePostMessage(port, state, { type: "TRANSLATE_DONE", requestId });
     } catch (err) {
         const aborted = err && err.name === "AbortError";

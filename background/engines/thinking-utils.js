@@ -7,6 +7,14 @@ const OPENAI_REASONING_EFFORT_VALUES = new Set([
     "xhigh",
 ]);
 
+export const THINKING_MODEL_TYPES = new Set([
+    "auto",
+    "openai_reasoning",
+    "deepseek_style",
+    "qwen_style",
+    "none",
+]);
+
 function normalizeModel(model) {
     return String(model || "")
         .trim()
@@ -21,7 +29,8 @@ export function supportsOpenAIReasoning(model) {
     return (
         /^o[0-9]/.test(normalizedModel) ||
         normalizedModel.startsWith("gpt-5") ||
-        normalizedModel.includes("thinking")
+        /^chatgpt-[0-9]/.test(normalizedModel) ||
+        normalizedModel.includes("-reasoning")
     );
 }
 
@@ -54,6 +63,27 @@ export function isLikelyDeepSeekStyleThinkingModel(model) {
         /^mimo/i.test(normalizedModel) ||
         /^kimi/i.test(normalizedModel)
     );
+}
+
+export function detectThinkingModelType(model) {
+    if (supportsOpenAIReasoning(model)) {
+        return "openai_reasoning";
+    }
+    if (isLikelyDeepSeekStyleThinkingModel(model)) {
+        return "deepseek_style";
+    }
+    if (isLikelyQwenModel(model) || isLikelyGemmaThinkingModel(model)) {
+        return "qwen_style";
+    }
+    return "none";
+}
+
+export function pickThinkingModelType(rawValue, fallback = "auto") {
+    const value = String(rawValue || "").toLowerCase();
+    if (THINKING_MODEL_TYPES.has(value)) {
+        return value;
+    }
+    return fallback;
 }
 
 function isLikelyNonThinkingChatModel(model) {
@@ -119,22 +149,39 @@ export function pickOpenAIReasoningEffort(rawValue, fallback) {
 
 export function buildOpenAIThinkingPatch({ model, showThoughts, settings }) {
     const patch = {};
-    if (!supportsOpenAIReasoning(model)) {
+    const thinkingModelType = pickThinkingModelType(
+        settings?.openai_thinking_model_type,
+        "auto",
+    );
+
+    let resolvedType = thinkingModelType;
+    if (resolvedType === "auto") {
+        resolvedType = supportsOpenAIReasoning(model)
+            ? "openai_reasoning"
+            : "none";
+    }
+
+    if (resolvedType === "none") {
         return patch;
     }
 
-    if (showThoughts) {
-        patch.reasoning_effort = pickOpenAIReasoningEffort(
-            settings?.openai_reasoning_effort,
-            "medium",
-        );
-    } else {
-        patch.reasoning_effort = "none";
-    }
+    if (resolvedType === "openai_reasoning") {
+        patch.reasoning_effort = showThoughts
+            ? pickOpenAIReasoningEffort(
+                  settings?.openai_reasoning_effort,
+                  "medium",
+              )
+            : "none";
 
-    const maxCompletionTokens = Number(settings?.openai_max_completion_tokens);
-    if (Number.isFinite(maxCompletionTokens) && maxCompletionTokens > 0) {
-        patch.max_completion_tokens = Math.floor(maxCompletionTokens);
+        const maxCompletionTokens = Number(
+            settings?.openai_max_completion_tokens,
+        );
+        if (
+            Number.isFinite(maxCompletionTokens) &&
+            maxCompletionTokens > 0
+        ) {
+            patch.max_completion_tokens = Math.floor(maxCompletionTokens);
+        }
     }
 
     return patch;
@@ -142,8 +189,21 @@ export function buildOpenAIThinkingPatch({ model, showThoughts, settings }) {
 
 export function buildCustomOpenAIThinkingPatch({ model, showThoughts, settings }) {
     const patch = {};
+    const thinkingModelType = pickThinkingModelType(
+        settings?.custom_openai_thinking_model_type,
+        "auto",
+    );
 
-    if (supportsOpenAIReasoning(model)) {
+    let resolvedType = thinkingModelType;
+    if (resolvedType === "auto") {
+        resolvedType = detectThinkingModelType(model);
+    }
+
+    if (resolvedType === "none") {
+        return patch;
+    }
+
+    if (resolvedType === "openai_reasoning") {
         patch.reasoning_effort = showThoughts
             ? pickOpenAIReasoningEffort(
                   settings?.custom_openai_reasoning_effort,
@@ -157,16 +217,12 @@ export function buildCustomOpenAIThinkingPatch({ model, showThoughts, settings }
         );
     }
 
-    if (isLikelyDeepSeekStyleThinkingModel(model)) {
+    if (resolvedType === "deepseek_style") {
         return buildDeepSeekStyleThinkingPatch(showThoughts);
     }
 
-    if (isLikelyQwenModel(model) || isLikelyGemmaThinkingModel(model)) {
+    if (resolvedType === "qwen_style") {
         return buildQwenStyleThinkingPatch(showThoughts);
-    }
-
-    if (shouldUseDeepSeekStyleThinkingFallback(model, showThoughts)) {
-        return buildDeepSeekStyleThinkingPatch(showThoughts);
     }
 
     return patch;
@@ -210,4 +266,27 @@ export function getThinkingEnabledByEngine(engine, settings) {
         return !!settings?.openrouter_show_thoughts;
     }
     return !!settings?.show_thoughts;
+}
+
+/**
+ * Resolves a thinking model type for OpenAI-compat engines.
+ *
+ * When the user sets a type explicitly (e.g. "deepseek_style", "none"),
+ * that value is returned directly.  When the value is "auto" the
+ * `autoDefault` callback is invoked with the model name so each engine
+ * can decide its own auto-detect logic.
+ *
+ * @param {string | undefined} rawValue  settings[`${engine}_thinking_model_type`]
+ * @param {string} model                 current model name
+ * @param {(model: string) => string} autoDefault  returns resolved type for "auto"
+ * @returns {string}  one of the THINKING_MODEL_TYPES values
+ */
+export function resolveCompatThinkingType(rawValue, model, autoDefault) {
+    const type = pickThinkingModelType(rawValue, "auto");
+    if (type !== "auto") {
+        return type;
+    }
+    return typeof autoDefault === "function"
+        ? autoDefault(model)
+        : "none";
 }

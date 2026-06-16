@@ -7,7 +7,7 @@ import { postTranslateError } from "../port-utils.js";
 import { mergeCustomHeaders } from "./custom-headers.js";
 import { mergeCustomPayload } from "./custom-payload.js";
 import { streamOpenAICompatRequest } from "./openai-compat-stream.js";
-import { getThinkingEnabledByEngine } from "./thinking-utils.js";
+import { getThinkingEnabledByEngine, pickThinkingModelType } from "./thinking-utils.js";
 import { normalizeOpenAICompatEndpoint } from "./url-utils.js";
 
 /**
@@ -47,6 +47,7 @@ export function createOpenAICompatTranslate(config) {
             Authorization: `Bearer ${key}`,
         }),
         includeThoughts = () => true,
+        thinkingModelTypeKey,
     } = config;
 
     return async function streamTranslate(request, port, state) {
@@ -63,6 +64,9 @@ export function createOpenAICompatTranslate(config) {
         const key = String(settings?.[apiKeyKey] || "").trim();
         const model = String(settings?.[modelKey] || defaultModel).trim();
         const showThoughts = getThinkingEnabledByEngine(engine, settings);
+        const thinkingModelType = thinkingModelTypeKey
+            ? pickThinkingModelType(settings?.[thinkingModelTypeKey], "auto")
+            : "auto";
         const promptParts = buildChatPromptParts(text, to, {
             glossaryTerms,
             legacyCustomPromptTemplate:
@@ -96,6 +100,7 @@ export function createOpenAICompatTranslate(config) {
             promptParts,
             showThoughts,
             settings,
+            thinkingModelType,
         });
         const { body } = mergeCustomPayload(
             baseBody,

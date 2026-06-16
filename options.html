@@ -175,15 +175,16 @@
                         <button type="button" class="jyt-btn-connection-test" data-engine="openai">测试连接</button>
                         <span class="jyt-connection-test-status"></span>
                     </div>
-                    <label>自定义翻译 Prompt（仅 OpenAI 生效）</label>
-                    <textarea
-                        id="openai_custom_prompt"
-                        rows="4"
-                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="openai_custom_prompt"></textarea>
-                    <label>显示思考过程</label>
+                    <label>是否开启思考模式</label>
                     <select id="show_thoughts" data-jyt-setting="show_thoughts">
                         <option value="false">否</option>
                         <option value="true">是</option>
+                    </select>
+                    <label>思考模型类型</label>
+                    <select id="openai_thinking_model_type" data-jyt-setting="openai_thinking_model_type">
+                        <option value="auto">自动检测</option>
+                        <option value="openai_reasoning">OpenAI 推理模型 (o系列/gpt-5)</option>
+                        <option value="none">非思考模型</option>
                     </select>
                     <label>OpenAI 推理强度</label>
                     <select id="openai_reasoning_effort" data-jyt-setting="openai_reasoning_effort">
@@ -201,6 +202,11 @@
                         min="0"
                         step="1"
                         placeholder="0" data-jyt-setting="openai_max_completion_tokens">
+                    <label>自定义翻译 Prompt（仅 OpenAI 生效）</label>
+                    <textarea
+                        id="openai_custom_prompt"
+                        rows="4"
+                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="openai_custom_prompt"></textarea>
                 </div>
 
                 <div class="jyt-section jyt-hidden" id="custom_openai_section" data-jyt-engine="custom_openai">
@@ -229,16 +235,22 @@
                         <button type="button" class="jyt-btn-connection-test" data-engine="custom_openai">测试连接</button>
                         <span class="jyt-connection-test-status"></span>
                     </div>
-                    <label>自定义翻译 Prompt（仅自定义 OpenAI 生效）</label>
-                    <textarea
-                        id="custom_openai_custom_prompt"
-                        rows="4"
-                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="custom_openai_custom_prompt"></textarea>
-                    <label>显示思考过程</label>
+                    <label>是否开启思考模式</label>
                     <select id="custom_openai_show_thoughts" data-jyt-setting="custom_openai_show_thoughts">
                         <option value="false">否</option>
                         <option value="true">是</option>
                     </select>
+                    <label>思考模型类型</label>
+                    <select id="custom_openai_thinking_model_type" data-jyt-setting="custom_openai_thinking_model_type">
+                        <option value="auto">自动检测</option>
+                        <option value="openai_reasoning">OpenAI 推理模型 (o系列/gpt-5)</option>
+                        <option value="deepseek_style">DeepSeek 风格 (DeepSeek/GLM/MiMo/Kimi)</option>
+                        <option value="qwen_style">Qwen 风格 (Qwen/Gemma)</option>
+                        <option value="none">非思考模型</option>
+                    </select>
+                    <div class="jyt-hint">
+                        自动检测会根据模型名判断；如果检测不准确，请手动选择。
+                    </div>
                     <label>推理强度</label>
                     <select id="custom_openai_reasoning_effort" data-jyt-setting="custom_openai_reasoning_effort">
                         <option value="none">none</option>
@@ -255,6 +267,11 @@
                         min="0"
                         step="1"
                         placeholder="0" data-jyt-setting="custom_openai_max_completion_tokens">
+                    <label>自定义翻译 Prompt（仅自定义 OpenAI 生效）</label>
+                    <textarea
+                        id="custom_openai_custom_prompt"
+                        rows="4"
+                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="custom_openai_custom_prompt"></textarea>
                 </div>
 
                 <div class="jyt-section jyt-hidden" id="openrouter_section" data-jyt-engine="openrouter">
@@ -285,13 +302,7 @@
                         <button type="button" class="jyt-btn-connection-test" data-engine="openrouter">测试连接</button>
                         <span class="jyt-connection-test-status"></span>
                     </div>
-                    <label>自定义翻译 Prompt（仅 OpenRouter 生效）</label>
-                    <textarea
-                        id="openrouter_custom_prompt"
-                        rows="4"
-                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 
-示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="openrouter_custom_prompt"></textarea>
-                    <label>显示思考过程</label>
+                    <label>是否开启思考模式</label>
                     <select id="openrouter_show_thoughts" data-jyt-setting="openrouter_show_thoughts">
                         <option value="false">否</option>
                         <option value="true">是</option>
@@ -312,6 +323,12 @@
                         min="0"
                         step="1"
                         placeholder="0" data-jyt-setting="openrouter_max_completion_tokens">
+                    <label>自定义翻译 Prompt（仅 OpenRouter 生效）</label>
+                    <textarea
+                        id="openrouter_custom_prompt"
+                        rows="4"
+                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 
+示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="openrouter_custom_prompt"></textarea>
                     <div class="jyt-hint">
                         默认使用 openrouter/free 自动路由；模型列表会优先显示 OpenRouter
                         标记或定价为免费的模型。
@@ -344,16 +361,22 @@
                         <button type="button" class="jyt-btn-connection-test" data-engine="deepseek">测试连接</button>
                         <span class="jyt-connection-test-status"></span>
                     </div>
+                    <label>是否开启思考模式</label>
+                    <select id="deepseek_show_thoughts" data-jyt-setting="deepseek_show_thoughts">
+                        <option value="false">否</option>
+                        <option value="true">是</option>
+                    </select>
+                    <label>思考模型类型</label>
+                    <select id="deepseek_thinking_model_type" data-jyt-setting="deepseek_thinking_model_type">
+                        <option value="auto">自动检测</option>
+                        <option value="deepseek_style">DeepSeek 风格 (DeepSeek/GLM/MiMo/Kimi)</option>
+                        <option value="none">非思考模型</option>
+                    </select>
                     <label>自定义翻译 Prompt（仅 DeepSeek 生效）</label>
                     <textarea
                         id="deepseek_custom_prompt"
                         rows="4"
                         placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="deepseek_custom_prompt"></textarea>
-                    <label>显示思考过程</label>
-                    <select id="deepseek_show_thoughts" data-jyt-setting="deepseek_show_thoughts">
-                        <option value="false">否</option>
-                        <option value="true">是</option>
-                    </select>
                 </div>
 
                 <div class="jyt-section jyt-hidden" id="siliconflow_section" data-jyt-engine="siliconflow">
@@ -382,19 +405,25 @@
                         <button type="button" class="jyt-btn-connection-test" data-engine="siliconflow">测试连接</button>
                         <span class="jyt-connection-test-status"></span>
                     </div>
+                    <label>是否开启思考模式</label>
+                    <select id="siliconflow_show_thoughts" data-jyt-setting="siliconflow_show_thoughts">
+                        <option value="false">否</option>
+                        <option value="true">是</option>
+                    </select>
+                    <label>思考模型类型</label>
+                    <select id="siliconflow_thinking_model_type" data-jyt-setting="siliconflow_thinking_model_type">
+                        <option value="auto">自动检测</option>
+                        <option value="deepseek_style">DeepSeek 风格 (DeepSeek/GLM/MiMo/Kimi)</option>
+                        <option value="none">非思考模型</option>
+                    </select>
+                    <div class="jyt-hint">
+                        推理模型（如 DeepSeek-R1）可开启思考过程；普通对话模型请保持关闭。
+                    </div>
                     <label>自定义翻译 Prompt（仅硅基流动生效）</label>
                     <textarea
                         id="siliconflow_custom_prompt"
                         rows="4"
                         placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="siliconflow_custom_prompt"></textarea>
-                    <label>显示思考过程</label>
-                    <select id="siliconflow_show_thoughts" data-jyt-setting="siliconflow_show_thoughts">
-                        <option value="false">否</option>
-                        <option value="true">是</option>
-                    </select>
-                    <div class="jyt-hint">
-                        推理模型（如 DeepSeek-R1）可开启思考过程；普通对话模型请保持关闭。
-                    </div>
                 </div>
 
                 <div class="jyt-section jyt-hidden" id="qwen_section" data-jyt-engine="qwen">
@@ -423,12 +452,7 @@
                         <button type="button" class="jyt-btn-connection-test" data-engine="qwen">测试连接</button>
                         <span class="jyt-connection-test-status"></span>
                     </div>
-                    <label>自定义翻译 Prompt（仅 Qwen 生效）</label>
-                    <textarea
-                        id="qwen_custom_prompt"
-                        rows="4"
-                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="qwen_custom_prompt"></textarea>
-                    <label>显示思考过程</label>
+                    <label>是否开启思考模式</label>
                     <select id="qwen_show_thoughts" data-jyt-setting="qwen_show_thoughts">
                         <option value="false">否</option>
                         <option value="true">是</option>
@@ -445,6 +469,11 @@
                         <option value="false">否</option>
                         <option value="true">是</option>
                     </select>
+                    <label>自定义翻译 Prompt（仅 Qwen 生效）</label>
+                    <textarea
+                        id="qwen_custom_prompt"
+                        rows="4"
+                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="qwen_custom_prompt"></textarea>
                 </div>
 
                 <div class="jyt-section jyt-hidden" id="glm_section" data-jyt-engine="glm">
@@ -473,21 +502,27 @@
                         <button type="button" class="jyt-btn-connection-test" data-engine="glm">测试连接</button>
                         <span class="jyt-connection-test-status"></span>
                     </div>
-                    <label>自定义翻译 Prompt（仅 GLM 生效）</label>
-                    <textarea
-                        id="glm_custom_prompt"
-                        rows="4"
-                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="glm_custom_prompt"></textarea>
-                    <label>显示思考过程</label>
+                    <label>是否开启思考模式</label>
                     <select id="glm_show_thoughts" data-jyt-setting="glm_show_thoughts">
                         <option value="false">否</option>
                         <option value="true">是</option>
+                    </select>
+                    <label>思考模型类型</label>
+                    <select id="glm_thinking_model_type" data-jyt-setting="glm_thinking_model_type">
+                        <option value="auto">自动检测</option>
+                        <option value="deepseek_style">DeepSeek 风格 (DeepSeek/GLM/MiMo/Kimi)</option>
+                        <option value="none">非思考模型</option>
                     </select>
                     <label>清理历史思考上下文</label>
                     <select id="glm_clear_thinking" data-jyt-setting="glm_clear_thinking">
                         <option value="true">是</option>
                         <option value="false">否</option>
                     </select>
+                    <label>自定义翻译 Prompt（仅 GLM 生效）</label>
+                    <textarea
+                        id="glm_custom_prompt"
+                        rows="4"
+                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="glm_custom_prompt"></textarea>
                 </div>
 
                 <div class="jyt-section jyt-hidden" id="xiaomi_section" data-jyt-engine="xiaomi">
@@ -516,15 +551,16 @@
                         <button type="button" class="jyt-btn-connection-test" data-engine="xiaomi">测试连接</button>
                         <span class="jyt-connection-test-status"></span>
                     </div>
-                    <label>自定义翻译 Prompt（仅 Xiaomi 生效）</label>
-                    <textarea
-                        id="xiaomi_custom_prompt"
-                        rows="4"
-                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="xiaomi_custom_prompt"></textarea>
-                    <label>显示思考过程</label>
+                    <label>是否开启思考模式</label>
                     <select id="xiaomi_show_thoughts" data-jyt-setting="xiaomi_show_thoughts">
                         <option value="false">否</option>
                         <option value="true">是</option>
+                    </select>
+                    <label>思考模型类型</label>
+                    <select id="xiaomi_thinking_model_type" data-jyt-setting="xiaomi_thinking_model_type">
+                        <option value="auto">自动检测</option>
+                        <option value="deepseek_style">DeepSeek 风格 (DeepSeek/GLM/MiMo/Kimi)</option>
+                        <option value="none">非思考模型</option>
                     </select>
                     <label>最大输出 Token（0=自动）</label>
                     <input
@@ -533,6 +569,11 @@
                         min="0"
                         step="1"
                         placeholder="0" data-jyt-setting="xiaomi_max_completion_tokens">
+                    <label>自定义翻译 Prompt（仅 Xiaomi 生效）</label>
+                    <textarea
+                        id="xiaomi_custom_prompt"
+                        rows="4"
+                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="xiaomi_custom_prompt"></textarea>
                 </div>
 
                 <div class="jyt-section jyt-hidden" id="nim_section" data-jyt-engine="nim">
@@ -561,11 +602,18 @@
                         <button type="button" class="jyt-btn-connection-test" data-engine="nim">测试连接</button>
                         <span class="jyt-connection-test-status"></span>
                     </div>
-                    <label>自定义翻译 Prompt（仅 NVIDIA NIM 生效）</label>
-                    <textarea
-                        id="nim_custom_prompt"
-                        rows="4"
-                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="nim_custom_prompt"></textarea>
+                    <label>是否开启思考模式</label>
+                    <select id="nim_show_thoughts" data-jyt-setting="nim_show_thoughts">
+                        <option value="false">否</option>
+                        <option value="true">是</option>
+                    </select>
+                    <label>思考模型类型</label>
+                    <select id="nim_thinking_model_type" data-jyt-setting="nim_thinking_model_type">
+                        <option value="auto">自动检测</option>
+                        <option value="deepseek_style">DeepSeek 风格 (DeepSeek/GLM/MiMo/Kimi)</option>
+                        <option value="openai_reasoning">OpenAI 推理模型 (o系列/gpt-5)</option>
+                        <option value="none">非思考模型</option>
+                    </select>
                     <label>最大输出 Token</label>
                     <input
                         id="nim_max_tokens"
@@ -575,11 +623,11 @@
                     <div class="jyt-hint">
                         NIM 部分模型要求设置 max_tokens。填 0 时使用默认 4096。
                     </div>
-                    <label>显示思考过程</label>
-                    <select id="nim_show_thoughts" data-jyt-setting="nim_show_thoughts">
-                        <option value="false">否</option>
-                        <option value="true">是</option>
-                    </select>
+                    <label>自定义翻译 Prompt（仅 NVIDIA NIM 生效）</label>
+                    <textarea
+                        id="nim_custom_prompt"
+                        rows="4"
+                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="nim_custom_prompt"></textarea>
                 </div>
 
                 <div class="jyt-section jyt-hidden" id="grok_section" data-jyt-engine="grok">
@@ -608,16 +656,22 @@
                         <button type="button" class="jyt-btn-connection-test" data-engine="grok">测试连接</button>
                         <span class="jyt-connection-test-status"></span>
                     </div>
+                    <label>是否开启思考模式</label>
+                    <select id="grok_show_thoughts" data-jyt-setting="grok_show_thoughts">
+                        <option value="false">否</option>
+                        <option value="true">是</option>
+                    </select>
+                    <label>思考模型类型</label>
+                    <select id="grok_thinking_model_type" data-jyt-setting="grok_thinking_model_type">
+                        <option value="auto">自动检测</option>
+                        <option value="openai_reasoning">OpenAI 推理模型 (o系列/gpt-5)</option>
+                        <option value="none">非思考模型</option>
+                    </select>
                     <label>自定义翻译 Prompt（仅 Grok 生效）</label>
                     <textarea
                         id="grok_custom_prompt"
                         rows="4"
                         placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="grok_custom_prompt"></textarea>
-                    <label>显示思考过程</label>
-                    <select id="grok_show_thoughts" data-jyt-setting="grok_show_thoughts">
-                        <option value="false">否</option>
-                        <option value="true">是</option>
-                    </select>
                 </div>
 
                 <div class="jyt-section jyt-hidden" id="claude_section" data-jyt-engine="claude">
@@ -646,12 +700,7 @@
                         <button type="button" class="jyt-btn-connection-test" data-engine="claude">测试连接</button>
                         <span class="jyt-connection-test-status"></span>
                     </div>
-                    <label>自定义翻译 Prompt（仅 Claude 生效）</label>
-                    <textarea
-                        id="claude_custom_prompt"
-                        rows="4"
-                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="claude_custom_prompt"></textarea>
-                    <label>显示思考过程</label>
+                    <label>是否开启思考模式</label>
                     <select id="claude_show_thoughts" data-jyt-setting="claude_show_thoughts">
                         <option value="false">否</option>
                         <option value="true">是</option>
@@ -681,6 +730,11 @@
                         min="1"
                         step="1"
                         placeholder="4096" data-jyt-setting="claude_max_tokens">
+                    <label>自定义翻译 Prompt（仅 Claude 生效）</label>
+                    <textarea
+                        id="claude_custom_prompt"
+                        rows="4"
+                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="claude_custom_prompt"></textarea>
                 </div>
 
                 <div class="jyt-section jyt-hidden" id="gemini_section" data-jyt-engine="gemini">
@@ -709,12 +763,7 @@
                         <button type="button" class="jyt-btn-connection-test" data-engine="gemini">测试连接</button>
                         <span class="jyt-connection-test-status"></span>
                     </div>
-                    <label>自定义翻译 Prompt（仅 Gemini 生效）</label>
-                    <textarea
-                        id="gemini_custom_prompt"
-                        rows="4"
-                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="gemini_custom_prompt"></textarea>
-                    <label>显示思考过程</label>
+                    <label>是否开启思考模式</label>
                     <select id="gemini_show_thoughts" data-jyt-setting="gemini_show_thoughts">
                         <option value="false">否</option>
                         <option value="true">是</option>
@@ -733,6 +782,11 @@
                         min="-1"
                         step="1"
                         placeholder="-1" data-jyt-setting="gemini_thinking_budget">
+                    <label>自定义翻译 Prompt（仅 Gemini 生效）</label>
+                    <textarea
+                        id="gemini_custom_prompt"
+                        rows="4"
+                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="gemini_custom_prompt"></textarea>
                 </div>
 
                 <div class="jyt-section jyt-hidden" id="ollama_section" data-jyt-engine="ollama">
@@ -759,12 +813,7 @@
                         <button type="button" class="jyt-btn-connection-test" data-engine="ollama">测试连接</button>
                         <span class="jyt-connection-test-status"></span>
                     </div>
-                    <label>自定义翻译 Prompt（仅 Ollama 生效）</label>
-                    <textarea
-                        id="ollama_custom_prompt"
-                        rows="4"
-                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="ollama_custom_prompt"></textarea>
-                    <label>显示思考过程</label>
+                    <label>是否开启思考模式</label>
                     <select id="ollama_show_thoughts" data-jyt-setting="ollama_show_thoughts">
                         <option value="false">否</option>
                         <option value="true">是</option>
@@ -772,6 +821,11 @@
                     <div class="jyt-hint">
                         自动检测模型来自 /api/tags 的 models[].name。
                     </div>
+                    <label>自定义翻译 Prompt（仅 Ollama 生效）</label>
+                    <textarea
+                        id="ollama_custom_prompt"
+                        rows="4"
+                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="ollama_custom_prompt"></textarea>
                 </div>
 
                 <div class="jyt-section jyt-hidden" id="deepl_section" data-jyt-engine="deepl">
@@ -866,12 +920,7 @@
                         <button type="button" class="jyt-btn-connection-test" data-engine="special_translate">测试连接</button>
                         <span class="jyt-connection-test-status"></span>
                     </div>
-                    <label>自定义翻译 Prompt（仅非 translategemma 生效）</label>
-                    <textarea
-                        id="special_translate_custom_prompt"
-                        rows="4"
-                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}" data-jyt-setting="special_translate_custom_prompt"></textarea>
-                    <label>显示思考过程</label>
+                    <label>是否开启思考模式</label>
                     <select id="special_translate_show_thoughts" data-jyt-setting="special_translate_show_thoughts">
                         <option value="false">否</option>
                         <option value="true">是</option>
@@ -880,6 +929,11 @@
                         该引擎面向专用翻译模型。当前内置
                         Translationgemma，命中后会自动套用官方翻译模板。
                     </div>
+                    <label>自定义翻译 Prompt（仅非 translategemma 生效）</label>
+                    <textarea
+                        id="special_translate_custom_prompt"
+                        rows="4"
+                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}" data-jyt-setting="special_translate_custom_prompt"></textarea>
                 </div>
             </div>
 

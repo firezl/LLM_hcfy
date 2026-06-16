@@ -26,6 +26,8 @@
     --jyt-muted-text: #71717a;
     --jyt-border-hover: #d4d4d8;
     --jyt-transition: 0.15s ease;
+    --jyt-link: #2563eb;
+    color-scheme: light;
 }
 
 /* Dark mode — translation bubble (softer charcoal, not pure black) */

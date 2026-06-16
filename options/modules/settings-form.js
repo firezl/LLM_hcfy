@@ -464,20 +464,17 @@
                         els.target_lang.value = items.target_lang || "auto";
                         els.openai_api_url.value = items.openai_api_url;
                         els.openai_api_key.value = items.openai_api_key;
-                        const legacyThinkingModel = String(
-                            items.openai_thinking_model || "",
+                        const savedOpenAIModel = String(
+                            items.openai_model || "gpt-5.4-mini",
                         ).trim();
-                        const unifiedOpenAIModel = String(
-                            items.openai_model || "",
-                        ).trim();
-                        const savedOpenAIModel =
-                            unifiedOpenAIModel || legacyThinkingModel || "gpt-5.4-mini";
                         els.openai_custom_model.value = items.openai_custom_model || "";
                         els.openai_custom_prompt.value =
                             items.openai_custom_prompt || "";
                         els.show_thoughts.value = items.show_thoughts
                             ? "true"
                             : "false";
+                        els.openai_thinking_model_type.value =
+                            items.openai_thinking_model_type || "auto";
                         els.openai_reasoning_effort.value =
                             items.openai_reasoning_effort || "medium";
                         els.openai_max_completion_tokens.value = Number.isFinite(
@@ -502,6 +499,8 @@
                             items.custom_openai_custom_prompt || "";
                         els.custom_openai_show_thoughts.value =
                             items.custom_openai_show_thoughts ? "true" : "false";
+                        els.custom_openai_thinking_model_type.value =
+                            items.custom_openai_thinking_model_type || "auto";
                         els.custom_openai_reasoning_effort.value =
                             items.custom_openai_reasoning_effort || "medium";
                         els.custom_openai_max_completion_tokens.value = Number.isFinite(
@@ -550,6 +549,8 @@
                         els.deepseek_show_thoughts.value = items.deepseek_show_thoughts
                             ? "true"
                             : "false";
+                        els.deepseek_thinking_model_type.value =
+                            items.deepseek_thinking_model_type || "auto";
                         els.siliconflow_api_url.value =
                             items.siliconflow_api_url ||
                             "https://api.siliconflow.cn/v1/chat/completions";
@@ -563,6 +564,8 @@
                             items.siliconflow_custom_prompt || "";
                         els.siliconflow_show_thoughts.value =
                             items.siliconflow_show_thoughts ? "true" : "false";
+                        els.siliconflow_thinking_model_type.value =
+                            items.siliconflow_thinking_model_type || "auto";
                         els.qwen_api_url.value =
                             items.qwen_api_url ||
                             "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
@@ -591,6 +594,8 @@
                         els.glm_show_thoughts.value = items.glm_show_thoughts
                             ? "true"
                             : "false";
+                        els.glm_thinking_model_type.value =
+                            items.glm_thinking_model_type || "auto";
                         els.glm_clear_thinking.value =
                             items.glm_clear_thinking === false ? "false" : "true";
                         els.xiaomi_api_url.value =
@@ -604,6 +609,8 @@
                         els.xiaomi_show_thoughts.value = items.xiaomi_show_thoughts
                             ? "true"
                             : "false";
+                        els.xiaomi_thinking_model_type.value =
+                            items.xiaomi_thinking_model_type || "auto";
                         els.xiaomi_max_completion_tokens.value = Number.isFinite(
                             Number(items.xiaomi_max_completion_tokens),
                         )
@@ -623,6 +630,8 @@
                         els.grok_show_thoughts.value = items.grok_show_thoughts
                             ? "true"
                             : "false";
+                        els.grok_thinking_model_type.value =
+                            items.grok_thinking_model_type || "auto";
                         els.nim_api_url.value =
                             items.nim_api_url ||
                             "https://integrate.api.nvidia.com/v1/chat/completions";
@@ -634,6 +643,8 @@
                         els.nim_show_thoughts.value = items.nim_show_thoughts
                             ? "true"
                             : "false";
+                        els.nim_thinking_model_type.value =
+                            items.nim_thinking_model_type || "auto";
                         els.nim_max_tokens.value = Number.isFinite(
                             Number(items.nim_max_tokens),
                         )
@@ -1104,6 +1115,10 @@
                 openai_custom_model: fieldTrim("openai_custom_model"),
                 openai_custom_prompt: fieldValue("openai_custom_prompt"),
                 show_thoughts: fieldBool("show_thoughts"),
+                openai_thinking_model_type: fieldValue(
+                    "openai_thinking_model_type",
+                    "auto",
+                ),
                 openai_reasoning_effort: fieldValue("openai_reasoning_effort"),
                 openai_max_completion_tokens: fieldNumber(
                     "openai_max_completion_tokens",
@@ -1117,6 +1132,10 @@
                 custom_openai_custom_model: fieldTrim("custom_openai_custom_model"),
                 custom_openai_custom_prompt: fieldValue("custom_openai_custom_prompt"),
                 custom_openai_show_thoughts: fieldBool("custom_openai_show_thoughts"),
+                custom_openai_thinking_model_type: fieldValue(
+                    "custom_openai_thinking_model_type",
+                    "auto",
+                ),
                 custom_openai_reasoning_effort: fieldValue(
                     "custom_openai_reasoning_effort",
                 ),
@@ -1142,6 +1161,10 @@
                 deepseek_custom_model: fieldTrim("deepseek_custom_model"),
                 deepseek_custom_prompt: fieldValue("deepseek_custom_prompt"),
                 deepseek_show_thoughts: fieldBool("deepseek_show_thoughts"),
+                deepseek_thinking_model_type: fieldValue(
+                    "deepseek_thinking_model_type",
+                    "auto",
+                ),
                 siliconflow_api_url: fieldTrim("siliconflow_api_url"),
                 siliconflow_api_key: fieldValue("siliconflow_api_key"),
                 siliconflow_model: getSelectedOpenAICompatModel(
@@ -1151,6 +1174,10 @@
                 siliconflow_custom_model: fieldTrim("siliconflow_custom_model"),
                 siliconflow_custom_prompt: fieldValue("siliconflow_custom_prompt"),
                 siliconflow_show_thoughts: fieldBool("siliconflow_show_thoughts"),
+                siliconflow_thinking_model_type: fieldValue(
+                    "siliconflow_thinking_model_type",
+                    "auto",
+                ),
                 qwen_api_url: fieldTrim("qwen_api_url"),
                 qwen_api_key: fieldValue("qwen_api_key"),
                 qwen_model: getSelectedOpenAICompatModel(
@@ -1171,6 +1198,10 @@
                 glm_custom_model: fieldTrim("glm_custom_model"),
                 glm_custom_prompt: fieldValue("glm_custom_prompt"),
                 glm_show_thoughts: fieldBool("glm_show_thoughts"),
+                glm_thinking_model_type: fieldValue(
+                    "glm_thinking_model_type",
+                    "auto",
+                ),
                 glm_clear_thinking: fieldValue("glm_clear_thinking") !== "false",
                 xiaomi_api_url: fieldTrim("xiaomi_api_url"),
                 xiaomi_api_key: fieldValue("xiaomi_api_key"),
@@ -1181,6 +1212,10 @@
                 xiaomi_custom_model: fieldTrim("xiaomi_custom_model"),
                 xiaomi_custom_prompt: fieldValue("xiaomi_custom_prompt"),
                 xiaomi_show_thoughts: fieldBool("xiaomi_show_thoughts"),
+                xiaomi_thinking_model_type: fieldValue(
+                    "xiaomi_thinking_model_type",
+                    "auto",
+                ),
                 xiaomi_max_completion_tokens: fieldNumber(
                     "xiaomi_max_completion_tokens",
                 ),
@@ -1193,6 +1228,10 @@
                 grok_custom_model: fieldTrim("grok_custom_model"),
                 grok_custom_prompt: fieldValue("grok_custom_prompt"),
                 grok_show_thoughts: fieldBool("grok_show_thoughts"),
+                grok_thinking_model_type: fieldValue(
+                    "grok_thinking_model_type",
+                    "auto",
+                ),
                 nim_api_url: fieldTrim("nim_api_url"),
                 nim_api_key: fieldValue("nim_api_key"),
                 nim_model: getSelectedOpenAICompatModel(
@@ -1202,6 +1241,10 @@
                 nim_custom_model: fieldTrim("nim_custom_model"),
                 nim_custom_prompt: fieldValue("nim_custom_prompt"),
                 nim_show_thoughts: fieldBool("nim_show_thoughts"),
+                nim_thinking_model_type: fieldValue(
+                    "nim_thinking_model_type",
+                    "auto",
+                ),
                 nim_max_tokens: fieldNumber("nim_max_tokens"),
                 claude_api_url: fieldTrim("claude_api_url"),
                 claude_api_key: fieldValue("claude_api_key"),

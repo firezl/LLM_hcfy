@@ -183,6 +183,20 @@
 
                     if (message.type === "TRANSLATE_DONE") {
                         clearActiveRequestTimeout(state.activeRequest);
+                        // 取消可能还在排队的 RAF，从 buffer 做最终同步渲染，
+                        // 避免 DONE 先于 RAF 执行导致最后几个 chunk 丢失
+                        if (state.renderRafId) {
+                            cancelAnimationFrame(state.renderRafId);
+                            state.renderRafId = null;
+                        }
+                        renderContentAndThought(
+                            state.activeRequest.buffer,
+                            null,
+                            streamEl,
+                            thoughtEl,
+                            thoughtDetails,
+                            isThinking,
+                        );
                         streamEl.innerText = app.trimEdgeBlankLines(streamEl.innerText || "");
                         const translatedText = app.getCleanTranslatedText();
                         state.lastTranslateContext = {

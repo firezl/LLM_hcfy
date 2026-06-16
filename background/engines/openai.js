@@ -66,9 +66,7 @@ export async function streamOpenAITranslate(request, port, state) {
     }
 
     const model = String(
-        settings.openai_model ||
-            settings.openai_thinking_model ||
-            "gpt-5.4-mini",
+        settings.openai_model || "gpt-5.4-mini",
     ).trim();
     const showThoughts = getThinkingEnabledByEngine("openai", settings);
     const promptParts = buildChatPromptParts(text, to, {
