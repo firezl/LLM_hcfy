@@ -1,19 +1,57 @@
-import { extensionApi } from "./extension-api.js";
+import { extensionApi, isFirefoxExtension } from "./extension-api.js";
 import { MESSAGE_TYPE_TRANSLATE_SELECTION } from "./constants.js";
 
 const CONTEXT_MENU_ID = "jyt-translate-selection";
 
-function registerContextMenu() {
+function drainContextMenuLastError(action) {
+    const lastError = extensionApi.runtime?.lastError;
+    if (lastError?.message) {
+        console.warn(`LLM划词翻译: contextMenus.${action} 失败:`, lastError.message);
+    }
+}
+
+function createContextMenuItem() {
     if (!extensionApi.contextMenus?.create) {
+        console.warn("LLM划词翻译: contextMenus.create 不可用");
         return;
     }
 
-    extensionApi.contextMenus.removeAll(() => {
-        extensionApi.contextMenus.create({
-            id: CONTEXT_MENU_ID,
-            title: '翻译「%s」',
-            contexts: ["selection"],
-        });
+    extensionApi.contextMenus.create({
+        id: CONTEXT_MENU_ID,
+        title: '翻译「%s」',
+        contexts: ["selection"],
+    });
+    drainContextMenuLastError("create");
+}
+
+function registerContextMenu() {
+    if (!extensionApi.contextMenus?.create) {
+        console.warn("LLM划词翻译: contextMenus API 不可用");
+        return;
+    }
+
+    if (isFirefoxExtension()) {
+        // Firefox 不会持久化菜单项，每次 Service Worker 启动都需同步创建。
+        createContextMenuItem();
+        return;
+    }
+
+    const removeAll = extensionApi.contextMenus.removeAll?.bind(
+        extensionApi.contextMenus,
+    );
+    if (!removeAll) {
+        createContextMenuItem();
+        return;
+    }
+
+    const removed = removeAll();
+    if (removed && typeof removed.then === "function") {
+        void removed.then(() => createContextMenuItem());
+        return;
+    }
+
+    removeAll(() => {
+        createContextMenuItem();
     });
 }
 
@@ -58,17 +96,17 @@ async function handleContextMenuClick(info, tab) {
 }
 
 export function initContextMenu() {
-    registerContextMenu();
-
-    if (extensionApi.runtime.onInstalled) {
-        extensionApi.runtime.onInstalled.addListener(() => {
-            registerContextMenu();
-        });
-    }
-
     if (extensionApi.contextMenus?.onClicked) {
         extensionApi.contextMenus.onClicked.addListener((info, tab) => {
             void handleContextMenuClick(info, tab);
         });
     }
+
+    if (extensionApi.runtime?.onInstalled) {
+        extensionApi.runtime.onInstalled.addListener(() => {
+            registerContextMenu();
+        });
+    }
+
+    registerContextMenu();
 }
