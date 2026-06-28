@@ -57,6 +57,37 @@ void ensureTermStoreReady();
 initContextMenu();
 initOnboarding();
 
+// 来自网页 content script 可安全调用的消息子集。
+// 其余消息（CONFIG_*、SYNC_*、API_CONNECTION_TEST、HISTORY_LIST/DELETE/CLEAR、
+// TERM_IMPORT/EXPORT/LIST/DELETE/CLEAR 等）属于特权操作，仅接受扩展自身页面触发。
+const CONTENT_ALLOWED_MESSAGE_TYPES = new Set([
+    MESSAGE_TYPE_HISTORY_ADD,
+    MESSAGE_TYPE_TERM_UPSERT,
+    MESSAGE_TYPE_PDF_CHECK_URL,
+    MESSAGE_TYPE_PDF_OPEN_IN_VIEWER,
+    MESSAGE_TYPE_PDF_PROMPT_DECISION,
+    MESSAGE_TYPE_PDF_GET_PENDING_PROMPT,
+]);
+
+function getExtensionBaseUrl() {
+    try {
+        return extensionApi.runtime.getURL("");
+    } catch (err) {
+        return "";
+    }
+}
+
+// 扩展自身页面（options.html 等）的 sender 没有 tab，且 url 以扩展基址开头；
+// content script 的 sender.tab 指向宿主标签页，据此区分来源以防止恶意网页调用特权消息。
+function isExtensionPageSender(sender) {
+    if (sender?.tab) {
+        return false;
+    }
+    const url = String(sender?.url || "");
+    const base = getExtensionBaseUrl();
+    return Boolean(base && url && url.startsWith(base));
+}
+
 extensionApi.runtime.onConnect.addListener((port) => {
     if (port.name !== PORT_NAME) {
         return;
@@ -168,6 +199,12 @@ extensionApi.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const isTestMessage = type === MESSAGE_TYPE_API_CONNECTION_TEST;
 
     if (!isPdfMessage && !isTermMessage && !isSyncMessage && !isHistoryMessage && !isTestMessage) {
+        return false;
+    }
+
+    // 来源校验：非扩展自身页面（即网页 content script）只能调用安全子集，
+    // 防止恶意页面通过 sendMessage 触发 CONFIG/SYNC/连接测试/历史导出等特权操作。
+    if (!isExtensionPageSender(sender) && !CONTENT_ALLOWED_MESSAGE_TYPES.has(type)) {
         return false;
     }
 
