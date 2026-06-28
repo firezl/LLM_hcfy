@@ -26,6 +26,17 @@
         }
     }
 
+    function appendPoint(payload, point) {
+        if (
+            point &&
+            Number.isFinite(point.x) &&
+            Number.isFinite(point.y)
+        ) {
+            payload.x = point.x;
+            payload.y = point.y;
+        }
+    }
+
     function findIframeOffset(source) {
         let offsetX = 0;
         let offsetY = 0;
@@ -78,10 +89,11 @@
         if (data.text != null) {
             payload.text = data.text;
         }
-        if (data.x != null) {
+        if (
+            Number.isFinite(data.x) &&
+            Number.isFinite(data.y)
+        ) {
             payload.x = offsetX + data.x;
-        }
-        if (data.y != null) {
             payload.y = offsetY + data.y;
         }
         if (type === "IFRAME_KEYDOWN") {
@@ -174,10 +186,7 @@
                 type: "IFRAME_TRIGGER",
                 text,
             };
-            if (point) {
-                payload.x = point.x;
-                payload.y = point.y;
-            }
+            appendPoint(payload, point);
             postToParent(payload);
             return false;
         });
@@ -191,17 +200,17 @@
         }
 
         const point = getSelectionPoint();
-        postToParent({
+        const payload = {
             type: "IFRAME_KEYDOWN",
             text,
-            x: point?.x,
-            y: point?.y,
             key: e.key,
             code: e.code,
             ctrlKey: e.ctrlKey,
             altKey: e.altKey,
             shiftKey: e.shiftKey,
             metaKey: e.metaKey,
-        });
+        };
+        appendPoint(payload, point);
+        postToParent(payload);
     });
 })();

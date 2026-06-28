@@ -212,6 +212,29 @@
         registerIframeProxyListener(app, state);
     }
 
+    function resolveIframePageCoords(offsetX, offsetY, data, fallbackPoint) {
+        if (
+            Number.isFinite(data.x) &&
+            Number.isFinite(data.y)
+        ) {
+            return {
+                x: offsetX + data.x,
+                y: offsetY + data.y,
+            };
+        }
+        if (
+            fallbackPoint &&
+            Number.isFinite(fallbackPoint.x) &&
+            Number.isFinite(fallbackPoint.y)
+        ) {
+            return { x: fallbackPoint.x, y: fallbackPoint.y };
+        }
+        if (Number.isFinite(offsetX) && Number.isFinite(offsetY)) {
+            return { x: offsetX, y: offsetY };
+        }
+        return null;
+    }
+
     function getIframeOffsetForSource(source) {
         let offsetX = 0;
         let offsetY = 0;
@@ -262,11 +285,26 @@
                     return;
                 }
 
+                if (
+                    !Number.isFinite(data.x) ||
+                    !Number.isFinite(data.y)
+                ) {
+                    state.lastSelection = text;
+                    app.hideButton();
+                    return;
+                }
+
                 const { offsetX, offsetY } = getIframeOffsetForSource(
                     event.source,
                 );
-                const x = offsetX + (data.x ?? 0);
-                const y = offsetY + (data.y ?? 0);
+                const x = offsetX + data.x;
+                const y = offsetY + data.y;
+                if (!Number.isFinite(x) || !Number.isFinite(y)) {
+                    state.lastSelection = text;
+                    app.hideButton();
+                    return;
+                }
+
                 state.lastSelection = text;
                 state.lastSelectionPoint = { x, y };
 
@@ -286,16 +324,17 @@
                 const { offsetX, offsetY } = getIframeOffsetForSource(
                     event.source,
                 );
-                const x =
-                    data.x != null
-                        ? offsetX + data.x
-                        : state.lastSelectionPoint?.x ?? offsetX;
-                const y =
-                    data.y != null
-                        ? offsetY + data.y
-                        : state.lastSelectionPoint?.y ?? offsetY;
+                const coords = resolveIframePageCoords(
+                    offsetX,
+                    offsetY,
+                    data,
+                    state.lastSelectionPoint,
+                );
+                if (!coords) {
+                    return;
+                }
                 state.lastSelection = text;
-                app.triggerTranslate(text, x, y);
+                app.triggerTranslate(text, coords.x, coords.y);
                 return;
             }
 
@@ -329,16 +368,17 @@
                 const { offsetX, offsetY } = getIframeOffsetForSource(
                     event.source,
                 );
-                const x =
-                    data.x != null
-                        ? offsetX + data.x
-                        : state.lastSelectionPoint?.x ?? offsetX;
-                const y =
-                    data.y != null
-                        ? offsetY + data.y
-                        : state.lastSelectionPoint?.y ?? offsetY;
+                const coords = resolveIframePageCoords(
+                    offsetX,
+                    offsetY,
+                    data,
+                    state.lastSelectionPoint,
+                );
+                if (!coords) {
+                    return;
+                }
                 state.lastSelection = text;
-                app.triggerTranslate(text, x, y);
+                app.triggerTranslate(text, coords.x, coords.y);
             }
         });
     }
