@@ -208,6 +208,139 @@
             if (!event.persisted) return;
             app.releaseTranslatePortForPageHide();
         });
+
+        registerIframeProxyListener(app, state);
+    }
+
+    function getIframeOffsetForSource(source) {
+        let offsetX = 0;
+        let offsetY = 0;
+        if (!source || source === window) {
+            return { offsetX, offsetY };
+        }
+
+        const frames = document.querySelectorAll("iframe");
+        for (const frame of frames) {
+            try {
+                if (frame.contentWindow === source) {
+                    const rect = frame.getBoundingClientRect();
+                    offsetX = rect.left;
+                    offsetY = rect.top;
+                    break;
+                }
+            } catch (err) {
+                // ignore cross-origin access failures
+            }
+        }
+
+        return { offsetX, offsetY };
+    }
+
+    function registerIframeProxyListener(app, state) {
+        window.addEventListener("message", (event) => {
+            const data = event.data;
+            if (!data || !data.__jyt) {
+                return;
+            }
+
+            const type = String(data.type || "");
+
+            if (type === "IFRAME_SELECTION_CLEARED") {
+                app.hideButton();
+                return;
+            }
+
+            if (type === "IFRAME_SELECTION") {
+                if (state.runtimeSettings.enabled !== "on") {
+                    app.hideButton();
+                    return;
+                }
+
+                const text = String(data.text || "").trim();
+                if (!text) {
+                    app.hideButton();
+                    return;
+                }
+
+                const { offsetX, offsetY } = getIframeOffsetForSource(
+                    event.source,
+                );
+                const x = offsetX + (data.x ?? 0);
+                const y = offsetY + (data.y ?? 0);
+                state.lastSelection = text;
+                state.lastSelectionPoint = { x, y };
+
+                const btn = app.getTranslateBtn?.();
+                if (btn) {
+                    app.positionButton(btn, x, y);
+                }
+                return;
+            }
+
+            if (type === "IFRAME_TRIGGER") {
+                const text = String(data.text || "").trim();
+                if (!text || state.runtimeSettings.enabled !== "on") {
+                    return;
+                }
+
+                const { offsetX, offsetY } = getIframeOffsetForSource(
+                    event.source,
+                );
+                const x =
+                    data.x != null
+                        ? offsetX + data.x
+                        : state.lastSelectionPoint?.x ?? offsetX;
+                const y =
+                    data.y != null
+                        ? offsetY + data.y
+                        : state.lastSelectionPoint?.y ?? offsetY;
+                state.lastSelection = text;
+                app.triggerTranslate(text, x, y);
+                return;
+            }
+
+            if (type === "IFRAME_KEYDOWN") {
+                if (state.runtimeSettings.enabled !== "on") {
+                    return;
+                }
+
+                const syntheticEvent = {
+                    key: data.key,
+                    code: data.code,
+                    ctrlKey: !!data.ctrlKey,
+                    altKey: !!data.altKey,
+                    shiftKey: !!data.shiftKey,
+                    metaKey: !!data.metaKey,
+                };
+                if (
+                    !app.isShortcutPressed(
+                        syntheticEvent,
+                        state.runtimeSettings.translate_shortcut,
+                    )
+                ) {
+                    return;
+                }
+
+                const text = String(data.text || "").trim();
+                if (!text) {
+                    return;
+                }
+
+                const { offsetX, offsetY } = getIframeOffsetForSource(
+                    event.source,
+                );
+                const x =
+                    data.x != null
+                        ? offsetX + data.x
+                        : state.lastSelectionPoint?.x ?? offsetX;
+                const y =
+                    data.y != null
+                        ? offsetY + data.y
+                        : state.lastSelectionPoint?.y ?? offsetY;
+                state.lastSelection = text;
+                app.triggerTranslate(text, x, y);
+            }
+        });
     }
 
     function registerContextMenuListener(app, state) {
