@@ -1,5 +1,6 @@
 import { PDF_VIEWER_PATH } from "./constants.js";
 import { extensionApi } from "./extension-api.js";
+import { isSsrfRiskyHttpUrl } from "./ssrf-utils.js";
 
 const runtimeBaseUrl = extensionApi.runtime.getURL("");
 const isFirefoxExtensionRuntime = runtimeBaseUrl.startsWith("moz-extension://");
@@ -462,6 +463,11 @@ export async function handlePdfRuntimeMessage(message, sender) {
         const pdfUrl = String(message?.pdfUrl || "");
         if (!pdfUrl) {
             return { ok: false, error: "缺少 pdfUrl" };
+        }
+        // 拒绝网页触发的内网/本机/link-local 探测，防止后台被利用做 SSRF。
+        // file:// 与公网地址不受此限制；用户自行导航触发的 handleTabUpdated 路径不经过此处。
+        if (isSsrfRiskyHttpUrl(pdfUrl)) {
+            return { ok: false, error: "该地址不可用于 PDF 检测" };
         }
         const verdict = await detectPdfByResponse(pdfUrl);
         return {
