@@ -39,6 +39,36 @@
 
         let loadedSettings = null;
 
+        // 判定自定义端点是否为非本机的 HTTP（明文）地址，用于在保存时提醒用户 API Key 将明文传输。
+        // loopback / localhost 视为本机，不告警。
+        function isInsecureHttpEndpoint(rawUrl) {
+            const trimmed = String(rawUrl || "").trim();
+            if (!trimmed || !/^https?:\/\//i.test(trimmed)) {
+                return false;
+            }
+            try {
+                const url = new URL(trimmed);
+                if (url.protocol !== "http:") {
+                    return false;
+                }
+                const host = String(url.hostname || "")
+                    .toLowerCase()
+                    .replace(/^\[|\]$/g, "");
+                if (!host) {
+                    return false;
+                }
+                if (host === "localhost" || host.endsWith(".localhost")) {
+                    return false;
+                }
+                if (host === "::1" || /^127\./.test(host)) {
+                    return false;
+                }
+                return true;
+            } catch (err) {
+                return false;
+            }
+        }
+
         function isDeepEqual(a, b) {
             if (a === b) return true;
             if (
@@ -1032,6 +1062,16 @@
                     const permissionUrls = Object.entries(data)
                         .filter(([key, value]) => key.endsWith("_api_url") && value)
                         .map(([, value]) => value);
+                    const insecureEndpoints = permissionUrls.filter(
+                        isInsecureHttpEndpoint,
+                    );
+                    if (insecureEndpoints.length > 0) {
+                        const sample = insecureEndpoints[0];
+                        showToast(
+                            `检测到 HTTP 接口（${sample}），API Key 将明文传输，建议改用 HTTPS。`,
+                            true,
+                        );
+                    }
                     const granted =
                         await requestOptionalHostPermissions(
                             permissionUrls,
