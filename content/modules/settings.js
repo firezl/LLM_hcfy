@@ -66,20 +66,16 @@
             }
 
             function loadRuntimeSettings() {
+                // content 仅持有非敏感的同步设置（引擎、语言、UI、prompt 等）；
+                // *_api_key 与 *_custom_headers 留在 background，避免凭据驻留任意网页上下文。
                 chrome.storage.sync.get(app.DEFAULT_SETTINGS, (syncItems) => {
                     const syncErr = chrome.runtime.lastError;
                     const safeSyncItems = syncErr ? {} : syncItems || {};
-
-                    chrome.storage.local.get(app.API_KEY_FIELDS, (localItems) => {
-                        const localErr = chrome.runtime.lastError;
-                        const safeLocalItems = localErr ? {} : localItems || {};
-                        state.runtimeSettings = {
-                            ...app.DEFAULT_SETTINGS,
-                            ...safeSyncItems,
-                            ...safeLocalItems,
-                        };
-                        app.applyTheme(state.runtimeSettings.theme_mode || "auto");
-                    });
+                    state.runtimeSettings = {
+                        ...app.DEFAULT_SETTINGS,
+                        ...safeSyncItems,
+                    };
+                    app.applyTheme(state.runtimeSettings.theme_mode || "auto");
                 });
             }
 

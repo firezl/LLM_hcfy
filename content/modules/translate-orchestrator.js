@@ -135,8 +135,9 @@
 
 
                 if (engine === "auto") {
-                    const openAIConfigured =
-                        !!settings.openai_api_url && !!settings.openai_api_key;
+                    // content 不再持有 API Key，用 openai_api_url（非敏感，存于 sync）
+                    // 作为 OpenAI 是否已配置的判定依据；Key 缺失时后台会返回鉴权错误。
+                    const openAIConfigured = !!settings.openai_api_url;
                     if (!openAIConfigured) {
                         try {
                             streamEl.innerText =

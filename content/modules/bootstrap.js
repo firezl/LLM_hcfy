@@ -34,16 +34,9 @@
             }
 
             if (area === "local") {
-                for (const key of Object.keys(changes)) {
-                    if (!app.API_KEY_FIELDS.includes(key)) {
-                        continue;
-                    }
-                    state.runtimeSettings[key] = key.endsWith("_custom_headers")
-                        ? Array.isArray(changes[key].newValue)
-                            ? changes[key].newValue
-                            : []
-                        : String(changes[key].newValue || "");
-                }
+                // content 不再持有 *_api_key / *_custom_headers，无需响应 local 区变更；
+                // 这些字段由后台 settings-cache 维护。
+                return;
             }
         });
 

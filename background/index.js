@@ -52,10 +52,12 @@ import { handleHistoryMessage } from "./history.js";
 import { handleSyncMessage } from "./sync-manager.js";
 import { initContextMenu } from "./context-menu.js";
 import { initOnboarding } from "./onboarding.js";
+import { initSettingsCache } from "./settings-cache.js";
 
 void ensureTermStoreReady();
 initContextMenu();
 initOnboarding();
+initSettingsCache();
 
 // 来自网页 content script 可安全调用的消息子集。
 // 其余消息（CONFIG_*、SYNC_*、API_CONNECTION_TEST、HISTORY_LIST/DELETE/CLEAR、
@@ -99,7 +101,14 @@ extensionApi.runtime.onConnect.addListener((port) => {
     };
 
     port.onDisconnect.addListener(() => {
+        // 端口因页面进入 bfcache 等原因断开时，Chrome 会设置 runtime.lastError
+        // （如 "The page keeping the extension port is moved into back/forward cache..."），
+        // 必须在此处读取以避免 "Unchecked runtime.lastError" 控制台告警。
+        const lastError = extensionApi.runtime?.lastError;
         state.connected = false;
+        if (lastError) {
+            // bfcache / 通道关闭属预期断开，无需告警；其他原因可选记录。
+        }
         for (const controller of state.controllers.values()) {
             controller.abort();
         }

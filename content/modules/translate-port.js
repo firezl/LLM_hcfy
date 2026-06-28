@@ -412,7 +412,7 @@
                     text,
                     preferredFrom,
                     preferredTo,
-                    settings,
+                    engine,
                 });
 
                 if (!sent) {
