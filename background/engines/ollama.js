@@ -1,6 +1,7 @@
 import {
     buildChatPromptParts,
     buildOpenAIStyleMessages,
+    buildTranslationgemmaPrompt,
     resolveLanguagePair,
 } from "../language.js";
 import { postTranslateError, safePostMessage } from "../port-utils.js";
@@ -35,6 +36,42 @@ function resolveOllamaModel(settings) {
     return selected;
 }
 
+function isTranslationgemmaModel(model) {
+    const normalized = String(model || "")
+        .trim()
+        .toLowerCase();
+    return (
+        normalized === "translategemma" ||
+        normalized.startsWith("translategemma:")
+    );
+}
+
+function buildOllamaPromptParts(model, request, from, to) {
+    const glossaryTerms = Array.isArray(request?.glossaryTerms)
+        ? request.glossaryTerms
+        : [];
+
+    if (isTranslationgemmaModel(model)) {
+        return {
+            systemPrompt: "",
+            userPrompt: buildTranslationgemmaPrompt(
+                request?.text || "",
+                from,
+                to,
+                { glossaryTerms },
+            ),
+        };
+    }
+
+    return buildChatPromptParts(request?.text || "", to, {
+        glossaryTerms,
+        legacyCustomPromptTemplate:
+            request?.promptTemplates?.legacy || request?.customPromptTemplate,
+        systemPromptTemplate: request?.promptTemplates?.system,
+        userPromptTemplate: request?.promptTemplates?.user,
+    });
+}
+
 function parseOllamaChunkLine(line) {
     const trimmed = String(line || "").trim();
     if (!trimmed) {
@@ -61,11 +98,8 @@ function parseOllamaDeltaLine(line) {
 }
 
 export async function streamOllamaTranslate(request, port, state) {
-    const { requestId, text, settings } = request;
-    const { to } = resolveLanguagePair(request);
-    const glossaryTerms = Array.isArray(request?.glossaryTerms)
-        ? request.glossaryTerms
-        : [];
+    const { requestId, settings } = request;
+    const { from, to } = resolveLanguagePair(request);
 
     const endpoint = normalizeOllamaChatEndpoint(settings?.ollama_api_url);
     if (!endpoint.ok) {
@@ -84,13 +118,7 @@ export async function streamOllamaTranslate(request, port, state) {
         return;
     }
 
-    const promptParts = buildChatPromptParts(text, to, {
-        glossaryTerms,
-        legacyCustomPromptTemplate:
-            request?.promptTemplates?.legacy || request?.customPromptTemplate,
-        systemPromptTemplate: request?.promptTemplates?.system,
-        userPromptTemplate: request?.promptTemplates?.user,
-    });
+    const promptParts = buildOllamaPromptParts(model, request, from, to);
 
     const baseBody = {
         model,

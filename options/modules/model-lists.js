@@ -3,13 +3,6 @@
     const DEFAULT_OPENROUTER_API_URL =
         "https://openrouter.ai/api/v1/chat/completions";
     const DEFAULT_OPENROUTER_FREE_MODEL = "openrouter/free";
-    const RECOMMENDED_SPECIAL_TRANSLATE_MODELS = ["translategemma"];
-    const SPECIAL_PROVIDER_OLLAMA = "ollama";
-    const SPECIAL_PROVIDER_OPENAI = "openai_compatible";
-    const SPECIAL_DEFAULT_URL_BY_PROVIDER = {
-        [SPECIAL_PROVIDER_OLLAMA]: "http://localhost:11434/api/chat",
-        [SPECIAL_PROVIDER_OPENAI]: "https://api.openai.com/v1/chat/completions",
-    };
 
     function createModelListController(deps) {
         const {
@@ -29,7 +22,6 @@
         const openrouterModelRequestResolvers = messaging.resolvers.openrouter;
         const claudeModelRequestResolvers = messaging.resolvers.claude;
         const geminiModelRequestResolvers = messaging.resolvers.gemini;
-        const specialModelRequestResolvers = messaging.resolvers.special;
 
             function collectCustomHeaders(customHeadersKey) {
                 const key = String(customHeadersKey || "").trim();
@@ -285,82 +277,6 @@
                 return selected;
             }
 
-            function normalizeSpecialProvider(provider) {
-                const normalized = String(provider || "")
-                    .trim()
-                    .toLowerCase();
-                return normalized === SPECIAL_PROVIDER_OPENAI
-                    ? SPECIAL_PROVIDER_OPENAI
-                    : SPECIAL_PROVIDER_OLLAMA;
-            }
-
-            function getSpecialApiDefaultByProvider(provider) {
-                return (
-                    SPECIAL_DEFAULT_URL_BY_PROVIDER[
-                        normalizeSpecialProvider(provider)
-                    ] || SPECIAL_DEFAULT_URL_BY_PROVIDER[SPECIAL_PROVIDER_OLLAMA]
-                );
-            }
-
-            function populateSpecialTranslateModelSelect(modelIds, selectedModel) {
-                if (!els.special_translate_model_select) return;
-
-                const orderedIds = Array.from(
-                    new Set((modelIds || []).map((id) => String(id || "").trim())),
-                ).filter(Boolean);
-
-                els.special_translate_model_select.innerHTML = "";
-                orderedIds.forEach((id) => {
-                    const option = document.createElement("option");
-                    option.value = id;
-                    option.textContent = RECOMMENDED_SPECIAL_TRANSLATE_MODELS.includes(
-                        id.toLowerCase(),
-                    )
-                        ? `${id}（推荐）`
-                        : id;
-                    els.special_translate_model_select.appendChild(option);
-                });
-
-                const customOption = document.createElement("option");
-                customOption.value = "custom";
-                customOption.textContent = "自定义模型名";
-                els.special_translate_model_select.appendChild(customOption);
-
-                if (selectedModel && orderedIds.includes(selectedModel)) {
-                    els.special_translate_model_select.value = selectedModel;
-                    els.special_translate_custom_model.disabled = true;
-                    return;
-                }
-
-                if (selectedModel && selectedModel !== "custom") {
-                    const savedOption = document.createElement("option");
-                    savedOption.value = selectedModel;
-                    savedOption.textContent = `${selectedModel}（已保存）`;
-                    els.special_translate_model_select.insertBefore(
-                        savedOption,
-                        customOption,
-                    );
-                    els.special_translate_model_select.value = selectedModel;
-                    els.special_translate_custom_model.disabled = true;
-                    return;
-                }
-
-                if (selectedModel === "custom") {
-                    els.special_translate_model_select.value = "custom";
-                    els.special_translate_custom_model.disabled = false;
-                    return;
-                }
-
-                if (orderedIds.length > 0) {
-                    els.special_translate_model_select.value = orderedIds[0];
-                    els.special_translate_custom_model.disabled = true;
-                    return;
-                }
-
-                els.special_translate_model_select.value = "custom";
-                els.special_translate_custom_model.disabled = false;
-            }
-
             async function requestOllamaModelList(apiUrl, customHeaders) {
                 return new Promise((resolve, reject) => {
                     const requestId = `ollama-models-${Date.now()}-${Math.random()}`;
@@ -537,46 +453,6 @@
                 });
             }
 
-            async function requestSpecialTranslateModelList(
-                provider,
-                apiUrl,
-                apiKey,
-                customHeaders,
-            ) {
-                return new Promise((resolve, reject) => {
-                    const requestId = `special-models-${Date.now()}-${Math.random()}`;
-                    const timer = setTimeout(() => {
-                        specialModelRequestResolvers.delete(requestId);
-                        reject(new Error("请求专用翻译模型列表超时"));
-                    }, 8000);
-
-                    specialModelRequestResolvers.set(requestId, (payload) => {
-                        clearTimeout(timer);
-                        resolve(payload || {});
-                    });
-
-                    try {
-                        const port = ensureBackgroundPort();
-                        port.postMessage({
-                            type:
-                                MESSAGE_TYPES.SPECIAL_TRANSLATE_GET_MODELS ||
-                                "SPECIAL_TRANSLATE_GET_MODELS",
-                            requestId,
-                            provider: normalizeSpecialProvider(provider),
-                            apiUrl: String(apiUrl || "").trim(),
-                            apiKey: String(apiKey || "").trim(),
-                            customHeaders: Array.isArray(customHeaders)
-                                ? customHeaders
-                                : [],
-                        });
-                    } catch (err) {
-                        clearTimeout(timer);
-                        specialModelRequestResolvers.delete(requestId);
-                        reject(err);
-                    }
-                });
-            }
-
             function refreshOpenAICompatModels(cfg, force) {
                 const selectEl = els[cfg.modelId];
                 const customEl = els[cfg.customModelId];
@@ -713,35 +589,6 @@
                     });
             }
 
-            function refreshSpecialTranslateModels(force) {
-                if (!force && modelListLoaded.has("special_translate")) {
-                    return Promise.resolve();
-                }
-                const selectedModel =
-                    (els.special_translate_model_select?.value || "").trim() ||
-                    "translategemma";
-                return requestSpecialTranslateModelList(
-                    els.special_translate_provider?.value,
-                    els.special_translate_api_url?.value,
-                    els.special_translate_api_key?.value,
-                    collectCustomHeaders("special_translate_custom_headers"),
-                )
-                    .then((res) => {
-                        const modelIds = Array.isArray(res.modelIds)
-                            ? res.modelIds
-                            : RECOMMENDED_SPECIAL_TRANSLATE_MODELS;
-                        populateSpecialTranslateModelSelect(modelIds, selectedModel);
-                        modelListLoaded.add("special_translate");
-                    })
-                    .catch(() => {
-                        populateSpecialTranslateModelSelect(
-                            RECOMMENDED_SPECIAL_TRANSLATE_MODELS,
-                            selectedModel,
-                        );
-                        modelListLoaded.delete("special_translate");
-                    });
-            }
-
             function refreshOllamaModels(force) {
                 if (!force && modelListLoaded.has("ollama")) {
                     return Promise.resolve();
@@ -776,8 +623,6 @@
                             refreshClaude: (force) => refreshClaudeModels(force),
                             refreshGemini: (force) => refreshGeminiModels(force),
                             refreshOllama: (force) => refreshOllamaModels(force),
-                            refreshSpecialTranslate: (force) =>
-                                refreshSpecialTranslateModels(force),
                         },
                     );
                 }
@@ -864,39 +709,6 @@
                     });
                 });
 
-                els.special_translate_provider?.addEventListener("change", () => {
-                    const provider = normalizeSpecialProvider(
-                        els.special_translate_provider.value,
-                    );
-                    if (!String(els.special_translate_api_url.value || "").trim()) {
-                        els.special_translate_api_url.value =
-                            getSpecialApiDefaultByProvider(provider);
-                    }
-                    modelListLoaded.delete("special_translate");
-                    debounceByKey("model-special", () => {
-                        void refreshSpecialTranslateModels(true);
-                    });
-                });
-
-                els.special_translate_api_url?.addEventListener("change", () => {
-                    modelListLoaded.delete("special_translate");
-                    debounceByKey("model-special", () => {
-                        void refreshSpecialTranslateModels(true);
-                    });
-                });
-
-                els.special_translate_api_key?.addEventListener("change", () => {
-                    if (
-                        normalizeSpecialProvider(els.special_translate_provider?.value) ===
-                        SPECIAL_PROVIDER_OPENAI
-                    ) {
-                        modelListLoaded.delete("special_translate");
-                        debounceByKey("model-special", () => {
-                            void refreshSpecialTranslateModels(true);
-                        });
-                    }
-                });
-
                 els.ollama_api_url?.addEventListener("change", () => {
                     modelListLoaded.delete("ollama");
                     debounceByKey("model-ollama", () => {
@@ -909,31 +721,22 @@
             populateOllamaModelSelect,
             populateOpenAICompatModelSelect,
             populateOpenRouterModelSelect,
-            populateSpecialTranslateModelSelect,
             getSelectedOpenAICompatModel,
             getSelectedOpenRouterModel,
-            normalizeSpecialProvider,
-            getSpecialApiDefaultByProvider,
             requestOllamaModelList,
             requestOpenAICompatModelList,
             requestOpenRouterModelList,
             requestClaudeModelList,
             requestGeminiModelList,
-            requestSpecialTranslateModelList,
             refreshOpenAICompatModels,
             refreshOpenRouterModels,
             refreshClaudeModels,
             refreshGeminiModels,
-            refreshSpecialTranslateModels,
             refreshOllamaModels,
             ensureActiveEngineModelListLoaded,
             bindModelListEvents,
             DEFAULT_OPENROUTER_API_URL,
             DEFAULT_OPENROUTER_FREE_MODEL,
-            RECOMMENDED_SPECIAL_TRANSLATE_MODELS,
-            SPECIAL_PROVIDER_OLLAMA,
-            SPECIAL_PROVIDER_OPENAI,
-            SPECIAL_DEFAULT_URL_BY_PROVIDER,
         };
     }
 

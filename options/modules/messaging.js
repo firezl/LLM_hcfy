@@ -7,7 +7,6 @@
         const openrouterModelRequestResolvers = new Map();
         const claudeModelRequestResolvers = new Map();
         const geminiModelRequestResolvers = new Map();
-        const specialModelRequestResolvers = new Map();
 
         function sendBackgroundMessage(type, payload) {
             const request = {
@@ -161,27 +160,6 @@
                     }
                     return;
                 }
-
-                if (message.type === "SPECIAL_TRANSLATE_OP_ERROR") {
-                    const resolvePending = specialModelRequestResolvers.get(
-                        message.requestId,
-                    );
-                    if (resolvePending) {
-                        specialModelRequestResolvers.delete(message.requestId);
-                        resolvePending({ modelIds: ["translategemma"] });
-                    }
-                    return;
-                }
-
-                if (message.type === "SPECIAL_TRANSLATE_MODELS_RESPONSE") {
-                    const resolvePending = specialModelRequestResolvers.get(
-                        message.requestId,
-                    );
-                    if (resolvePending) {
-                        specialModelRequestResolvers.delete(message.requestId);
-                        resolvePending(message);
-                    }
-                }
             });
 
             backgroundPort.onDisconnect.addListener(() => {
@@ -201,7 +179,6 @@
                 openrouter: openrouterModelRequestResolvers,
                 claude: claudeModelRequestResolvers,
                 gemini: geminiModelRequestResolvers,
-                special: specialModelRequestResolvers,
             },
         };
     }

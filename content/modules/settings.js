@@ -16,6 +16,9 @@
 
             function getEffectiveEngine(settings) {
                 const selectedEngine = String(settings?.engine || "auto").trim();
+                if (selectedEngine === "special_translate") {
+                    return "ollama";
+                }
                 if (selectedEngine === "llm") {
                     return String(settings?.llm_engine || "openai").trim() || "openai";
                 }
@@ -38,7 +41,6 @@
                     claude: "claude_model",
                     gemini: "gemini_model",
                     ollama: "ollama_model",
-                    special_translate: "special_translate_model",
                 };
                 const customKeyByEngine = {
                     openai: "openai_custom_model",
@@ -54,7 +56,6 @@
                     claude: "claude_custom_model",
                     gemini: "gemini_custom_model",
                     ollama: "ollama_custom_model",
-                    special_translate: "special_translate_custom_model",
                 };
                 const modelKey = keyByEngine[engine] || keyByEngine.auto;
                 const customKey = customKeyByEngine[engine];

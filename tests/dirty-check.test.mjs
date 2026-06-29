@@ -33,11 +33,8 @@ describe("isDeepEqual in settings-form", () => {
                 populateOllamaModelSelect: () => {},
                 populateOpenAICompatModelSelect: () => {},
                 populateOpenRouterModelSelect: () => {},
-                populateSpecialTranslateModelSelect: () => {},
                 getSelectedOpenAICompatModel: () => {},
                 getSelectedOpenRouterModel: () => {},
-                normalizeSpecialProvider: () => {},
-                getSpecialApiDefaultByProvider: () => {},
             },
             shortcutsModule: {
                 normalizeShortcut: (x) => x,

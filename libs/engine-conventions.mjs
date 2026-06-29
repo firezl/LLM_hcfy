@@ -72,7 +72,7 @@ export function hasDedicatedOptionsSection(raw) {
     if (raw.sectionId) {
         return true;
     }
-    if (id === "deepl" || id === "deeplx" || id === "special_translate") {
+    if (id === "deepl" || id === "deeplx") {
         return true;
     }
     if (kind === "llm" && id !== "openai") {
@@ -89,7 +89,7 @@ export function supportsPromptSettings(raw) {
         return false;
     }
     const { id, kind } = raw;
-    if (kind === "llm" || id === "auto" || id === "special_translate") {
+    if (kind === "llm" || id === "auto") {
         return true;
     }
     return false;

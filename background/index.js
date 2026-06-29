@@ -14,7 +14,6 @@ import {
     MESSAGE_TYPE_SYNC_TEST,
     MESSAGE_TYPE_SYNC_UPLOAD,
     MESSAGE_TYPE_OLLAMA_GET_MODELS,
-    MESSAGE_TYPE_SPECIAL_TRANSLATE_GET_MODELS,
     MESSAGE_TYPE_PDF_CHECK_URL,
     MESSAGE_TYPE_PDF_OPEN_IN_VIEWER,
     MESSAGE_TYPE_PDF_PROMPT_DECISION,
@@ -42,7 +41,6 @@ import { handleOpenAICompatGetModels } from "./engines/openai-compat-models.js";
 import { handleOpenRouterGetModels } from "./engines/openrouter.js";
 import { handleClaudeGetModels } from "./engines/claude-models.js";
 import { handleGeminiGetModels } from "./engines/gemini-models.js";
-import { handleSpecialTranslateGetModels } from "./engines/special-translate.js";
 import {
     ensureTermStoreReady,
     handleTermMessage as handleBackgroundTermMessage,
@@ -162,10 +160,6 @@ extensionApi.runtime.onConnect.addListener((port) => {
         if (message.type === MESSAGE_TYPE_GEMINI_GET_MODELS) {
             void handleGeminiGetModels(message, port, state);
             return;
-        }
-
-        if (message.type === MESSAGE_TYPE_SPECIAL_TRANSLATE_GET_MODELS) {
-            void handleSpecialTranslateGetModels(message, port, state);
         }
     });
 });

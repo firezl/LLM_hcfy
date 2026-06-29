@@ -26,7 +26,6 @@ const EXTRA_SETTING_IDS = new Set([
     "bubble_height_percent",
     "show_thoughts",
     "ollama_model_select",
-    "special_translate_model_select",
 ]);
 
 const SETTING_IDS = new Set([
@@ -50,7 +49,6 @@ const SECTION_ENGINE_IDS = new Map([
     ["ollama_section", "ollama"],
     ["deepl_section", "deepl"],
     ["deeplx_section", "deeplx"],
-    ["special_translate_section", "special_translate"],
 ]);
 
 function upsertAttribute(attrs, name, value) {

@@ -136,7 +136,6 @@
             claude: cbs.refreshClaude,
             gemini: cbs.refreshGemini,
             ollama: cbs.refreshOllama,
-            special_translate: cbs.refreshSpecialTranslate,
         };
 
         const refresh = refreshMap[activeEngine];

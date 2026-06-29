@@ -22,15 +22,10 @@
             populateOllamaModelSelect,
             populateOpenAICompatModelSelect,
             populateOpenRouterModelSelect,
-            populateSpecialTranslateModelSelect,
             getSelectedOpenAICompatModel,
             getSelectedOpenRouterModel,
-            normalizeSpecialProvider,
-            getSpecialApiDefaultByProvider,
             DEFAULT_OPENROUTER_API_URL,
             DEFAULT_OPENROUTER_FREE_MODEL,
-            RECOMMENDED_SPECIAL_TRANSLATE_MODELS,
-            SPECIAL_PROVIDER_OLLAMA,
         } = modelLists;
 
         const { normalizeShortcut } = shortcutsModule;
@@ -469,7 +464,27 @@
                             });
                         }
 
-                        const savedEngine = String(items.engine || "auto").trim();
+                        let savedEngine = String(items.engine || "auto").trim();
+                        if (savedEngine === "special_translate") {
+                            if (!items.ollama_api_url && items.special_translate_api_url) {
+                                items.ollama_api_url = items.special_translate_api_url;
+                            }
+                            const specialModel =
+                                items.special_translate_model === "custom"
+                                    ? items.special_translate_custom_model
+                                    : items.special_translate_model;
+                            if (!items.ollama_model && specialModel) {
+                                items.ollama_model = specialModel;
+                            }
+                            if (
+                                items.special_translate_show_thoughts &&
+                                items.ollama_show_thoughts === undefined
+                            ) {
+                                items.ollama_show_thoughts =
+                                    items.special_translate_show_thoughts;
+                            }
+                            savedEngine = "ollama";
+                        }
                         const savedLLMEngine = String(items.llm_engine || "").trim();
                         const migratedLLMEngine = LLM_ENGINES.has(savedEngine)
                             ? savedEngine
@@ -783,28 +798,6 @@
                         els.deeplx_api_url.value =
                             items.deeplx_api_url || "http://localhost:1188/translate";
                         els.deeplx_api_key.value = items.deeplx_api_key || "";
-                        const specialProvider = normalizeSpecialProvider(
-                            items.special_translate_provider || SPECIAL_PROVIDER_OLLAMA,
-                        );
-                        const savedSpecialModel =
-                            items.special_translate_model || "translategemma";
-                        els.special_translate_provider.value = specialProvider;
-                        els.special_translate_api_url.value =
-                            items.special_translate_api_url ||
-                            getSpecialApiDefaultByProvider(specialProvider);
-                        els.special_translate_api_key.value =
-                            items.special_translate_api_key || "";
-                        els.special_translate_custom_model.value =
-                            items.special_translate_custom_model || "";
-                        els.special_translate_custom_prompt.value =
-                            items.special_translate_custom_prompt || "";
-                        els.special_translate_show_thoughts.value =
-                            items.special_translate_show_thoughts ? "true" : "false";
-                        populateSpecialTranslateModelSelect(
-                            RECOMMENDED_SPECIAL_TRANSLATE_MODELS,
-                            savedSpecialModel,
-                        );
-                        modelListLoaded.delete("special_translate");
                         els.theme_mode.value = items.theme_mode || "auto";
                         els.font_family.value = items.font_family || "";
                         els.bubble_width_percent.value = clampPercent(
@@ -1033,27 +1026,6 @@
                     if (effectiveEngine === "deeplx") {
                         if (!data.deeplx_api_url) {
                             data.deeplx_api_url = "http://localhost:1188/translate";
-                        }
-                    }
-
-                    if (effectiveEngine === "special_translate") {
-                        data.special_translate_provider = normalizeSpecialProvider(
-                            data.special_translate_provider,
-                        );
-                        if (!data.special_translate_api_url) {
-                            data.special_translate_api_url = getSpecialApiDefaultByProvider(
-                                data.special_translate_provider,
-                            );
-                        }
-
-                        const selectedSpecialModel =
-                            data.special_translate_model === "custom"
-                                ? data.special_translate_custom_model
-                                : data.special_translate_model;
-
-                        if (!selectedSpecialModel) {
-                            showToast("请先选择专用翻译模型或填写自定义模型名。", true);
-                            return;
                         }
                     }
 
@@ -1315,21 +1287,6 @@
                 ollama_custom_model: fieldTrim("ollama_custom_model"),
                 ollama_custom_prompt: fieldValue("ollama_custom_prompt"),
                 ollama_show_thoughts: fieldBool("ollama_show_thoughts"),
-                special_translate_provider: normalizeSpecialProvider(
-                    fieldValue("special_translate_provider"),
-                ),
-                special_translate_api_url: fieldTrim("special_translate_api_url"),
-                special_translate_api_key: fieldValue("special_translate_api_key"),
-                special_translate_model: fieldValue("special_translate_model_select"),
-                special_translate_custom_model: fieldTrim(
-                    "special_translate_custom_model",
-                ),
-                special_translate_custom_prompt: fieldValue(
-                    "special_translate_custom_prompt",
-                ),
-                special_translate_show_thoughts: fieldBool(
-                    "special_translate_show_thoughts",
-                ),
                 deepl_api_url: fieldTrim("deepl_api_url"),
                 deepl_api_key: fieldValue("deepl_api_key"),
                 deeplx_api_url: fieldTrim("deeplx_api_url"),
@@ -1398,10 +1355,6 @@
             if (engine === "deepl" && !settings.deepl_api_key) {
                 return "请先填写 DeepL API Key。";
             }
-            if (engine === "special_translate") {
-                const specialModel = settings.special_translate_model === "custom" ? settings.special_translate_custom_model : settings.special_translate_model;
-                if (!specialModel) return "请先填写/选择专用模型。";
-            }
             return null;
         }
 
@@ -1419,7 +1372,6 @@
             if (engine === "claude") return settings.claude_model === "custom" ? settings.claude_custom_model : settings.claude_model;
             if (engine === "gemini") return settings.gemini_model === "custom" ? settings.gemini_custom_model : settings.gemini_model;
             if (engine === "ollama") return settings.ollama_model === "custom" ? settings.ollama_custom_model : settings.ollama_model;
-            if (engine === "special_translate") return settings.special_translate_model === "custom" ? settings.special_translate_custom_model : settings.special_translate_model;
             if (engine === "deepl") return "DeepL";
             if (engine === "deeplx") return "DeepLX";
             return "";
@@ -1509,11 +1461,6 @@
             els.ollama_model_select?.addEventListener("change", () => {
                 const isCustom = els.ollama_model_select.value === "custom";
                 els.ollama_custom_model.disabled = !isCustom;
-            });
-
-            els.special_translate_model_select?.addEventListener("change", () => {
-                const isCustom = els.special_translate_model_select.value === "custom";
-                els.special_translate_custom_model.disabled = !isCustom;
             });
 
             window.addEventListener("beforeunload", (e) => {

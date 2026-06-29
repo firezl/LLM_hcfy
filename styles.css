@@ -502,8 +502,8 @@
 html.jyt-options--popup-root,
 #jyt-options-body.jyt-options--popup {
     width: 100%;
-    min-width: 320px;
-    max-width: 480px;
+    min-width: 420px;
+    max-width: 560px;
     min-height: 480px;
     box-sizing: border-box;
 }
@@ -1407,8 +1407,8 @@ button.jyt-custom-header-remove {
     html.jyt-options--popup-root,
     #jyt-options-body.jyt-options--popup {
         width: 100%;
-        max-width: 480px;
-        min-width: 320px;
+        max-width: 560px;
+        min-width: 420px;
         min-height: 480px;
         padding: 0;
         background: var(--jyt-bg);

@@ -4,7 +4,6 @@ import {
     CUSTOM_PROMPT_SETTING_BY_ENGINE,
     CUSTOM_HEADERS_SETTING_BY_ENGINE,
     CUSTOM_PAYLOAD_SETTING_BY_ENGINE,
-    getCustomHeadersSettingKey,
     getCustomPayloadSettingKey,
     getPromptSettingKeys,
     getTranslateHandlerKey,
@@ -43,7 +42,10 @@ describe("engine-registry", () => {
     it("includes expected llm engines", () => {
         assert.ok(LLM_ENGINE_IDS.includes("openrouter"));
         assert.ok(LLM_ENGINE_IDS.includes("ollama"));
-        assert.ok(!LLM_ENGINE_IDS.includes("special_translate"));
+    });
+
+    it("migrates removed special_translate engine to ollama", () => {
+        assert.equal(resolveTranslateEngine({ engine: "special_translate" }), "ollama");
     });
 
     it("exposes openai compat ui configs", () => {
@@ -82,10 +84,6 @@ describe("engine-registry", () => {
             system: "deepseek_system_prompt",
             user: "deepseek_user_prompt",
         });
-        assert.equal(
-            getCustomHeadersSettingKey("special_translate"),
-            "special_translate_custom_headers",
-        );
         assert.equal(
             getCustomPayloadSettingKey("qwen"),
             "qwen_custom_payload",

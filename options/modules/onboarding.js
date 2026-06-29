@@ -32,12 +32,6 @@
                 hint: "可在 openrouter.ai 注册并创建 API Key。",
             },
         },
-        special: {
-            title: "专用翻译模型",
-            description: "Translationgemma 等专用翻译模型。",
-            effectiveEngine: "special_translate",
-            apiKey: null,
-        },
     };
 
     function createOnboarding(deps) {
@@ -139,12 +133,8 @@
                 populateOllamaModelSelect,
                 populateOpenAICompatModelSelect,
                 populateOpenRouterModelSelect,
-                populateSpecialTranslateModelSelect,
                 DEFAULT_OPENROUTER_API_URL,
                 DEFAULT_OPENROUTER_FREE_MODEL,
-                RECOMMENDED_SPECIAL_TRANSLATE_MODELS,
-                SPECIAL_PROVIDER_OLLAMA,
-                SPECIAL_DEFAULT_URL_BY_PROVIDER,
             } = modelLists;
 
             if (value === "cloud") {
@@ -177,17 +167,6 @@
                     els.openrouter_api_url.value || DEFAULT_OPENROUTER_API_URL;
                 populateOpenRouterModelSelect([], DEFAULT_OPENROUTER_FREE_MODEL);
                 els.openrouter_show_thoughts.value = "false";
-            } else if (value === "special") {
-                els.engine_select.value = "special_translate";
-                els.special_translate_provider.value = SPECIAL_PROVIDER_OLLAMA;
-                els.special_translate_api_url.value =
-                    els.special_translate_api_url.value ||
-                    SPECIAL_DEFAULT_URL_BY_PROVIDER[SPECIAL_PROVIDER_OLLAMA];
-                populateSpecialTranslateModelSelect(
-                    RECOMMENDED_SPECIAL_TRANSLATE_MODELS,
-                    "translategemma",
-                );
-                els.special_translate_show_thoughts.value = "false";
             }
 
             updateEngineDependentUI();
