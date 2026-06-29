@@ -8,7 +8,7 @@ import {
     engineSectionId,
 } from "./engine-conventions.mjs";
 
-/** @typedef {'builtin' | 'llm' | 'top'} EngineKind */
+/** @typedef {'builtin' | 'llm'} EngineKind */
 
 /**
  * @typedef {object} OpenAICompatUiConfig
@@ -103,7 +103,6 @@ const RAW_ENGINE_DEFINITIONS = [
         openaiCompat: { defaultModel: "meta/llama-3.1-70b-instruct" },
     },
     { id: "ollama", kind: "llm" },
-    { id: "special_translate", kind: "top" },
 ];
 
 export const ENGINE_DEFINITIONS = Object.freeze(
@@ -188,6 +187,9 @@ export { engineSectionId };
  */
 export function resolveTranslateEngine(settings) {
     const selectedEngine = String(settings?.engine || "auto").trim();
+    if (selectedEngine === "special_translate") {
+        return "ollama";
+    }
     if (selectedEngine !== "llm") {
         return selectedEngine || "auto";
     }

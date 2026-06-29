@@ -46,9 +46,6 @@
                     <select id="engine_select" data-jyt-setting="engine_select">
                         <option value="auto">自动（优先 OpenAI API）</option>
                         <option value="llm">大模型翻译</option>
-                        <option value="special_translate">
-                            专用大模型翻译
-                        </option>
                         <option value="google">谷歌翻译</option>
                         <option value="bing">Bing翻译</option>
                         <option value="deepl">DeepL 翻译</option>
@@ -881,60 +878,6 @@
                         <span class="jyt-connection-test-status"></span>
                     </div>
                 </div>
-
-                <div
-                    class="jyt-section jyt-hidden"
-                    id="special_translate_section" data-jyt-engine="special_translate"
-                >
-                    <div class="jyt-section-title">专用大模型翻译</div>
-                    <label>提供方</label>
-                    <select id="special_translate_provider" data-jyt-setting="special_translate_provider">
-                        <option value="ollama">Ollama 本地/远端</option>
-                        <option value="openai_compatible">
-                            OpenAI 兼容 API
-                        </option>
-                    </select>
-                    <label>API 地址</label>
-                    <input
-                        id="special_translate_api_url"
-                        type="text"
-                        placeholder="http://localhost:11434/api/chat" data-jyt-setting="special_translate_api_url">
-                    <label>API Key（OpenAI 兼容可选）</label>
-                    <input
-                        id="special_translate_api_key"
-                        type="password"
-                        placeholder="sk-..." data-jyt-setting="special_translate_api_key">
-                    <label>专用模型</label>
-                    <select id="special_translate_model_select" data-jyt-setting="special_translate_model_select">
-                        <option value="translategemma">
-                            translategemma（推荐）
-                        </option>
-                        <option value="custom">自定义模型名</option>
-                    </select>
-                    <label>自定义模型名</label>
-                    <input
-                        id="special_translate_custom_model"
-                        type="text"
-                        placeholder="例如: translategemma:4b" data-jyt-setting="special_translate_custom_model">
-                    <div class="jyt-connection-test-container">
-                        <button type="button" class="jyt-btn-connection-test" data-engine="special_translate">测试连接</button>
-                        <span class="jyt-connection-test-status"></span>
-                    </div>
-                    <label>是否开启思考模式</label>
-                    <select id="special_translate_show_thoughts" data-jyt-setting="special_translate_show_thoughts">
-                        <option value="false">否</option>
-                        <option value="true">是</option>
-                    </select>
-                    <div class="jyt-hint">
-                        该引擎面向专用翻译模型。当前内置
-                        Translationgemma，命中后会自动套用官方翻译模板。
-                    </div>
-                    <label>自定义翻译 Prompt（仅非 translategemma 生效）</label>
-                    <textarea
-                        id="special_translate_custom_prompt"
-                        rows="4"
-                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}" data-jyt-setting="special_translate_custom_prompt"></textarea>
-                </div>
             </div>
 
             <div class="jyt-tab-content" id="tab_glossary">
@@ -1164,10 +1107,6 @@
                         <button type="button" data-preset="free">
                             <strong>免费保底</strong>
                             <span>OpenRouter 免费路由，适合轻量试用。</span>
-                        </button>
-                        <button type="button" data-preset="special">
-                            <strong>专用翻译模型</strong>
-                            <span>Translationgemma 等专用翻译模型。</span>
                         </button>
                     </div>
                 </div>

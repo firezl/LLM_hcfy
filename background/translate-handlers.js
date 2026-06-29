@@ -14,7 +14,6 @@ import { streamOllamaTranslate } from "./engines/ollama.js";
 import { streamOpenAITranslate } from "./engines/openai.js";
 import { streamOpenRouterTranslate } from "./engines/openrouter.js";
 import { streamQwenTranslate } from "./engines/qwen.js";
-import { streamSpecialTranslate } from "./engines/special-translate.js";
 import { streamXiaomiTranslate } from "./engines/xiaomi.js";
 
 /** @type {Record<string, (request: object, port: object, state: object) => Promise<void>>} */
@@ -35,6 +34,5 @@ export const TRANSLATE_HANDLERS = Object.freeze({
     openrouter: streamOpenRouterTranslate,
     gemini: streamGeminiTranslate,
     ollama: streamOllamaTranslate,
-    special_translate: streamSpecialTranslate,
     openai: streamOpenAITranslate,
 });

@@ -39,7 +39,6 @@
             ollama: engineSectionsById.get("ollama") || null,
             deepl: engineSectionsById.get("deepl") || null,
             deeplx: engineSectionsById.get("deeplx") || null,
-            specialTranslate: engineSectionsById.get("special_translate") || null,
         };
 
         const glossary = {

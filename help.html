@@ -82,27 +82,6 @@
 
                     <article class="jyt-engine-card">
                         <div class="jyt-engine-card-head">
-                            <h3>专用大模型翻译</h3>
-                            <span>special_translate</span>
-                        </div>
-                        <p>
-                            面向 Translationgemma 这类专用翻译模型。默认 provider 是 Ollama，也可以切换到 OpenAI 兼容服务。
-                        </p>
-                        <div class="jyt-code-row">
-                            <code>http://localhost:11434/api/chat</code>
-                            <button type="button" data-copy="http://localhost:11434/api/chat">
-                                复制
-                            </button>
-                        </div>
-                        <ul class="jyt-help-mini-list">
-                            <li>provider 选 Ollama：通常不需要 API Key。</li>
-                            <li>provider 选 OpenAI 兼容：按服务要求填写 Key，可留空给本地服务。</li>
-                            <li>模型默认：<code>translategemma</code>。</li>
-                        </ul>
-                    </article>
-
-                    <article class="jyt-engine-card">
-                        <div class="jyt-engine-card-head">
                             <h3>Google 翻译</h3>
                             <span>google</span>
                         </div>
@@ -429,7 +408,7 @@
                         </div>
                         <p>
                             如果 Ollama 中的模型名是 <code>translategemma</code> 或
-                            <code>translategemma:*</code>，插件会自动使用专用翻译模板。
+                            <code>translategemma:*</code>，插件会自动使用专用翻译模板。请在「大模型翻译 → Ollama」中选择该模型。
                         </p>
                         <div class="jyt-code-row">
                             <code>ollama pull translategemma</code>
@@ -444,8 +423,8 @@
             <section class="jyt-help-section">
                 <h2>本地 OpenAI 兼容服务</h2>
                 <p>
-                    这些工具通常可以通过“自定义 OpenAI 兼容”接入。因为当前设置页会要求 API Key，本地服务没有 Key 时可先填
-                    <code>local</code>，如果服务拒绝 Authorization 头，再改用支持可选 Key 的“专用大模型翻译 -> OpenAI 兼容”路径。
+                    这些工具通常可以通过「大模型翻译 → 自定义 OpenAI 兼容」接入。因为当前设置页会要求 API Key，本地服务没有 Key 时可先填
+                    <code>local</code>。
                 </p>
                 <div class="jyt-help-table-wrap">
                     <table class="jyt-help-table">
