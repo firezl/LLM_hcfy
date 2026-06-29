@@ -113,6 +113,139 @@ function buildGlossaryLines(glossaryTerms) {
     return lines.join("\n");
 }
 
+function normalizeContextWhitespace(text) {
+    return String(text || "").replace(/\s+/g, " ").trim();
+}
+
+function getContextFieldValues(context) {
+    const page = context?.page || {};
+    return {
+        before: normalizeContextWhitespace(context?.before || ""),
+        after: normalizeContextWhitespace(context?.after || ""),
+        block: normalizeContextWhitespace(context?.block || ""),
+        pageTitle: normalizeContextWhitespace(page.title || ""),
+        pageDomain: normalizeContextWhitespace(page.domain || ""),
+        pageLang: normalizeContextWhitespace(page.lang || ""),
+        selectedText: normalizeContextWhitespace(
+            context?.selectedText || "",
+        ),
+    };
+}
+
+export function buildContextBlock(context) {
+    if (!context || typeof context !== "object") {
+        return "";
+    }
+
+    const fields = getContextFieldValues(context);
+    const parts = [];
+    if (fields.pageTitle) {
+        parts.push(`网页标题: ${fields.pageTitle}`);
+    }
+    if (fields.pageDomain) {
+        parts.push(`网页域名: ${fields.pageDomain}`);
+    }
+    if (fields.pageLang) {
+        parts.push(`网页语言: ${fields.pageLang}`);
+    }
+    if (fields.block) {
+        parts.push(`当前段落: ${fields.block}`);
+    }
+    if (fields.before) {
+        parts.push(`前文: ${fields.before}`);
+    }
+    if (fields.after) {
+        parts.push(`后文: ${fields.after}`);
+    }
+    if (fields.selectedText) {
+        parts.push(`划选文本: ${fields.selectedText}`);
+    }
+
+    return parts.join("\n");
+}
+
+function resolvePromptMode(options) {
+    const mode = String(options?.context?.mode || "").trim();
+    if (mode === "lightweight" || mode === "enhanced") {
+        return mode;
+    }
+    return "off";
+}
+
+function appendGlossaryConstraint(parts, glossaryTerms) {
+    const glossaryBlock = buildGlossaryConstraint(glossaryTerms).trimStart();
+    if (glossaryBlock) {
+        parts.push(glossaryBlock);
+    }
+    return parts.join("\n");
+}
+
+function buildDefaultSystemPrompt(_text, to, options) {
+    const targetLang = getLanguageDisplayName(to);
+    const mode = resolvePromptMode(options);
+    const glossaryTerms = options?.glossaryTerms;
+
+    if (mode === "lightweight") {
+        return appendGlossaryConstraint(
+            [
+                `请把【划选文本】翻译成${targetLang}。前后文只用于判断含义，不要翻译前后文。只输出译文。`,
+            ],
+            glossaryTerms,
+        );
+    }
+
+    if (mode === "enhanced") {
+        return appendGlossaryConstraint(
+            [
+                "你是一个浏览器划词翻译插件的翻译引擎。",
+                `请根据网页上下文，将用户划选文本翻译成简洁自然的${targetLang}。`,
+                "要求：",
+                "1. 只翻译划选文本。",
+                "2. 前文、后文和当前段落只用于消歧。",
+                "3. 不要解释。",
+                "4. 不要翻译整个段落。",
+                "5. 保留代码、变量名、公式、URL。",
+            ],
+            glossaryTerms,
+        );
+    }
+
+    return appendGlossaryConstraint(
+        [`请将以下内容翻译成${targetLang}，只输出译文。`],
+        glossaryTerms,
+    );
+}
+
+function buildDefaultUserPrompt(text, to, options) {
+    const targetLang = getLanguageDisplayName(to);
+    const mode = resolvePromptMode(options);
+    const fields = getContextFieldValues(options?.context);
+    const selected = String(text || "");
+
+    if (mode === "lightweight") {
+        return [
+            `前文：${fields.before}`,
+            `划选文本：${selected}`,
+            `后文：${fields.after}`,
+        ].join("\n");
+    }
+
+    if (mode === "enhanced") {
+        return [
+            `网页标题：${fields.pageTitle}`,
+            `网页域名：${fields.pageDomain}`,
+            `前文：${fields.before}`,
+            `划选文本：${selected}`,
+            `后文：${fields.after}`,
+            `当前段落：${fields.block}`,
+            "",
+            `${targetLang}译文：`,
+        ].join("\n");
+    }
+
+    return selected;
+}
+
 function buildPromptWithTemplate(
     template,
     text,
@@ -131,12 +264,29 @@ function buildPromptWithTemplate(
         options?.glossaryTerms,
     ).trimStart();
     const glossaryLines = buildGlossaryLines(options?.glossaryTerms);
+    const contextBlock = buildContextBlock(options?.context);
+    const fields = getContextFieldValues(options?.context);
 
     let prompt = normalizedTemplate
         .replaceAll("{targetLang}", targetLang)
+        .replaceAll("{target_language}", targetLang)
         .replaceAll("{text}", String(text || ""))
+        .replaceAll("{selected_text}", String(text || ""))
         .replaceAll("{glossary}", glossaryLines)
-        .replaceAll("{glossaryConstraint}", glossaryConstraint);
+        .replaceAll("{glossaryConstraint}", glossaryConstraint)
+        .replaceAll("{context}", contextBlock)
+        .replaceAll("{before}", fields.before)
+        .replaceAll("{after}", fields.after)
+        .replaceAll("{before_context}", fields.before)
+        .replaceAll("{after_context}", fields.after)
+        .replaceAll("{block}", fields.block)
+        .replaceAll("{block_text}", fields.block)
+        .replaceAll("{pageTitle}", fields.pageTitle)
+        .replaceAll("{pageDomain}", fields.pageDomain)
+        .replaceAll("{pageLang}", fields.pageLang)
+        .replaceAll("{page_title}", fields.pageTitle)
+        .replaceAll("{page_domain}", fields.pageDomain)
+        .replaceAll("{page_lang}", fields.pageLang);
 
     if (appendTextWhenMissing && !normalizedTemplate.includes("{text}")) {
         prompt += `\n输入:\n${text}`;
@@ -154,25 +304,6 @@ function renderPromptTemplate(template, text, to, options) {
         () => "",
         false,
     );
-}
-
-function buildDefaultSystemPrompt(_text, to, options) {
-    const targetLang = getLanguageDisplayName(to);
-    const glossaryBlock = buildGlossaryConstraint(
-        options?.glossaryTerms,
-    ).trimStart();
-    const parts = [
-        `你是一个专业翻译引擎。请把用户提供的文本翻译为${targetLang}，准确保留原意、语气、格式和术语。`,
-        "只输出译文，不要输出解释、前后缀、Markdown 包裹或其它多余内容。",
-    ];
-    if (glossaryBlock) {
-        parts.push(glossaryBlock);
-    }
-    return parts.join("\n");
-}
-
-function buildDefaultUserPrompt(text, to, options) {
-    return String(text || "");
 }
 
 export function buildPrompt(text, to, options) {
@@ -250,4 +381,3 @@ export function buildTranslationgemmaPrompt(text, from, to, options) {
 
     return instruction;
 }
-

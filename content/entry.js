@@ -9,6 +9,7 @@ import "./modules/browser-translate.js";
 import "./modules/pdf-prompt.js";
 import "./modules/ui-host.js";
 import "./modules/ui.js";
+import "./modules/context-collector.js";
 import "./modules/translate-port.js";
 import "./modules/translate-orchestrator.js";
 import "./modules/bootstrap.js";
@@ -43,6 +44,7 @@ import "./modules/bootstrap.js";
         globalThis.JYT_CS_BROWSER_AI,
         globalThis.JYT_CS_UI_HOST,
         globalThis.JYT_CS_UI,
+        globalThis.JYT_CS_CONTEXT,
         globalThis.JYT_CS_PORT,
         globalThis.JYT_CS_ORCHESTRATOR,
     ];

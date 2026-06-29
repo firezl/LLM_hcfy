@@ -76,6 +76,10 @@
                         ...app.DEFAULT_SETTINGS,
                         ...safeSyncItems,
                     };
+                    if (typeof app.resolveContextMode === "function") {
+                        state.runtimeSettings.context_translate_mode =
+                            app.resolveContextMode(state.runtimeSettings);
+                    }
                     app.applyTheme(state.runtimeSettings.theme_mode || "auto");
                 });
             }

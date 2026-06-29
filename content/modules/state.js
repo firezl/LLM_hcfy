@@ -3,6 +3,7 @@
     function createSessionState(defaultSettings) {
         return {
             lastSelection: "",
+            lastSelectionContext: null,
             lastSelectionPoint: null,
             isPinned: false,
             translatePort: null,

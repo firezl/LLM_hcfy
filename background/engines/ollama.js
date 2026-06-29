@@ -69,6 +69,7 @@ function buildOllamaPromptParts(model, request, from, to) {
             request?.promptTemplates?.legacy || request?.customPromptTemplate,
         systemPromptTemplate: request?.promptTemplates?.system,
         userPromptTemplate: request?.promptTemplates?.user,
+        context: request?.context,
     });
 }
 

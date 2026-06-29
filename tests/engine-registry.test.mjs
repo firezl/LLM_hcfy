@@ -44,6 +44,12 @@ describe("engine-registry", () => {
         assert.ok(LLM_ENGINE_IDS.includes("ollama"));
     });
 
+    it("excludes machine translation and browser engines from llm list", () => {
+        for (const engineId of ["google", "bing", "deepl", "deeplx", "browser"]) {
+            assert.equal(LLM_ENGINE_IDS.includes(engineId), false);
+        }
+    });
+
     it("migrates removed special_translate engine to ollama", () => {
         assert.equal(resolveTranslateEngine({ engine: "special_translate" }), "ollama");
     });

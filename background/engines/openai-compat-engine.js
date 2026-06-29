@@ -74,6 +74,7 @@ export function createOpenAICompatTranslate(config) {
                 request?.customPromptTemplate,
             systemPromptTemplate: request?.promptTemplates?.system,
             userPromptTemplate: request?.promptTemplates?.user,
+            context: request?.context,
         });
         const messages = buildOpenAIStyleMessages(promptParts);
 

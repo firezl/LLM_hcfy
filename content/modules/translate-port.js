@@ -413,6 +413,10 @@
                     preferredFrom,
                     preferredTo,
                     engine,
+                    context:
+                        extraOptions.context !== undefined
+                            ? extraOptions.context
+                            : state.lastSelectionContext || null,
                 });
 
                 if (!sent) {

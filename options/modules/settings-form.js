@@ -28,6 +28,17 @@
             DEFAULT_OPENROUTER_FREE_MODEL,
         } = modelLists;
 
+        function resolveContextMode(items) {
+            const raw = String(items?.context_translate_mode || "").trim();
+            if (raw === "off" || raw === "lightweight" || raw === "enhanced") {
+                return raw;
+            }
+            if (items?.context_translate_enabled === false) {
+                return "off";
+            }
+            return "enhanced";
+        }
+
         const { normalizeShortcut } = shortcutsModule;
         const modelListLoaded = deps.modelListLoaded;
         const registry = global.JYT_ENGINE_REGISTRY || {};
@@ -507,6 +518,10 @@
                         );
                         els.source_lang.value = items.source_lang || "auto";
                         els.target_lang.value = items.target_lang || "auto";
+                        if (els.context_translate_mode) {
+                            els.context_translate_mode.value =
+                                resolveContextMode(items);
+                        }
                         els.openai_api_url.value = items.openai_api_url;
                         els.openai_api_key.value = items.openai_api_key;
                         const savedOpenAIModel = String(
@@ -1108,6 +1123,10 @@
                 translate_shortcut: normalizeShortcut(fieldValue("translate_shortcut")),
                 source_lang: fieldValue("source_lang"),
                 target_lang: fieldValue("target_lang"),
+                context_translate_mode: fieldValue(
+                    "context_translate_mode",
+                    "enhanced",
+                ),
                 theme_mode: fieldValue("theme_mode", "auto"),
                 font_family: fieldValue("font_family"),
                 bubble_width_percent: clampPercent(

@@ -92,6 +92,7 @@ export async function streamQwenTranslate(request, port, state) {
             request?.promptTemplates?.legacy || request?.customPromptTemplate,
         systemPromptTemplate: request?.promptTemplates?.system,
         userPromptTemplate: request?.promptTemplates?.user,
+        context: request?.context,
     });
 
     if (!endpoint.ok) {

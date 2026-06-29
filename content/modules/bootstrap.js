@@ -29,6 +29,14 @@
                     if (key === "theme_mode") {
                         app.applyTheme(changes[key].newValue);
                     }
+                    if (
+                        key === "context_translate_mode" ||
+                        key === "context_translate_enabled"
+                    ) {
+                        state.runtimeSettings.context_translate_mode =
+                            app.resolveContextMode?.(state.runtimeSettings) ||
+                            state.runtimeSettings.context_translate_mode;
+                    }
                 }
                 return;
             }
@@ -59,6 +67,9 @@
             const text = sel.toString();
             if (text && text.trim().length > 0) {
                 state.lastSelection = text;
+                state.lastSelectionContext = app.collectSelectionContext
+                    ? app.collectSelectionContext(sel)
+                    : null;
                 const btn = app.getTranslateBtn?.();
                 if (btn) {
                     let x;
@@ -75,6 +86,7 @@
                     app.positionButton(btn, x, y);
                 }
             } else {
+                state.lastSelectionContext = null;
                 app.hideButton();
             }
         }
@@ -139,6 +151,9 @@
 
             e.preventDefault();
             state.lastSelection = text;
+            state.lastSelectionContext = app.collectSelectionContext
+                ? app.collectSelectionContext(sel)
+                : null;
             const point = app.getSelectionAnchorPoint(sel);
             app.triggerTranslate(text, point.x, point.y);
         });
@@ -307,6 +322,7 @@
 
                 state.lastSelection = text;
                 state.lastSelectionPoint = { x, y };
+                state.lastSelectionContext = null;
 
                 const btn = app.getTranslateBtn?.();
                 if (btn) {
@@ -403,7 +419,11 @@
             }
 
             state.lastSelection = text;
-            const point = app.getSelectionAnchorPoint(window.getSelection());
+            const sel = window.getSelection();
+            state.lastSelectionContext = app.collectSelectionContext
+                ? app.collectSelectionContext(sel)
+                : null;
+            const point = app.getSelectionAnchorPoint(sel);
             app.triggerTranslate(text, point.x, point.y);
             return false;
         });

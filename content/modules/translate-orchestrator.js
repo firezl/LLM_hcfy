@@ -5,12 +5,6 @@
 
             function maybeNormalizePdfSelectionText(text, engine) {
                 const pdfText = globalThis.JYT_PDF_TEXT || {};
-                if (typeof pdfText.isMachineTranslateEngine !== "function") {
-                    return text;
-                }
-                if (!pdfText.isMachineTranslateEngine(engine)) {
-                    return text;
-                }
                 if (typeof pdfText.isPdfSelectionContext !== "function") {
                     return text;
                 }
@@ -128,6 +122,7 @@
                         {
                             allowBrowserFallback: false,
                             isThinking: !!settings[backgroundEngine],
+                            context: state.lastSelectionContext,
                         },
                     );
                     return;
@@ -187,7 +182,10 @@
                     streamEl,
                     thoughtEl,
                     thoughtDetails,
-                    { allowBrowserFallback: engine === "auto" },
+                    {
+                        allowBrowserFallback: engine === "auto",
+                        context: state.lastSelectionContext,
+                    },
                 );
             }
 
@@ -204,6 +202,12 @@
             function triggerTranslate(selection, x, y) {
                 const text = (selection || "").trim();
                 if (!text) return;
+
+                const sel = window.getSelection();
+                if (app.collectSelectionContext && sel?.toString?.().trim()) {
+                    state.lastSelectionContext =
+                        app.collectSelectionContext(sel);
+                }
 
                 app.cancelActiveTranslateRequest();
                 app.hideButton();

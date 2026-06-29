@@ -5,8 +5,10 @@ import {
     getPromptSettingKeys,
     getTranslateHandlerKey,
     isContentOnlyEngine,
+    LLM_ENGINE_IDS,
     resolveTranslateEngine,
 } from "../libs/engine-registry.mjs";
+import { sanitizeTranslateContext, resolveContextMode } from "../libs/context-collector.mjs";
 import { postTranslateError } from "./port-utils.js";
 import { getMatchedGlossaryTerms } from "./term.js";
 import { TRANSLATE_HANDLERS } from "./translate-handlers.js";
@@ -52,11 +54,20 @@ export async function handleTranslateStart(message, port, state) {
             ? settings[customPayloadSettingKey]
             : "";
 
+        const isLlm =
+            engine === "auto" || LLM_ENGINE_IDS.includes(engine);
+        const contextMode = resolveContextMode(settings);
+        const context =
+            contextMode !== "off" && isLlm && message?.context
+                ? sanitizeTranslateContext(message.context, contextMode)
+                : null;
+
         const requestWithGlossary = {
             ...message,
             // 覆盖 message 中可能存在的 settings（content 不再发送，但即便发送也不采信）。
             settings,
             glossaryTerms,
+            context,
             customPromptTemplate: legacyCustomPromptTemplate,
             promptTemplates: {
                 legacy: legacyCustomPromptTemplate,
