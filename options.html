@@ -83,6 +83,16 @@
                         <option value="es">西班牙文</option>
                         <option value="ru">俄文</option>
                     </select>
+
+                    <label>智能上下文翻译（仅大模型）</label>
+                    <select id="context_translate_mode" data-jyt-setting="context_translate_mode">
+                        <option value="off">关闭</option>
+                        <option value="lightweight">轻量（前后文消歧）</option>
+                        <option value="enhanced">增强（全上下文）</option>
+                    </select>
+                    <div class="jyt-hint">
+                        仅对大模型引擎生效。关闭则回退纯划选翻译。
+                    </div>
                 </div>
 
                 <div class="jyt-section">

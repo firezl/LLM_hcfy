@@ -173,5 +173,6 @@ export const DEFAULT_SETTINGS = {
     glossary_enabled: true,
     glossary_terms: [],
     glossary_version: 1,
+    context_translate_mode: "enhanced",
     config_updated_at: 0,
 };
