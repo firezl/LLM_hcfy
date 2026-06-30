@@ -54,9 +54,12 @@ import { initSettingsCache } from "./settings-cache.js";
 import { initBackgroundI18n } from "./i18n.js";
 
 void ensureTermStoreReady();
-void initBackgroundI18n().then(() => {
-    initContextMenu();
-});
+// contextMenus.onClicked 等事件监听器必须在 Service Worker 顶层同步注册，
+// 否则 SW 被右键点击唤醒时，事件会在 .then 回调注册监听器之前派发而被丢弃，
+// 表现为“右键翻译无反应”。菜单标题依赖的 i18n 改为并行加载，加载完成后
+// 通过 onLangChange -> refreshContextMenuTitle 刷新标题即可。
+initContextMenu();
+void initBackgroundI18n();
 initOnboarding();
 initSettingsCache();
 
