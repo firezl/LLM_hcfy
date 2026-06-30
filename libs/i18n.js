@@ -141,11 +141,6 @@
         if (titleKey && "title" in el) {
             el.title = t(titleKey);
         }
-
-        const htmlKey = el.getAttribute("data-i18n-html");
-        if (htmlKey) {
-            el.innerHTML = t(htmlKey);
-        }
     }
 
     function applyDom(root) {
@@ -158,7 +153,7 @@
         }
         const nodes = scope.querySelectorAll
             ? scope.querySelectorAll(
-                  "[data-i18n], [data-i18n-ph], [data-i18n-title], [data-i18n-html]",
+                  "[data-i18n], [data-i18n-ph], [data-i18n-title]",
               )
             : [];
         for (const el of nodes) {
