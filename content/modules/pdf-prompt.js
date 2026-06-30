@@ -2,6 +2,30 @@
 (function (global) {
     function install(app) {
         const state = app.state;
+        const t = (key, vars) =>
+            typeof app.t === "function" ? app.t(key, vars) : key;
+
+        function refreshPdfPromptI18n() {
+            if (!state.pdfPromptEl) {
+                return;
+            }
+            const title = state.pdfPromptEl.querySelector(".jyt-pdf-prompt-title");
+            const desc = state.pdfPromptEl.querySelector(".jyt-pdf-prompt-desc");
+            const openBtn = state.pdfPromptEl.querySelector(".jyt-pdf-open");
+            const browserBtn = state.pdfPromptEl.querySelector(".jyt-pdf-browser");
+            if (title) title.textContent = t("pdfPrompt.title");
+            if (desc) desc.textContent = t("pdfPrompt.desc");
+            if (openBtn) openBtn.textContent = t("pdfPrompt.open");
+            if (browserBtn) browserBtn.textContent = t("pdfPrompt.browser");
+            if (state.pdfPromptState?.pdfUrl) {
+                const remain =
+                    state.pdfPromptCountdownDeadline != null
+                        ? Math.max(0, state.pdfPromptCountdownDeadline - Date.now())
+                        : app.PDF_PROMPT_AUTO_CLOSE_MS;
+                updatePdfPromptCountdown(remain);
+            }
+        }
+
         function isLikelyPdfUrl(url) {
             if (!url || typeof url !== "string") return false;
 
@@ -50,18 +74,19 @@
             state.pdfPromptEl = document.createElement("div");
             state.pdfPromptEl.className = "jyt-pdf-prompt";
             state.pdfPromptEl.innerHTML = `
-                    <div class="jyt-pdf-prompt-title">检测到可能是 PDF</div>
-                    <div class="jyt-pdf-prompt-desc">是否使用插件内置查看器打开？</div>
-                    <div class="jyt-pdf-prompt-countdown">10 秒后将自动使用浏览器打开</div>
+                    <div class="jyt-pdf-prompt-title"></div>
+                    <div class="jyt-pdf-prompt-desc"></div>
+                    <div class="jyt-pdf-prompt-countdown"></div>
                     <div class="jyt-pdf-progress" aria-hidden="true">
                         <div class="jyt-pdf-progress-bar"></div>
                     </div>
                     <div class="jyt-pdf-prompt-status"></div>
                     <div class="jyt-pdf-prompt-actions">
-                        <button type="button" class="jyt-pdf-open">用划词翻译插件打开</button>
-                        <button type="button" class="jyt-pdf-browser">保持浏览器打开</button>
+                        <button type="button" class="jyt-pdf-open"></button>
+                        <button type="button" class="jyt-pdf-browser"></button>
                     </div>
                 `;
+            refreshPdfPromptI18n();
 
             const openBtn = state.pdfPromptEl.querySelector(".jyt-pdf-open");
             const browserBtn =
@@ -78,7 +103,7 @@
 
                 openBtn.disabled = true;
                 browserBtn.disabled = true;
-                updatePdfPromptStatus("正在打开插件内置 PDF 查看器...");
+                updatePdfPromptStatus(t("pdfPrompt.opening"));
 
                 try {
                     if (state.pdfPromptState.source === "background") {
@@ -105,7 +130,10 @@
                     openBtn.disabled = false;
                     browserBtn.disabled = false;
                     const message = err?.message || String(err);
-                    updatePdfPromptStatus(`打开失败：${message}`, true);
+                    updatePdfPromptStatus(
+                        t("pdfPrompt.openFailed", { error: message }),
+                        true,
+                    );
                 }
             });
 
@@ -133,6 +161,7 @@
             }
             state.pdfPromptEl = null;
             state.pdfPromptState = null;
+            state.pdfPromptCountdownDeadline = null;
         }
 
         function clearPdfPromptAutoCloseTimer() {
@@ -144,6 +173,7 @@
                 window.clearInterval(state.pdfPromptCountdownInterval);
                 state.pdfPromptCountdownInterval = null;
             }
+            state.pdfPromptCountdownDeadline = null;
         }
 
         function updatePdfPromptCountdown(msRemaining) {
@@ -168,7 +198,9 @@
                 Math.min(1, remaining / app.PDF_PROMPT_AUTO_CLOSE_MS),
             );
 
-            countdownEl.textContent = `${remainSeconds} 秒后将自动使用浏览器打开`;
+            countdownEl.textContent = t("pdfPrompt.countdown", {
+                seconds: remainSeconds,
+            });
             progressBarEl.style.width = `${Math.round(ratio * 100)}%`;
         }
 
@@ -217,6 +249,7 @@
             }
 
             const deadline = Date.now() + app.PDF_PROMPT_AUTO_CLOSE_MS;
+            state.pdfPromptCountdownDeadline = deadline;
             updatePdfPromptCountdown(app.PDF_PROMPT_AUTO_CLOSE_MS);
             state.pdfPromptCountdownInterval = window.setInterval(() => {
                 const remain = deadline - Date.now();
@@ -261,24 +294,15 @@
             ensurePdfPrompt();
             if (state.pdfPromptState.isPdf === false) {
                 setPdfPromptOpenEnabled(false);
-                updatePdfPromptStatus(
-                    "校验结果：该链接不像 PDF（已禁用划词翻译插件打开）",
-                    true,
-                );
+                updatePdfPromptStatus(t("pdfPrompt.verify.notLikelyPdf"), true);
                 return;
             }
 
             setPdfPromptOpenEnabled(true);
             if (state.pdfPromptState.isPdf === true) {
-                updatePdfPromptStatus(
-                    "校验结果：该链接是 PDF，可以选择用划词翻译插件打开。",
-                    false,
-                );
+                updatePdfPromptStatus(t("pdfPrompt.verify.isPdf"), false);
             } else {
-                updatePdfPromptStatus(
-                    "正在校验文件类型，可稍候再决定。",
-                    false,
-                );
+                updatePdfPromptStatus(t("pdfPrompt.verify.checking"), false);
             }
 
             schedulePdfPromptAutoClose();
@@ -302,28 +326,22 @@
 
                 if (!result?.ok) {
                     setPdfPromptOpenEnabled(true);
-                    updatePdfPromptStatus("校验失败，可按需继续打开。", true);
+                    updatePdfPromptStatus(t("pdfPrompt.verify.failed"), true);
                     return;
                 }
 
                 state.pdfPromptState.isPdf = result.isPdf;
                 if (result.isPdf === false) {
                     setPdfPromptOpenEnabled(false);
-                    updatePdfPromptStatus(
-                        "校验结果：该链接不是 PDF（将保持浏览器默认行为）。",
-                        true,
-                    );
+                    updatePdfPromptStatus(t("pdfPrompt.verify.notPdf"), true);
                     return;
                 }
 
                 setPdfPromptOpenEnabled(true);
                 if (result.isPdf === true) {
-                    updatePdfPromptStatus("校验结果：确认是 PDF。", false);
+                    updatePdfPromptStatus(t("pdfPrompt.verify.confirmed"), false);
                 } else {
-                    updatePdfPromptStatus(
-                        "未能完全确认类型，但可按需继续打开。",
-                        false,
-                    );
+                    updatePdfPromptStatus(t("pdfPrompt.verify.uncertain"), false);
                 }
             } catch (err) {
                 if (
@@ -333,7 +351,10 @@
                     return;
                 }
                 setPdfPromptOpenEnabled(true);
-                updatePdfPromptStatus("校验请求失败，可按需继续打开。", true);
+                updatePdfPromptStatus(
+                    t("pdfPrompt.verify.requestFailed"),
+                    true,
+                );
             }
         }
 
@@ -374,7 +395,7 @@
                     if (state.pdfPromptState.isPdf === false) {
                         setPdfPromptOpenEnabled(false);
                         updatePdfPromptStatus(
-                            "校验结果：该链接不是 PDF。",
+                            t("pdfPrompt.verify.notPdfShort"),
                             true,
                         );
                         return false;
@@ -382,10 +403,13 @@
 
                     setPdfPromptOpenEnabled(true);
                     if (state.pdfPromptState.isPdf === true) {
-                        updatePdfPromptStatus("校验结果：确认是 PDF。", false);
+                        updatePdfPromptStatus(
+                            t("pdfPrompt.verify.confirmed"),
+                            false,
+                        );
                     } else {
                         updatePdfPromptStatus(
-                            "未能完全确认类型，但你仍可按需选择划词翻译插件打开。",
+                            t("pdfPrompt.verify.uncertainWithChoice"),
                             false,
                         );
                     }
@@ -431,6 +455,7 @@
             checkPdfUrlAndUpdatePrompt,
             registerPdfRuntimeListener,
             restorePendingPdfPrompt,
+            refreshPdfPromptI18n,
         });
     }
 

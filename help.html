@@ -4,167 +4,143 @@
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="color-scheme" content="light dark" />
-        <title>LLM划词翻译 - 快速上手</title>
+        <title data-i18n="help.page.title"></title>
         <link rel="stylesheet" href="styles.css" />
     </head>
     <body id="jyt-help-body">
         <main class="jyt-help-shell">
             <header class="jyt-help-hero">
                 <div>
-                    <p class="jyt-help-kicker">快速上手</p>
-                    <h1>按设置页里的真实引擎完成配置</h1>
-                    <p>
-                        先在“通用”里选择首选翻译引擎。如果选择“大模型翻译”，再到“引擎”里选择具体模型来源。
-                        API Key 会保存在本地浏览器存储中，不会通过 WebDAV 配置同步上传。
-                    </p>
+                    <p class="jyt-help-kicker" data-i18n="help.kicker"></p>
+                    <h1 data-i18n="help.hero.title"></h1>
+                    <p data-i18n="help.hero.desc"></p>
                 </div>
-                <a class="jyt-help-primary" href="options.html">打开设置</a>
+                <a class="jyt-help-primary" href="options.html" data-i18n="common.openSettings"></a>
             </header>
 
             <section class="jyt-help-section">
-                <h2>先选哪一个</h2>
+                <h2 data-i18n="help.section.choose.title"></h2>
                 <div class="jyt-help-steps">
                     <article>
                         <span>1</span>
-                        <h3>想最快试用</h3>
-                        <p>
-                            选择“OpenRouter”，申请 Key 后保留默认模型
-                            <code>openrouter/free</code>。免费模型有额度和稳定性限制。
-                        </p>
+                        <h3 data-i18n="help.section.choose.fast.title"></h3>
+                        <p data-i18n="help.section.choose.fast.desc"></p>
                     </article>
                     <article>
                         <span>2</span>
-                        <h3>想要本地隐私</h3>
-                        <p>
-                            选择“Ollama 本地服务”，先安装 Ollama 并拉取模型，再回到设置页选择检测到的模型。
-                        </p>
+                        <h3 data-i18n="help.section.choose.local.title"></h3>
+                        <p data-i18n="help.section.choose.local.desc"></p>
                     </article>
                     <article>
                         <span>3</span>
-                        <h3>想要稳定质量</h3>
-                        <p>
-                            选择 OpenAI、Gemini、Claude、DeepSeek、Qwen、GLM、xAI Grok 或 Xiaomi MiMo，按平台申请 Key。
-                        </p>
+                        <h3 data-i18n="help.section.choose.quality.title"></h3>
+                        <p data-i18n="help.section.choose.quality.desc"></p>
                     </article>
                 </div>
             </section>
 
             <section class="jyt-help-section">
-                <h2>通用引擎</h2>
+                <h2 data-i18n="help.section.general.title"></h2>
                 <div class="jyt-engine-grid">
                     <article class="jyt-engine-card">
                         <div class="jyt-engine-card-head">
-                            <h3>自动</h3>
+                            <h3 data-i18n="common.auto"></h3>
                             <span>auto</span>
                         </div>
-                        <p>
-                            设置页默认项。当前路由会走 OpenAI 适配，因此仍需要配置 OpenAI API 地址、Key 和模型。
-                        </p>
+                        <p data-i18n="help.engine.auto.desc"></p>
                         <ul class="jyt-help-mini-list">
-                            <li>适合：只想保持默认行为。</li>
-                            <li>设置：通用 -> 首选翻译引擎 -> 自动。</li>
+                            <li data-i18n="help.engine.auto.suitable"></li>
+                            <li data-i18n="help.engine.auto.setup"></li>
                         </ul>
                     </article>
 
                     <article class="jyt-engine-card">
                         <div class="jyt-engine-card-head">
-                            <h3>大模型翻译</h3>
+                            <h3 data-i18n="help.engine.llm.title"></h3>
                             <span>llm</span>
                         </div>
-                        <p>
-                            这是所有 LLM 提供方的总入口。选择后，在“引擎”页的“大模型提供方”里选择 OpenAI、OpenRouter、Ollama 等具体引擎。
-                        </p>
+                        <p data-i18n="help.engine.llm.desc"></p>
                         <ul class="jyt-help-mini-list">
-                            <li>适合：需要术语、Prompt、思考过程或更自然译文。</li>
-                            <li>设置：通用 -> 大模型翻译；引擎 -> 大模型提供方。</li>
+                            <li data-i18n="help.engine.llm.suitable"></li>
+                            <li data-i18n="help.engine.llm.setup"></li>
                         </ul>
                     </article>
 
                     <article class="jyt-engine-card">
                         <div class="jyt-engine-card-head">
-                            <h3>Google 翻译</h3>
+                            <h3 data-i18n="help.engine.google.title"></h3>
                             <span>google</span>
                         </div>
-                        <p>
-                            传统机器翻译入口，不需要在设置页填写 API Key。适合做轻量兜底。
-                        </p>
+                        <p data-i18n="help.engine.google.desc"></p>
                         <ul class="jyt-help-mini-list">
-                            <li>适合：快速、免费、对质量要求不高的网页阅读。</li>
-                            <li>设置：通用 -> 首选翻译引擎 -> 谷歌翻译。</li>
+                            <li data-i18n="help.engine.google.suitable"></li>
+                            <li data-i18n="help.engine.google.setup"></li>
                         </ul>
                     </article>
 
                     <article class="jyt-engine-card">
                         <div class="jyt-engine-card-head">
-                            <h3>Bing 翻译</h3>
+                            <h3 data-i18n="help.engine.bing.title"></h3>
                             <span>bing</span>
                         </div>
-                        <p>
-                            传统机器翻译入口，不需要在设置页填写 API Key。可作为 Google 翻译不可用时的备用选择。
-                        </p>
+                        <p data-i18n="help.engine.bing.desc"></p>
                         <ul class="jyt-help-mini-list">
-                            <li>适合：不想申请 API Key 的用户。</li>
-                            <li>设置：通用 -> 首选翻译引擎 -> Bing翻译。</li>
+                            <li data-i18n="help.engine.bing.suitable"></li>
+                            <li data-i18n="help.engine.bing.setup"></li>
                         </ul>
                     </article>
 
                     <article class="jyt-engine-card">
                         <div class="jyt-engine-card-head">
-                            <h3>DeepL 翻译</h3>
+                            <h3 data-i18n="help.engine.deepl.title"></h3>
                             <span>deepl</span>
                         </div>
-                        <p>
-                            官方 DeepL API，翻译质量高，需在设置页填写 API Key。
-                        </p>
+                        <p data-i18n="help.engine.deepl.desc"></p>
                         <ul class="jyt-help-mini-list">
-                            <li>免费版：<code>https://api-free.deepl.com/v2/translate</code></li>
-                            <li>Pro 版：<code>https://api.deepl.com/v2/translate</code></li>
-                            <li>设置：通用 -> DeepL 翻译；引擎 -> 填写 API Key。</li>
+                            <li><span data-i18n="help.engine.deepl.freeLabel"></span><code>https://api-free.deepl.com/v2/translate</code></li>
+                            <li><span data-i18n="help.engine.deepl.proLabel"></span><code>https://api.deepl.com/v2/translate</code></li>
+                            <li data-i18n="help.engine.deepl.setup"></li>
                         </ul>
                     </article>
 
                     <article class="jyt-engine-card">
                         <div class="jyt-engine-card-head">
-                            <h3>DeepLX 翻译</h3>
+                            <h3 data-i18n="help.engine.deeplx.title"></h3>
                             <span>deeplx</span>
                         </div>
-                        <p>
-                            连接自托管 DeepLX 代理服务，无需官方 API Key，适合本地或私有部署。
-                        </p>
+                        <p data-i18n="help.engine.deeplx.desc"></p>
                         <ul class="jyt-help-mini-list">
-                            <li>默认地址：<code>http://localhost:1188/translate</code></li>
-                            <li>若服务启用了 TOKEN，在引擎设置中填写访问令牌。</li>
-                            <li>也支持 <code>/v2/translate</code> 官方兼容端点。</li>
+                            <li><span data-i18n="help.engine.deeplx.defaultLabel"></span><code>http://localhost:1188/translate</code></li>
+                            <li data-i18n="help.engine.deeplx.token"></li>
+                            <li data-i18n="help.engine.deeplx.v2"></li>
                         </ul>
                     </article>
 
                     <article class="jyt-engine-card">
                         <div class="jyt-engine-card-head">
-                            <h3>浏览器 AI</h3>
+                            <h3 data-i18n="help.engine.browser.title"></h3>
                             <span>browser</span>
                         </div>
-                        <p>
-                            实验入口，面向最新版 Chrome / Edge 的浏览器内置 Translation API。翻译在<strong>网页划词时于页面内完成</strong>，不经过扩展后台；Firefox 不支持，PDF 阅读器内请改用其他引擎。
-                        </p>
+                        <p data-i18n="help.engine.browser.desc"></p>
                         <ul class="jyt-help-mini-list">
-                            <li>适合：离线/低延迟的简单网页翻译。</li>
-                            <li>复杂推理或 PDF：请使用大模型翻译或 Ollama。</li>
+                            <li data-i18n="help.engine.browser.suitable"></li>
+                            <li data-i18n="help.engine.browser.note"></li>
                         </ul>
                     </article>
                 </div>
             </section>
 
             <section class="jyt-help-section">
-                <h2>大模型引擎逐项配置</h2>
+                <h2 data-i18n="help.section.llmTable.title"></h2>
                 <div class="jyt-help-table-wrap">
                     <table class="jyt-help-table jyt-engine-guide-table">
                         <thead>
                             <tr>
-                                <th>引擎</th>
-                                <th>申请入口</th>
-                                <th>API 地址</th>
-                                <th>默认/示例模型</th>
-                                <th>填写要点</th>
+                                <th data-i18n="help.table.engine"></th>
+                                <th data-i18n="help.table.signup"></th>
+                                <th data-i18n="help.table.apiUrl"></th>
+                                <th data-i18n="help.table.defaultModel"></th>
+                                <th data-i18n="help.table.notes"></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -180,18 +156,14 @@
                                 </td>
                                 <td><code>https://api.openai.com/v1/chat/completions</code></td>
                                 <td><code>gpt-5.4-mini</code></td>
-                                <td>
-                                    选择“大模型翻译 -> OpenAI”。API 地址可留空，插件会使用默认地址；Key 必填。需要推理模型时再调整“是否开启思考模式”和推理强度。
-                                </td>
+                                <td data-i18n="help.table.note.openai"></td>
                             </tr>
                             <tr>
-                                <td>自定义 OpenAI 兼容</td>
-                                <td>按服务商提供</td>
+                                <td data-i18n="help.table.row.customOpenai.engine"></td>
+                                <td data-i18n="help.table.row.customOpenai.signup"></td>
                                 <td><code>https://your-endpoint/v1/chat/completions</code></td>
                                 <td><code>gpt-4o-mini</code> 或服务商模型名</td>
-                                <td>
-                                    适合 One API、New API、LiteLLM、LM Studio、llama.cpp server、LocalAI 等。当前设置保存会要求 API Key；本地服务没有 Key 时可填 <code>local</code> 作为占位。
-                                </td>
+                                <td data-i18n="help.table.note.customOpenai"></td>
                             </tr>
                             <tr>
                                 <td>OpenRouter</td>
@@ -205,9 +177,7 @@
                                 </td>
                                 <td><code>https://openrouter.ai/api/v1/chat/completions</code></td>
                                 <td><code>openrouter/free</code></td>
-                                <td>
-                                    最适合快速试用免费模型。插件会加载 OpenRouter 模型列表，并优先显示免费模型。免费路由可能因为额度、地区或模型状态失败。
-                                </td>
+                                <td data-i18n="help.table.note.openrouterLong"></td>
                             </tr>
                             <tr>
                                 <td>Gemini</td>
@@ -221,9 +191,7 @@
                                 </td>
                                 <td><code>https://generativelanguage.googleapis.com/v1beta/models</code></td>
                                 <td><code>gemini-flash-latest</code></td>
-                                <td>
-                                    API 地址填写 models 基础路径即可，插件会自动拼接 <code>:streamGenerateContent</code>。Gemma 系列不使用思考配置。
-                                </td>
+                                <td data-i18n="help.table.note.gemini"></td>
                             </tr>
                             <tr>
                                 <td>Claude</td>
@@ -237,9 +205,7 @@
                                 </td>
                                 <td><code>https://api.anthropic.com/v1/messages</code></td>
                                 <td><code>claude-sonnet-4-6</code></td>
-                                <td>
-                                    Key 必填。最大输出 Token 默认 <code>4096</code>。开启思考时，思考预算必须小于最大输出 Token。
-                                </td>
+                                <td data-i18n="help.table.note.claude"></td>
                             </tr>
                             <tr>
                                 <td>Qwen</td>
@@ -253,9 +219,7 @@
                                 </td>
                                 <td><code>https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions</code></td>
                                 <td><code>qwen3.5-plus</code></td>
-                                <td>
-                                    当前插件已升级至 DashScope compatible-mode 接口。开启思考后可设置 thinking budget，并选择是否保留思考内容。
-                                </td>
+                                <td data-i18n="help.table.note.qwen"></td>
                             </tr>
                             <tr>
                                 <td>DeepSeek</td>
@@ -269,9 +233,7 @@
                                 </td>
                                 <td><code>https://api.deepseek.com/chat/completions</code></td>
                                 <td><code>deepseek-v4-flash</code></td>
-                                <td>
-                                    Key 必填。需要推理内容时打开“是否开启思考模式”；插件会发送 thinking enabled/disabled 配置。
-                                </td>
+                                <td data-i18n="help.table.note.deepseek"></td>
                             </tr>
                             <tr>
                                 <td>GLM</td>
@@ -285,9 +247,7 @@
                                 </td>
                                 <td><code>https://open.bigmodel.cn/api/paas/v4/chat/completions</code></td>
                                 <td><code>glm-5.1</code></td>
-                                <td>
-                                    Key 必填。默认会清理思考内容，想在弹窗展示思考时打开“是否开启思考模式”并按需要关闭“清理思考”。
-                                </td>
+                                <td data-i18n="help.table.note.glm"></td>
                             </tr>
                             <tr>
                                 <td>Xiaomi MiMo</td>
@@ -301,9 +261,7 @@
                                 </td>
                                 <td><code>https://api.xiaomimimo.com/v1/chat/completions</code></td>
                                 <td><code>mimo-v2.5</code></td>
-                                <td>
-                                    Key 必填。该入口走 OpenAI 风格的 chat completions。最大输出 Token 可填 <code>0</code> 让服务端自动决定。
-                                </td>
+                                <td data-i18n="help.table.note.xiaomi"></td>
                             </tr>
                             <tr>
                                 <td>硅基流动 SiliconFlow</td>
@@ -317,11 +275,7 @@
                                 </td>
                                 <td><code>https://api.siliconflow.cn/v1/chat/completions</code></td>
                                 <td><code>deepseek-ai/DeepSeek-V3</code></td>
-                                <td>
-                                    Key 必填。OpenAI 兼容 chat completions；海外可用
-                                    <code>https://api.siliconflow.com/v1/chat/completions</code>。
-                                    模型名通常带组织前缀，如 <code>Qwen/Qwen3-8B</code>。
-                                </td>
+                                <td data-i18n="help.table.note.siliconflow"></td>
                             </tr>
                             <tr>
                                 <td>NVIDIA NIM</td>
@@ -335,9 +289,7 @@
                                 </td>
                                 <td><code>https://integrate.api.nvidia.com/v1/chat/completions</code></td>
                                 <td><code>meta/llama-3.1-70b-instruct</code></td>
-                                <td>
-                                    Key 必填（<code>nvapi-</code> 前缀）。OpenAI 兼容接口；自托管 NIM 可改 API 地址。部分模型需设置 max_tokens。
-                                </td>
+                                <td data-i18n="help.table.note.nim"></td>
                             </tr>
                             <tr>
                                 <td>xAI Grok</td>
@@ -351,25 +303,21 @@
                                 </td>
                                 <td><code>https://api.x.ai/v1/chat/completions</code></td>
                                 <td><code>grok-4.3</code></td>
-                                <td>
-                                    Key 必填。该入口是 xAI Grok，不是 Groq。不要把 Groq 的 API 地址填到这里。
-                                </td>
+                                <td data-i18n="help.table.note.grok"></td>
                             </tr>
                             <tr>
-                                <td>Ollama 本地服务</td>
+                                <td data-i18n="help.table.row.ollama.engine"></td>
                                 <td>
                                     <a
                                         href="https://ollama.com/download"
                                         target="_blank"
                                         rel="noreferrer"
-                                        >下载 Ollama</a
-                                    >
+                                        data-i18n="help.table.signup.downloadOllama"
+                                    ></a>
                                 </td>
                                 <td><code>http://localhost:11434/api/chat</code></td>
                                 <td><code>qwen3.5:latest</code>、<code>llama3.1:8b</code></td>
-                                <td>
-                                    不需要 API Key。先启动 Ollama 并拉取模型，设置页会从 <code>/api/tags</code> 自动检测模型。
-                                </td>
+                                <td data-i18n="help.table.note.ollamaLong"></td>
                             </tr>
                         </tbody>
                     </table>
@@ -377,69 +325,57 @@
             </section>
 
             <section class="jyt-help-section">
-                <h2>本地模型常用命令</h2>
+                <h2 data-i18n="help.section.localCommands.title"></h2>
                 <div class="jyt-engine-grid">
                     <article class="jyt-engine-card">
                         <div class="jyt-engine-card-head">
-                            <h3>Ollama 拉取通用模型</h3>
-                            <span>推荐</span>
+                            <h3 data-i18n="help.local.ollamaPull.title"></h3>
+                            <span data-i18n="help.local.ollamaPull.badge"></span>
                         </div>
                         <div class="jyt-code-row">
                             <code>ollama pull qwen3.5:latest</code>
                             <button
                                 type="button"
                                 data-copy="ollama pull qwen3.5:latest"
-                            >
-                                复制
-                            </button>
+                             data-i18n="common.copy"></button>
                         </div>
                         <div class="jyt-code-row">
                             <code>ollama pull llama3.1:8b</code>
-                            <button type="button" data-copy="ollama pull llama3.1:8b">
-                                复制
-                            </button>
+                            <button type="button" data-copy="ollama pull llama3.1:8b" data-i18n="common.copy"></button>
                         </div>
                     </article>
 
                     <article class="jyt-engine-card">
                         <div class="jyt-engine-card-head">
-                            <h3>Translationgemma</h3>
-                            <span>专用翻译</span>
+                            <h3 data-i18n="help.local.translategemma.title"></h3>
+                            <span data-i18n="help.local.translategemma.badge"></span>
                         </div>
-                        <p>
-                            如果 Ollama 中的模型名是 <code>translategemma</code> 或
-                            <code>translategemma:*</code>，插件会自动使用专用翻译模板。请在「大模型翻译 → Ollama」中选择该模型。
-                        </p>
+                        <p data-i18n="help.local.translategemma.desc"></p>
                         <div class="jyt-code-row">
                             <code>ollama pull translategemma</code>
-                            <button type="button" data-copy="ollama pull translategemma">
-                                复制
-                            </button>
+                            <button type="button" data-copy="ollama pull translategemma" data-i18n="common.copy"></button>
                         </div>
                     </article>
                 </div>
             </section>
 
             <section class="jyt-help-section">
-                <h2>本地 OpenAI 兼容服务</h2>
-                <p>
-                    这些工具通常可以通过「大模型翻译 → 自定义 OpenAI 兼容」接入。因为当前设置页会要求 API Key，本地服务没有 Key 时可先填
-                    <code>local</code>。
-                </p>
+                <h2 data-i18n="help.section.localOpenai.title"></h2>
+                <p data-i18n="help.section.localOpenai.intro"></p>
                 <div class="jyt-help-table-wrap">
                     <table class="jyt-help-table">
                         <thead>
                             <tr>
-                                <th>工具</th>
-                                <th>常见 API 地址</th>
-                                <th>备注</th>
+                                <th data-i18n="help.table.local.tool"></th>
+                                <th data-i18n="help.table.local.apiUrl"></th>
+                                <th data-i18n="help.table.local.notes"></th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr>
                                 <td>LM Studio</td>
                                 <td><code>http://localhost:1234/v1/chat/completions</code></td>
-                                <td>在 LM Studio 中启动 Local Server 后使用。</td>
+                                <td data-i18n="help.table.local.lmStudio"></td>
                             </tr>
                             <tr>
                                 <td>llama.cpp server</td>
@@ -480,6 +416,8 @@
         </main>
 
         <div id="toast_container" class="jyt-toast-container"></div>
+        <script src="libs/i18n-messages.js"></script>
+        <script src="libs/i18n.js"></script>
         <script src="help.js"></script>
     </body>
 </html>

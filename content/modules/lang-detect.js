@@ -2,6 +2,8 @@
 (function (global) {
     function install(app) {
         const state = app.state;
+        const t = (key, vars) =>
+            typeof app.t === "function" ? app.t(key, vars) : key;
             function getSelectionAnchorPoint(sel) {
                 try {
                     if (!sel || sel.rangeCount === 0) {
@@ -112,10 +114,9 @@
                             m.addEventListener("downloadprogress", (e) => {
                                 const percent = Math.round((e.loaded || 0) * 100);
                                 if (percent > 0 && percent < 100) {
-                                    streamEl.innerText =
-                                        "正在下载 LanguageDetector 模型: " +
-                                        percent +
-                                        "%";
+                                    streamEl.innerText = t("langDetect.downloading", {
+                                        percent,
+                                    });
                                 }
                             });
                         };

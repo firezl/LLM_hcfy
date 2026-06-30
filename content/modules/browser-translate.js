@@ -2,6 +2,8 @@
 (function (global) {
     function install(app) {
         const state = app.state;
+        const t = (key, vars) =>
+            typeof app.t === "function" ? app.t(key, vars) : key;
             function isBrowserAITranslatorSupported() {
                 return (
                     typeof self.Translator !== "undefined" &&
@@ -12,9 +14,7 @@
 
             async function getBrowserTranslator(from, to, streamEl) {
                 if (!isBrowserAITranslatorSupported()) {
-                    throw new Error(
-                        "当前浏览器不支持 Translation API（需 Chrome 138+ 实验功能）",
-                    );
+                    throw new Error(t("browser.translate.unsupported"));
                 }
 
                 const key = `${from}->${to}`;
@@ -27,7 +27,9 @@
 
                 if (availability === "available") state.translationModelReady = true;
                 if (availability === "unavailable") {
-                    throw new Error(`Translation API 不支持语言对: ${from} -> ${to}`);
+                    throw new Error(
+                        t("browser.translate.unsupportedPair", { from, to }),
+                    );
                 }
 
                 const createOptions = { sourceLanguage: from, targetLanguage: to };
@@ -39,8 +41,9 @@
                         m.addEventListener("downloadprogress", (e) => {
                             const percent = Math.round((e.loaded || 0) * 100);
                             if (percent > 0 && percent < 100) {
-                                streamEl.innerText =
-                                    "正在下载 Translation 模型: " + percent + "%";
+                                streamEl.innerText = t("browser.translate.downloading", {
+                                    percent,
+                                });
                             }
                         });
                     };

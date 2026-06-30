@@ -1,4 +1,12 @@
 document.addEventListener("DOMContentLoaded", () => {
+    const i18n = globalThis.JYT_I18N;
+    if (i18n) {
+        i18n.loadUiLangFromStorage();
+        i18n.bindStorageListener();
+    }
+
+    const t = (key, vars) => (i18n?.t ? i18n.t(key, vars) : key);
+
     const toastContainer = document.getElementById("toast_container");
     const extensionApi =
         (typeof chrome !== "undefined" && chrome.storage) ||
@@ -82,9 +90,9 @@ document.addEventListener("DOMContentLoaded", () => {
     async function copyText(text) {
         try {
             await navigator.clipboard.writeText(text);
-            showToast("已复制");
+            showToast(t("common.copySuccess"));
         } catch (err) {
-            showToast("复制失败，请手动选择文本");
+            showToast(t("help.copyFailedManual"));
         }
     }
 

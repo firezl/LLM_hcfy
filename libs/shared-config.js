@@ -165,6 +165,7 @@
     "deepl_api_key": "",
     "deeplx_api_url": "http://localhost:1188/translate",
     "deeplx_api_key": "",
+    "ui_lang": "auto",
     "theme_mode": "auto",
     "font_family": "",
     "bubble_width_percent": 20,

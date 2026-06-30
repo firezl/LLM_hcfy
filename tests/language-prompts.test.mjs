@@ -16,15 +16,18 @@ const glossaryTerms = [
 describe("language prompt builders", () => {
     it("uses mode1 prompt when context is absent", () => {
         const parts = buildChatPromptParts("hello", "zh", {});
-        assert.match(parts.systemPrompt, /请将以下内容翻译成中文，只输出译文/);
+        assert.match(
+            parts.systemPrompt,
+            /Translate the following into Chinese\. Output only the translation\./,
+        );
         assert.equal(parts.userPrompt, "hello");
     });
 
     it("uses legacy prompt as system prompt fallback", () => {
         const parts = buildChatPromptParts("hello", "zh", {
-            legacyCustomPromptTemplate: "你是翻译助手，目标是 {targetLang}",
+            legacyCustomPromptTemplate: "You are a translator. Target: {targetLang}",
         });
-        assert.equal(parts.systemPrompt, "你是翻译助手，目标是 中文");
+        assert.equal(parts.systemPrompt, "You are a translator. Target: Chinese");
         assert.equal(parts.userPrompt, "hello");
     });
 
@@ -32,19 +35,19 @@ describe("language prompt builders", () => {
         const parts = buildChatPromptParts("OpenAI", "zh", {
             glossaryTerms,
         });
-        assert.match(parts.systemPrompt, /术语约束/);
-        assert.match(parts.systemPrompt, /OpenAI => 开放人工智能/);
+        assert.match(parts.systemPrompt, /Terminology constraints/);
+        assert.match(parts.systemPrompt, /OpenAI -> 开放人工智能/);
         assert.equal(parts.userPrompt, "OpenAI");
     });
 
     it("appends input to user templates that omit text", () => {
         const parts = buildChatPromptParts("hello", "zh", {
-            systemPromptTemplate: "只输出译文",
-            userPromptTemplate: "翻译到 {targetLang}",
+            systemPromptTemplate: "Output only the translation",
+            userPromptTemplate: "Translate to {targetLang}",
         });
-        assert.equal(parts.systemPrompt, "只输出译文");
-        assert.match(parts.userPrompt, /翻译到 中文/);
-        assert.match(parts.userPrompt, /输入:\nhello/);
+        assert.equal(parts.systemPrompt, "Output only the translation");
+        assert.match(parts.userPrompt, /Translate to Chinese/);
+        assert.match(parts.userPrompt, /Input:\nhello/);
     });
 
     it("builds OpenAI-style system and user messages", () => {
@@ -71,9 +74,9 @@ describe("language prompt builders", () => {
                 lang: "en",
             },
         });
-        assert.match(block, /网页标题: Docs/);
-        assert.match(block, /前文: earlier/);
-        assert.match(block, /后文: later/);
+        assert.match(block, /Page title: Docs/);
+        assert.match(block, /Before: earlier/);
+        assert.match(block, /After: later/);
     });
 
     it("uses lightweight mode prompts with glossary", () => {
@@ -86,11 +89,11 @@ describe("language prompt builders", () => {
                 after: "后文",
             },
         });
-        assert.match(parts.systemPrompt, /前后文只用于判断含义/);
-        assert.match(parts.systemPrompt, /术语约束/);
-        assert.match(parts.userPrompt, /前文：前文/);
-        assert.match(parts.userPrompt, /划选文本：selected/);
-        assert.match(parts.userPrompt, /后文：后文/);
+        assert.match(parts.systemPrompt, /Use surrounding context only for disambiguation/);
+        assert.match(parts.systemPrompt, /Terminology constraints/);
+        assert.match(parts.userPrompt, /Before: 前文/);
+        assert.match(parts.userPrompt, /Selected: selected/);
+        assert.match(parts.userPrompt, /After: 后文/);
     });
 
     it("uses enhanced mode prompts with dynamic target language suffix", () => {
@@ -108,17 +111,17 @@ describe("language prompt builders", () => {
                 },
             },
         });
-        assert.match(parts.systemPrompt, /浏览器划词翻译插件/);
-        assert.match(parts.systemPrompt, /保留代码、变量名、公式、URL/);
-        assert.match(parts.userPrompt, /网页标题：Title/);
-        assert.match(parts.userPrompt, /英文译文：/);
+        assert.match(parts.systemPrompt, /browser selection-translate extension/);
+        assert.match(parts.systemPrompt, /Preserve code, variable names, formulas, and URLs/);
+        assert.match(parts.userPrompt, /Page title: Title/);
+        assert.match(parts.userPrompt, /English translation:/);
     });
 
     it("replaces custom placeholders in custom templates", () => {
         const parts = buildChatPromptParts("selected", "zh", {
-            systemPromptTemplate: "系统提示",
+            systemPromptTemplate: "System prompt",
             userPromptTemplate:
-                "标题:{page_title}\n前文:{before_context}\n文本:{selected_text}\n段落:{block_text}",
+                "Title:{page_title}\nBefore:{before_context}\nText:{selected_text}\nBlock:{block_text}",
             context: {
                 mode: "enhanced",
                 selectedText: "selected",
@@ -132,17 +135,17 @@ describe("language prompt builders", () => {
                 },
             },
         });
-        assert.equal(parts.systemPrompt, "系统提示");
-        assert.match(parts.userPrompt, /标题:标题/);
-        assert.match(parts.userPrompt, /前文:前文/);
-        assert.match(parts.userPrompt, /文本:selected/);
-        assert.match(parts.userPrompt, /段落:段落/);
+        assert.equal(parts.systemPrompt, "System prompt");
+        assert.match(parts.userPrompt, /Title:标题/);
+        assert.match(parts.userPrompt, /Before:前文/);
+        assert.match(parts.userPrompt, /Text:selected/);
+        assert.match(parts.userPrompt, /Block:段落/);
     });
 
     it("replaces {context} placeholder in custom templates", () => {
         const parts = buildChatPromptParts("selected", "zh", {
-            systemPromptTemplate: "系统提示",
-            userPromptTemplate: "上下文:\n{context}\n翻译:\n{text}",
+            systemPromptTemplate: "System prompt",
+            userPromptTemplate: "Context:\n{context}\nTranslate:\n{text}",
             context: {
                 mode: "lightweight",
                 selectedText: "selected",
@@ -150,7 +153,7 @@ describe("language prompt builders", () => {
                 after: "后文",
             },
         });
-        assert.equal(parts.systemPrompt, "系统提示");
+        assert.equal(parts.systemPrompt, "System prompt");
         assert.match(parts.userPrompt, /前文/);
         assert.match(parts.userPrompt, /selected/);
     });

@@ -5,31 +5,29 @@
 
     const PRESET_META = {
         cloud: {
-            title: "云端高质量",
-            description: "OpenAI 兼容模型，适合稳定高质量翻译。",
+            titleKey: "options.onboarding.preset.cloud.title",
+            descriptionKey: "options.onboarding.preset.cloud.desc",
             effectiveEngine: "openai",
             apiKey: {
                 field: "openai_api_key",
                 label: "OpenAI API Key",
                 placeholder: "sk-...",
-                hint: "可在 platform.openai.com 创建密钥。",
             },
         },
         local: {
-            title: "本地隐私",
-            description: "Ollama 本地服务，文本不离开本机。",
+            titleKey: "options.onboarding.preset.local.title",
+            descriptionKey: "options.onboarding.preset.local.desc",
             effectiveEngine: "ollama",
             apiKey: null,
         },
         free: {
-            title: "免费保底",
-            description: "OpenRouter 免费路由，适合轻量试用。",
+            titleKey: "options.onboarding.preset.free.title",
+            descriptionKey: "options.onboarding.preset.free.desc",
             effectiveEngine: "openrouter",
             apiKey: {
                 field: "openrouter_api_key",
                 label: "OpenRouter API Key",
                 placeholder: "sk-or-...",
-                hint: "可在 openrouter.ai 注册并创建 API Key。",
             },
         },
     };
@@ -43,6 +41,9 @@
             showToast,
             settingsForm,
         } = deps;
+
+        const t = (key, vars) =>
+            global.JYT_I18N?.t ? global.JYT_I18N.t(key, vars) : key;
 
         if (!overlay?.root) {
             return { maybeAutoStart() {} };
@@ -127,6 +128,10 @@
             return PRESET_META[String(preset || "")] || null;
         }
 
+        function presetLabel(meta) {
+            return meta?.titleKey ? t(meta.titleKey) : "";
+        }
+
         function applyPreset(preset) {
             const value = String(preset || "");
             const {
@@ -194,16 +199,16 @@
             }
             if (nextBtn) {
                 if (stepName === "welcome") {
-                    nextBtn.textContent = "请选择上方方案";
+                    nextBtn.textContent = t("common.selectPreset");
                     nextBtn.disabled = true;
                 } else if (stepName === "credentials") {
-                    nextBtn.textContent = "下一步";
+                    nextBtn.textContent = t("common.next");
                     nextBtn.disabled = false;
                 } else if (stepName === "test") {
-                    nextBtn.textContent = "保存并完成";
+                    nextBtn.textContent = t("common.saveAndFinish");
                     nextBtn.disabled = false;
                 } else {
-                    nextBtn.textContent = "开始使用";
+                    nextBtn.textContent = t("common.startUsing");
                     nextBtn.disabled = false;
                 }
             }
@@ -233,7 +238,7 @@
                         apiKeyInput.value = String(els[meta.apiKey.field]?.value || "");
                     }
                     if (apiKeyHint) {
-                        apiKeyHint.textContent = meta.apiKey.hint || "";
+                        apiKeyHint.textContent = t("options.onboarding.credentialsHint");
                     }
                 }
             } else if (stepName === "test" && stepTest) {
@@ -243,7 +248,9 @@
                 stepDone.classList.remove("jyt-hidden");
                 const meta = getPresetMeta(activePreset);
                 if (doneTitleEl && meta) {
-                    doneTitleEl.textContent = `已配置「${meta.title}」方案`;
+                    doneTitleEl.textContent = t("options.onboarding.doneConfigured", {
+                        preset: presetLabel(meta),
+                    });
                 }
             }
 
@@ -266,9 +273,9 @@
                     button.dataset.preset === preset,
                 );
             }
-            setStatus(`已选择「${getPresetMeta(preset)?.title || preset}」`, false);
+            setStatus(presetLabel(getPresetMeta(preset)), false);
             if (nextBtn) {
-                nextBtn.textContent = "下一步";
+                nextBtn.textContent = t("common.next");
                 nextBtn.disabled = false;
             }
         }
@@ -278,7 +285,7 @@
             if (!meta?.apiKey || !apiKeyInput) return true;
             const value = String(apiKeyInput.value || "").trim();
             if (!value) {
-                setStatus("请填写 API Key。", true);
+                setStatus(t("options.validation.apiKeyRequired"), true);
                 return false;
             }
             if (els[meta.apiKey.field]) {
@@ -296,12 +303,12 @@
             }
 
             if (typeof settingsForm.testEngineConnection !== "function") {
-                setTestStatus("连接测试不可用。", "error");
+                setTestStatus(t("options.error.messagingFailed"), "error");
                 return;
             }
 
             if (testBtn) testBtn.disabled = true;
-            setTestStatus("⏳ 正在测试连接...", "testing");
+            setTestStatus(t("common.testing"), "testing");
 
             try {
                 const result = await settingsForm.testEngineConnection(
@@ -309,16 +316,23 @@
                 );
                 if (result?.ok) {
                     const modelSuffix = result.model ? ` (${result.model})` : "";
-                    setTestStatus(`✅ 连接成功${modelSuffix}`, "success");
+                    setTestStatus(
+                        t("options.onboarding.testSuccess", { modelSuffix }),
+                        "success",
+                    );
                 } else {
                     setTestStatus(
-                        `❌ 连接失败: ${result?.error || "未知错误"}`,
+                        t("options.onboarding.testFailed", {
+                            error: result?.error || t("common.unknownError"),
+                        }),
                         "error",
                     );
                 }
             } catch (err) {
                 setTestStatus(
-                    `❌ 发生错误: ${err && err.message ? err.message : String(err)}`,
+                    t("options.onboarding.testError", {
+                        error: err && err.message ? err.message : String(err),
+                    }),
                     "error",
                 );
             } finally {
@@ -334,12 +348,12 @@
 
             const saveButton = document.getElementById("save");
             if (!saveButton) {
-                setStatus("无法保存设置。", true);
+                setStatus(t("options.error.saveFailed", { error: "" }), true);
                 return false;
             }
 
             saveButton.click();
-            showToast("设置已保存");
+            showToast(t("options.toast.settingsSaved"));
             goToStep(stepIndex + 1);
             return true;
         }
@@ -348,7 +362,7 @@
             const stepName = currentStepName();
             if (stepName === "welcome") {
                 if (!activePreset) {
-                    setStatus("请先选择一个使用方案。", true);
+                    setStatus(t("common.selectPreset"), true);
                     return;
                 }
                 goToStep(stepIndex + 1);

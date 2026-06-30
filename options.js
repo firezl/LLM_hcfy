@@ -1,5 +1,12 @@
 // options.js — bootstrap entry for the options / popup page
 document.addEventListener("DOMContentLoaded", () => {
+    const i18n = globalThis.JYT_I18N;
+    if (i18n) {
+        i18n.loadUiLangFromStorage();
+        i18n.bindStorageListener();
+    }
+
+    const t = (key, vars) => (i18n?.t ? i18n.t(key, vars) : key);
     (function markOptionsPopupMode() {
         try {
             const extensionApi =
@@ -37,7 +44,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function requireSharedConfig(name) {
         const value = shared[name];
         if (!value) {
-            throw new Error(`缺少共享配置: ${name}`);
+            throw new Error(t("options.error.missingSharedConfig", { name }));
         }
         return value;
     }
@@ -167,7 +174,10 @@ document.addEventListener("DOMContentLoaded", () => {
             if (tabId === "tab_history" && historyController) {
                 void historyController.refreshList().catch((err) => {
                     historyController.setStatus(
-                        `历史记录加载失败: ${err && err.message ? err.message : String(err)}`,
+                        t("options.error.historyLoadFailed", {
+                            error:
+                                err && err.message ? err.message : String(err),
+                        }),
                         true,
                     );
                 });
@@ -229,7 +239,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = () => resolve(String(reader.result || ""));
-            reader.onerror = () => reject(new Error("读取文件失败"));
+            reader.onerror = () => reject(new Error(t("options.error.readFileFailed")));
             reader.readAsText(file, "utf-8");
         });
     }
@@ -363,7 +373,9 @@ document.addEventListener("DOMContentLoaded", () => {
     glossaryController.resetEditor();
     void glossaryController.refreshList().catch((err) => {
         glossaryController.setStatus(
-            `术语列表加载失败: ${err && err.message ? err.message : String(err)}`,
+            t("options.error.glossaryListFailed", {
+                error: err && err.message ? err.message : String(err),
+            }),
             true,
         );
     });

@@ -13,9 +13,7 @@ import { postTranslateError } from "./port-utils.js";
 import { getMatchedGlossaryTerms } from "./term.js";
 import { TRANSLATE_HANDLERS } from "./translate-handlers.js";
 import { getSettings } from "./settings-cache.js";
-
-const BROWSER_ENGINE_HINT =
-    "浏览器 AI 翻译在网页内直接完成（无需后台）。请划词使用；若仍失败，请确认 Chrome/Edge 已启用 Translation API，或改用「大模型翻译」。";
+import { t } from "./i18n.js";
 
 export async function handleTranslateStart(message, port, state) {
     const requestId = message?.requestId;
@@ -79,7 +77,12 @@ export async function handleTranslateStart(message, port, state) {
         };
 
         if (isContentOnlyEngine(engine)) {
-            postTranslateError(port, state, requestId, BROWSER_ENGINE_HINT);
+            postTranslateError(
+                port,
+                state,
+                requestId,
+                t("translate.router.browserHint"),
+            );
             return;
         }
 
@@ -90,7 +93,7 @@ export async function handleTranslateStart(message, port, state) {
                 port,
                 state,
                 requestId,
-                `未支持的翻译引擎: ${engine}`,
+                t("translate.router.unsupportedEngine", { engine }),
             );
             return;
         }
@@ -100,7 +103,12 @@ export async function handleTranslateStart(message, port, state) {
         // 任何前置异常（如 settings 缓存加载失败）都回传明确错误，
         // 避免 content 端静默等待超时（曾表现为"需点两次才翻译"）。
         const errMessage = err && err.message ? err.message : String(err);
-        postTranslateError(port, state, requestId, `翻译初始化失败: ${errMessage}`);
+        postTranslateError(
+            port,
+            state,
+            requestId,
+            t("translate.router.initFailed", { error: errMessage }),
+        );
     }
 }
 
@@ -109,7 +117,10 @@ export async function handleTestConnection(message) {
     const handlerKey = getTranslateHandlerKey(engine);
     const handler = TRANSLATE_HANDLERS[handlerKey];
     if (!handler) {
-        return { ok: false, error: `未支持的测试引擎: ${engine}` };
+        return {
+            ok: false,
+            error: t("translate.router.unsupportedTestEngine", { engine }),
+        };
     }
 
     const requestId = "connection-test-" + Date.now();
@@ -162,7 +173,7 @@ export async function handleTestConnection(message) {
             if (controller) {
                 controller.abort();
             }
-            responseError = "连接测试超时 (15s)";
+            responseError = t("translate.router.testTimeout");
             resolvePromise();
         }
     }, 15000);

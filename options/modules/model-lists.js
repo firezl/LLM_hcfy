@@ -16,6 +16,9 @@
             getCurrentEffectiveEngine,
         } = deps;
 
+        const t = (key, vars) =>
+            global.JYT_I18N?.t ? global.JYT_I18N.t(key, vars) : key;
+
         const ensureBackgroundPort = () => messaging.ensureBackgroundPort();
         const ollamaModelRequestResolvers = messaging.resolvers.ollama;
         const openaiCompatModelRequestResolvers = messaging.resolvers.openaiCompat;
@@ -70,7 +73,7 @@
 
                 const customOption = document.createElement("option");
                 customOption.value = "custom";
-                customOption.textContent = "自定义模型名";
+                customOption.textContent = t("options.engine.shared.customModelOption");
                 els.ollama_model_select.appendChild(customOption);
 
                 if (selectedModel && orderedIds.includes(selectedModel)) {
@@ -82,7 +85,7 @@
                 if (selectedModel && selectedModel !== "custom") {
                     const savedOption = document.createElement("option");
                     savedOption.value = selectedModel;
-                    savedOption.textContent = `${selectedModel}（已保存）`;
+                    savedOption.textContent = `${selectedModel}${t("options.engine.shared.savedModelSuffix")}`;
                     els.ollama_model_select.insertBefore(savedOption, customOption);
                     els.ollama_model_select.value = selectedModel;
                     els.ollama_custom_model.disabled = true;
@@ -127,7 +130,7 @@
 
                 const customOption = document.createElement("option");
                 customOption.value = "custom";
-                customOption.textContent = "自定义模型名";
+                customOption.textContent = t("options.engine.shared.customModelOption");
                 modelSelectEl.appendChild(customOption);
 
                 if (selectedModel && orderedIds.includes(selectedModel)) {
@@ -139,7 +142,7 @@
                 if (selectedModel && selectedModel !== "custom") {
                     const savedOption = document.createElement("option");
                     savedOption.value = selectedModel;
-                    savedOption.textContent = `${selectedModel}（已保存）`;
+                    savedOption.textContent = `${selectedModel}${t("options.engine.shared.savedModelSuffix")}`;
                     modelSelectEl.insertBefore(savedOption, customOption);
                     modelSelectEl.value = selectedModel;
                     customModelEl.disabled = true;
@@ -233,7 +236,7 @@
 
                 const customOption = document.createElement("option");
                 customOption.value = "custom";
-                customOption.textContent = "自定义模型名";
+                customOption.textContent = t("options.engine.shared.customModelOption");
                 els.openrouter_model.appendChild(customOption);
 
                 const orderedIds = [
@@ -249,7 +252,7 @@
                 if (selectedModel && selectedModel !== "custom") {
                     const savedOption = document.createElement("option");
                     savedOption.value = selectedModel;
-                    savedOption.textContent = `${selectedModel}（已保存）`;
+                    savedOption.textContent = `${selectedModel}${t("options.engine.shared.savedModelSuffix")}`;
                     const firstPaidIndex = 1 + freeItems.length;
                     const firstPaidOption =
                         els.openrouter_model.options[firstPaidIndex] || customOption;

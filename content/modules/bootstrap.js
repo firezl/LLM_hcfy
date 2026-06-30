@@ -29,6 +29,13 @@
                     if (key === "theme_mode") {
                         app.applyTheme(changes[key].newValue);
                     }
+                    if (key === "ui_lang") {
+                        if (global.JYT_I18N?.setLang) {
+                            global.JYT_I18N.setLang(changes[key].newValue);
+                        }
+                        app.refreshBubbleI18n?.();
+                        app.refreshPdfPromptI18n?.();
+                    }
                     if (
                         key === "context_translate_mode" ||
                         key === "context_translate_enabled"

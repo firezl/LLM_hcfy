@@ -26,6 +26,10 @@ import "./modules/bootstrap.js";
         CONTENT_UI_CSS: contentUiCss,
         MESSAGE_TYPES,
         DEFAULT_SETTINGS,
+        t: (key, vars) =>
+            globalThis.JYT_I18N?.t
+                ? globalThis.JYT_I18N.t(key, vars)
+                : key,
         PDF_PROMPT_AUTO_CLOSE_MS: 10 * 1000,
         LANG_DETECT_TIMEOUT_MS: 8000,
         TRANSLATE_RESPONSE_TIMEOUT_MS: 30000,

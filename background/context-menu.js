@@ -1,5 +1,6 @@
 import { extensionApi, isFirefoxExtension } from "./extension-api.js";
 import { MESSAGE_TYPE_TRANSLATE_SELECTION } from "./constants.js";
+import { onLangChange, t } from "./i18n.js";
 
 const CONTEXT_MENU_ID = "jyt-translate-selection";
 
@@ -18,7 +19,7 @@ function createContextMenuItem() {
 
     extensionApi.contextMenus.create({
         id: CONTEXT_MENU_ID,
-        title: '翻译「%s」',
+        title: t("contextMenu.translateSelection"),
         contexts: ["selection"],
     });
     drainContextMenuLastError("create");
@@ -101,6 +102,10 @@ export function initContextMenu() {
             void handleContextMenuClick(info, tab);
         });
     }
+
+    onLangChange(() => {
+        registerContextMenu();
+    });
 
     if (extensionApi.runtime?.onInstalled) {
         extensionApi.runtime.onInstalled.addListener(() => {

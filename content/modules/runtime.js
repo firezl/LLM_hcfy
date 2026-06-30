@@ -2,6 +2,8 @@
 (function (global) {
     function install(app) {
         const state = app.state;
+        const t = (key, vars) =>
+            typeof app.t === "function" ? app.t(key, vars) : key;
             function drainRuntimeLastError() {
                 let message = "";
                 try {
@@ -39,7 +41,7 @@
             function sendTermMessage(type, payload) {
                 const runtimeApi = getRuntimeApi();
                 if (!runtimeApi) {
-                    return Promise.reject(new Error("运行时消息接口不可用"));
+                    return Promise.reject(new Error(t("runtime.messagingUnavailable")));
                 }
 
                 const request = {
@@ -56,7 +58,7 @@
                         runtimeApi.sendMessage(request, (resp) => {
                             const err = chrome?.runtime?.lastError;
                             if (err) {
-                                reject(new Error(err.message || "术语消息发送失败"));
+                                reject(new Error(err.message || t("runtime.termMessageFailed")));
                                 return;
                             }
                             resolve(resp);

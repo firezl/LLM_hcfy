@@ -41,6 +41,17 @@
 
         const { normalizeShortcut } = shortcutsModule;
         const modelListLoaded = deps.modelListLoaded;
+        const t = (key, vars) =>
+            global.JYT_I18N?.t ? global.JYT_I18N.t(key, vars) : key;
+
+        function applyUiLang(value) {
+            if (!global.JYT_I18N?.setLang) {
+                return;
+            }
+            global.JYT_I18N.setLang(value);
+            global.JYT_I18N.applyDom(document);
+        }
+
         const registry = global.JYT_ENGINE_REGISTRY || {};
 
         let loadedSettings = null;
@@ -182,24 +193,24 @@
             enabled.type = "checkbox";
             enabled.checked = item?.enabled !== false;
             enabled.setAttribute("data-header-enabled", "");
-            enabled.title = "启用";
+            enabled.title = t("options.advanced.headerEnabled");
 
             const name = document.createElement("input");
             name.type = "text";
-            name.placeholder = "Header 名称";
+            name.placeholder = t("options.advanced.headerNamePlaceholder");
             name.value = item?.name || "";
             name.setAttribute("data-header-name", "");
 
             const value = document.createElement("input");
             value.type = "text";
-            value.placeholder = "Header 值";
+            value.placeholder = t("options.advanced.headerValuePlaceholder");
             value.value = item?.value || "";
             value.setAttribute("data-header-value", "");
 
             const remove = document.createElement("button");
             remove.type = "button";
             remove.className = "jyt-custom-header-remove";
-            remove.textContent = "删除";
+            remove.textContent = t("options.advanced.headerRemove");
             remove.addEventListener("click", () => row.remove());
 
             row.append(enabled, name, value, remove);
@@ -219,13 +230,12 @@
             const add = document.createElement("button");
             add.type = "button";
             add.className = "jyt-custom-header-add";
-            add.textContent = "添加 Header";
+            add.textContent = t("options.advanced.headerAdd");
             add.addEventListener("click", () => createHeaderRow(rows, {}));
 
             const hint = document.createElement("div");
             hint.className = "jyt-hint";
-            hint.textContent =
-                "不会同步到云端；Authorization、Content-Type、x-api-key、anthropic-version、Accept 不允许覆盖。";
+            hint.textContent = t("options.advanced.headerHint");
 
             wrap.append(rows, add, hint);
             return { wrap, rows };
@@ -250,18 +260,18 @@
 
                 const system = createPromptTextarea(
                     cfg.systemKey,
-                    "系统提示词",
-                    "可用变量: {targetLang} {text} {glossary} {glossaryConstraint}",
+                    t("options.advanced.systemPrompt"),
+                    t("options.advanced.systemPromptPlaceholder"),
                 );
                 const user = createPromptTextarea(
                     cfg.userKey,
-                    "用户提示词",
-                    "留空则使用默认翻译输入。可用变量: {targetLang} {text} {glossary} {glossaryConstraint}",
+                    t("options.advanced.userPrompt"),
+                    t("options.advanced.userPromptPlaceholder"),
                 );
                 const payload = createPromptTextarea(
                     cfg.customPayloadKey,
-                    "额外请求体参数（JSON 对象）",
-                    '例如: {"temperature":0.2,"top_p":0.9}。Qwen 可用 {"parameters":{"temperature":0.2}}，Ollama 可用 {"options":{"temperature":0.2,"top_k":40}}。',
+                    t("options.advanced.customPayload"),
+                    t("options.advanced.customPayloadPlaceholder"),
                 );
 
                 let anchor = legacyEl;
@@ -273,7 +283,7 @@
                 anchor = insertAfter(anchor, payload.textarea);
 
                 const headerLabel = document.createElement("label");
-                headerLabel.textContent = "自定义 Header";
+                headerLabel.textContent = t("options.advanced.customHeaders");
                 const headerEditor = createHeaderEditor(
                     `${cfg.customHeadersKey}_editor`,
                     cfg.customHeadersKey,
@@ -372,7 +382,7 @@
                 ) {
                     return {
                         ok: false,
-                        error: "额外请求体参数必须是 JSON 对象。",
+                        error: t("options.advanced.invalidPayloadObject"),
                     };
                 }
                 return {
@@ -382,7 +392,9 @@
             } catch (err) {
                 return {
                     ok: false,
-                    error: `额外请求体 JSON 格式不正确: ${err.message}`,
+                    error: t("options.advanced.invalidPayloadJson", {
+                        error: err.message,
+                    }),
                 };
             }
         }
@@ -441,7 +453,12 @@
                 chrome.storage.sync.get(DEFAULT_SETTINGS, (syncItems) => {
                     const syncErr = chrome.runtime.lastError;
                     if (syncErr) {
-                        showToast(`读取同步配置失败: ${syncErr.message}`, true);
+                        showToast(
+                            t("options.toast.syncConfigReadFailed", {
+                                error: syncErr.message,
+                            }),
+                            true,
+                        );
                         return;
                     }
 
@@ -462,13 +479,20 @@
                         };
 
                         if (localErr) {
-                            showToast(`读取本地密钥失败: ${localErr.message}`, true);
+                            showToast(
+                                t("options.toast.localKeysReadFailed", {
+                                    error: localErr.message,
+                                }),
+                                true,
+                            );
                         } else if (Object.keys(migrateKeys).length > 0) {
                             chrome.storage.local.set(migrateKeys, () => {
                                 const migrateErr = chrome.runtime.lastError;
                                 if (migrateErr) {
                                     showToast(
-                                        `迁移本地密钥失败: ${migrateErr.message}`,
+                                        t("options.toast.localKeysMigrateFailed", {
+                                            error: migrateErr.message,
+                                        }),
                                         true,
                                     );
                                 }
@@ -814,6 +838,10 @@
                             items.deeplx_api_url || "http://localhost:1188/translate";
                         els.deeplx_api_key.value = items.deeplx_api_key || "";
                         els.theme_mode.value = items.theme_mode || "auto";
+                        if (els.ui_lang) {
+                            els.ui_lang.value = items.ui_lang || "auto";
+                            applyUiLang(els.ui_lang.value);
+                        }
                         els.font_family.value = items.font_family || "";
                         els.bubble_width_percent.value = clampPercent(
                             items.bubble_width_percent,
@@ -847,17 +875,19 @@
                     }
                     if (advancedFields.blockedCustomHeaderCount > 0) {
                         showToast(
-                            `已禁用 ${advancedFields.blockedCustomHeaderCount} 个重复或受保护的自定义 Header。`,
+                            t("options.validation.headersBlocked", {
+                                count: advancedFields.blockedCustomHeaderCount,
+                            }),
                             true,
                         );
                     }
                     if (effectiveEngine === "custom_openai") {
                         if (!data.custom_openai_api_key) {
-                            showToast("请先填写自定义 OpenAI 兼容 API Key。", true);
+                            showToast(t("options.validation.customOpenaiApiKey"), true);
                             return;
                         }
                         if (!data.custom_openai_model) {
-                            showToast("请先填写自定义 OpenAI 兼容模型。", true);
+                            showToast(t("options.validation.customOpenaiModel"), true);
                             return;
                         }
                         if (!data.custom_openai_api_url) {
@@ -868,11 +898,11 @@
 
                     if (effectiveEngine === "openrouter") {
                         if (!data.openrouter_api_key) {
-                            showToast("请先填写 OpenRouter API Key。", true);
+                            showToast(t("options.validation.openrouterApiKey"), true);
                             return;
                         }
                         if (!data.openrouter_model) {
-                            showToast("请先选择 OpenRouter 模型或填写自定义模型名。", true);
+                            showToast(t("options.validation.openrouterModelOrCustom"), true);
                             return;
                         }
                         if (!data.openrouter_api_url) {
@@ -882,11 +912,11 @@
 
                     if (effectiveEngine === "deepseek") {
                         if (!data.deepseek_api_key) {
-                            showToast("请先填写 DeepSeek API Key。", true);
+                            showToast(t("options.validation.genericApiKey"), true);
                             return;
                         }
                         if (!data.deepseek_model) {
-                            showToast("请先填写 DeepSeek 模型。", true);
+                            showToast(t("options.validation.modelName"), true);
                             return;
                         }
                         if (!data.deepseek_api_url) {
@@ -897,11 +927,11 @@
 
                     if (effectiveEngine === "siliconflow") {
                         if (!data.siliconflow_api_key) {
-                            showToast("请先填写硅基流动 API Key。", true);
+                            showToast(t("options.validation.siliconflowApiKey"), true);
                             return;
                         }
                         if (!data.siliconflow_model) {
-                            showToast("请先选择硅基流动模型或填写自定义模型名。", true);
+                            showToast(t("options.validation.siliconflowModelOrCustom"), true);
                             return;
                         }
                         if (!data.siliconflow_api_url) {
@@ -912,11 +942,11 @@
 
                     if (effectiveEngine === "qwen") {
                         if (!data.qwen_api_key) {
-                            showToast("请先填写 Qwen API Key。", true);
+                            showToast(t("options.validation.genericApiKey"), true);
                             return;
                         }
                         if (!data.qwen_model) {
-                            showToast("请先填写 Qwen 模型。", true);
+                            showToast(t("options.validation.modelName"), true);
                             return;
                         }
                         if (!data.qwen_api_url) {
@@ -927,11 +957,11 @@
 
                     if (effectiveEngine === "glm") {
                         if (!data.glm_api_key) {
-                            showToast("请先填写 GLM API Key。", true);
+                            showToast(t("options.validation.genericApiKey"), true);
                             return;
                         }
                         if (!data.glm_model) {
-                            showToast("请先填写 GLM 模型。", true);
+                            showToast(t("options.validation.modelName"), true);
                             return;
                         }
                         if (!data.glm_api_url) {
@@ -942,11 +972,11 @@
 
                     if (effectiveEngine === "xiaomi") {
                         if (!data.xiaomi_api_key) {
-                            showToast("请先填写 Xiaomi API Key。", true);
+                            showToast(t("options.validation.genericApiKey"), true);
                             return;
                         }
                         if (!data.xiaomi_model) {
-                            showToast("请先填写 Xiaomi 模型。", true);
+                            showToast(t("options.validation.modelName"), true);
                             return;
                         }
                         if (!data.xiaomi_api_url) {
@@ -957,11 +987,11 @@
 
                     if (effectiveEngine === "grok") {
                         if (!data.grok_api_key) {
-                            showToast("请先填写 Grok API Key。", true);
+                            showToast(t("options.validation.genericApiKey"), true);
                             return;
                         }
                         if (!data.grok_model) {
-                            showToast("请先填写 Grok 模型。", true);
+                            showToast(t("options.validation.modelName"), true);
                             return;
                         }
                         if (!data.grok_api_url) {
@@ -971,11 +1001,11 @@
 
                     if (effectiveEngine === "nim") {
                         if (!data.nim_api_key) {
-                            showToast("请先填写 NVIDIA NIM API Key。", true);
+                            showToast(t("options.validation.genericApiKey"), true);
                             return;
                         }
                         if (!data.nim_model) {
-                            showToast("请先填写 NVIDIA NIM 模型。", true);
+                            showToast(t("options.validation.modelName"), true);
                             return;
                         }
                         if (!data.nim_api_url) {
@@ -986,11 +1016,11 @@
 
                     if (effectiveEngine === "claude") {
                         if (!data.claude_api_key) {
-                            showToast("请先填写 Claude API Key。", true);
+                            showToast(t("options.validation.genericApiKey"), true);
                             return;
                         }
                         if (!data.claude_model) {
-                            showToast("请先填写 Claude 模型。", true);
+                            showToast(t("options.validation.modelName"), true);
                             return;
                         }
                         if (!data.claude_api_url) {
@@ -1000,11 +1030,11 @@
 
                     if (effectiveEngine === "gemini") {
                         if (!data.gemini_api_key) {
-                            showToast("请先填写 Gemini API Key。", true);
+                            showToast(t("options.validation.genericApiKey"), true);
                             return;
                         }
                         if (!data.gemini_model) {
-                            showToast("请先填写 Gemini 模型。", true);
+                            showToast(t("options.validation.modelName"), true);
                             return;
                         }
                         if (!data.gemini_api_url) {
@@ -1022,14 +1052,14 @@
                                 ? data.ollama_custom_model
                                 : data.ollama_model;
                         if (!selectedOllamaModel) {
-                            showToast("请先选择 Ollama 模型或填写自定义模型名。", true);
+                            showToast(t("options.validation.ollamaModel"), true);
                             return;
                         }
                     }
 
                     if (effectiveEngine === "deepl") {
                         if (!data.deepl_api_key) {
-                            showToast("请先填写 DeepL API Key。", true);
+                            showToast(t("options.validation.deeplApiKey"), true);
                             return;
                         }
                         if (!data.deepl_api_url) {
@@ -1055,7 +1085,7 @@
                     if (insecureEndpoints.length > 0) {
                         const sample = insecureEndpoints[0];
                         showToast(
-                            `检测到 HTTP 接口（${sample}），API Key 将明文传输，建议改用 HTTPS。`,
+                            t("options.validation.httpWarning", { sample }),
                             true,
                         );
                     }
@@ -1064,10 +1094,7 @@
                             permissionUrls,
                         );
                     if (!granted) {
-                        showToast(
-                            "未授予部分自定义接口访问权限，若服务端不支持 CORS，翻译可能失败。",
-                            true,
-                        );
+                        showToast(t("options.validation.hostPermissionWarning"), true);
                     }
 
                     const localApiKeys = extractApiKeyPayload(data);
@@ -1076,18 +1103,18 @@
                     chrome.storage.local.set(localApiKeys, () => {
                         const localErr = chrome.runtime.lastError;
                         if (localErr) {
-                            showToast(`保存失败: ${localErr.message}`, true);
+                            showToast(t("options.toast.saveFailed", { error: localErr.message }), true);
                             return;
                         }
 
                         chrome.storage.sync.set(syncData, () => {
                             const syncErr = chrome.runtime.lastError;
                             if (syncErr) {
-                                showToast(`保存失败: ${syncErr.message}`, true);
+                                showToast(t("options.toast.saveFailed", { error: syncErr.message }), true);
                                 return;
                             }
                             applyTheme(syncData.theme_mode);
-                            showToast("已保存");
+                            showToast(t("options.toast.saved"));
                             loadedSettings = collectCurrentFormSettings();
                         });
                     });
@@ -1097,19 +1124,19 @@
                     chrome.storage.sync.clear(() => {
                         const syncErr = chrome.runtime.lastError;
                         if (syncErr) {
-                            showToast(`恢复失败: ${syncErr.message}`, true);
+                            showToast(t("options.toast.restoreFailed", { error: syncErr.message }), true);
                             return;
                         }
 
                         chrome.storage.local.remove(API_KEY_FIELDS, () => {
                             const localErr = chrome.runtime.lastError;
                             if (localErr) {
-                                showToast(`恢复失败: ${localErr.message}`, true);
+                                showToast(t("options.toast.restoreFailed", { error: localErr.message }), true);
                                 return;
                             }
 
                             load();
-                            showToast("已恢复默认");
+                            showToast(t("options.toast.resetDone"));
                         });
                     });
                 });
@@ -1127,6 +1154,7 @@
                     "context_translate_mode",
                     "enhanced",
                 ),
+                ui_lang: fieldValue("ui_lang", "auto"),
                 theme_mode: fieldValue("theme_mode", "auto"),
                 font_family: fieldValue("font_family"),
                 bubble_width_percent: clampPercent(
@@ -1321,58 +1349,75 @@
 
         function validateEngineFields(engine, settings) {
             if (engine === "openai" && !settings.openai_api_key) {
-                return "请先填写 OpenAI API Key。";
+                return t("options.validation.openaiApiKey");
             }
             if (engine === "custom_openai") {
-                if (!settings.custom_openai_api_key) return "请先填写 API Key。";
-                if (!settings.custom_openai_model) return "请先填写/选择模型名称。";
+                if (!settings.custom_openai_api_key)
+                    return t("options.validation.genericApiKey");
+                if (!settings.custom_openai_model)
+                    return t("options.validation.modelName");
             }
             if (engine === "openrouter") {
-                if (!settings.openrouter_api_key) return "请先填写 OpenRouter API Key。";
-                if (!settings.openrouter_model) return "请先选择 OpenRouter 模型。";
+                if (!settings.openrouter_api_key)
+                    return t("options.validation.openrouterApiKey");
+                if (!settings.openrouter_model)
+                    return t("options.validation.openrouterModel");
             }
             if (engine === "deepseek") {
-                if (!settings.deepseek_api_key) return "请先填写 DeepSeek API Key。";
-                if (!settings.deepseek_model) return "请先填写/选择模型名称。";
+                if (!settings.deepseek_api_key)
+                    return t("options.validation.genericApiKey");
+                if (!settings.deepseek_model) return t("options.validation.modelName");
             }
             if (engine === "siliconflow") {
-                if (!settings.siliconflow_api_key) return "请先填写 SiliconFlow API Key。";
-                if (!settings.siliconflow_model) return "请先填写/选择模型名称。";
+                if (!settings.siliconflow_api_key)
+                    return t("options.validation.siliconflowApiKey");
+                if (!settings.siliconflow_model)
+                    return t("options.validation.modelName");
             }
             if (engine === "qwen") {
-                if (!settings.qwen_api_key) return "请先填写 Qwen API Key。";
-                if (!settings.qwen_model) return "请先填写/选择模型名称。";
+                if (!settings.qwen_api_key)
+                    return t("options.validation.genericApiKey");
+                if (!settings.qwen_model) return t("options.validation.modelName");
             }
             if (engine === "glm") {
-                if (!settings.glm_api_key) return "请先填写 GLM API Key。";
-                if (!settings.glm_model) return "请先填写/选择模型名称。";
+                if (!settings.glm_api_key)
+                    return t("options.validation.genericApiKey");
+                if (!settings.glm_model) return t("options.validation.modelName");
             }
             if (engine === "xiaomi") {
-                if (!settings.xiaomi_api_key) return "请先填写 Xiaomi API Key。";
-                if (!settings.xiaomi_model) return "请先填写/选择模型名称。";
+                if (!settings.xiaomi_api_key)
+                    return t("options.validation.genericApiKey");
+                if (!settings.xiaomi_model) return t("options.validation.modelName");
             }
             if (engine === "grok") {
-                if (!settings.grok_api_key) return "请先填写 Grok API Key。";
-                if (!settings.grok_model) return "请先填写/选择模型名称。";
+                if (!settings.grok_api_key)
+                    return t("options.validation.genericApiKey");
+                if (!settings.grok_model) return t("options.validation.modelName");
             }
             if (engine === "nim") {
-                if (!settings.nim_api_key) return "请先填写 NVIDIA NIM API Key。";
-                if (!settings.nim_model) return "请先填写/选择模型名称。";
+                if (!settings.nim_api_key)
+                    return t("options.validation.genericApiKey");
+                if (!settings.nim_model) return t("options.validation.modelName");
             }
             if (engine === "claude") {
-                if (!settings.claude_api_key) return "请先填写 Claude API Key。";
-                if (!settings.claude_model) return "请先填写/选择模型名称。";
+                if (!settings.claude_api_key)
+                    return t("options.validation.genericApiKey");
+                if (!settings.claude_model) return t("options.validation.modelName");
             }
             if (engine === "gemini") {
-                if (!settings.gemini_api_key) return "请先填写 Gemini API Key。";
-                if (!settings.gemini_model) return "请先填写/选择模型名称。";
+                if (!settings.gemini_api_key)
+                    return t("options.validation.genericApiKey");
+                if (!settings.gemini_model) return t("options.validation.modelName");
             }
             if (engine === "ollama") {
-                const ollamaModel = settings.ollama_model === "custom" ? settings.ollama_custom_model : settings.ollama_model;
-                if (!ollamaModel) return "请先填写/选择 Ollama 模型。";
+                const ollamaModel =
+                    settings.ollama_model === "custom"
+                        ? settings.ollama_custom_model
+                        : settings.ollama_model;
+                if (!ollamaModel) return t("options.validation.ollamaModel");
             }
             if (engine === "deepl" && !settings.deepl_api_key) {
-                return "请先填写 DeepL API Key。";
+                return t("options.validation.deeplApiKey");
             }
             return null;
         }
@@ -1416,7 +1461,7 @@
                     (response) => {
                         const err = chrome.runtime.lastError;
                         if (err) {
-                            reject(new Error(err.message || "发送测试请求失败"));
+                            reject(new Error(err.message || t("options.error.testRequestFailed")));
                             return;
                         }
                         resolve(response);
@@ -1433,7 +1478,7 @@
 
             return {
                 ok: false,
-                error: resp && resp.error ? resp.error : "未知错误",
+                error: resp && resp.error ? resp.error : t("common.unknownError"),
             };
         }
 
@@ -1445,7 +1490,7 @@
                     const statusSpan = btn.nextElementSibling;
                     if (!engine || !statusSpan) return;
 
-                    statusSpan.textContent = "⏳ 测试中...";
+                    statusSpan.textContent = t("options.connection.testing");
                     statusSpan.className = "jyt-connection-test-status testing";
                     btn.disabled = true;
 
@@ -1453,14 +1498,20 @@
                         const result = await testEngineConnection(engine);
                         if (result?.ok) {
                             const modelName = result.model || "";
-                            statusSpan.textContent = `✅ 连接成功${modelName ? ` (${modelName})` : ""}`;
+                            statusSpan.textContent = t("options.connection.success", {
+                                modelSuffix: modelName ? ` (${modelName})` : "",
+                            });
                             statusSpan.className = "jyt-connection-test-status success";
                         } else {
-                            statusSpan.textContent = `❌ 连接失败: ${result?.error || "未知错误"}`;
+                            statusSpan.textContent = t("options.connection.failed", {
+                                error: result?.error || t("common.unknownError"),
+                            });
                             statusSpan.className = "jyt-connection-test-status error";
                         }
                     } catch (err) {
-                        statusSpan.textContent = `❌ 发生错误: ${err.message || String(err)}`;
+                        statusSpan.textContent = t("options.connection.error", {
+                            error: err.message || String(err),
+                        });
                         statusSpan.className = "jyt-connection-test-status error";
                     } finally {
                         btn.disabled = false;
@@ -1475,6 +1526,10 @@
 
             els.theme_mode.addEventListener("change", () => {
                 applyTheme(els.theme_mode.value);
+            });
+
+            els.ui_lang?.addEventListener("change", () => {
+                applyUiLang(els.ui_lang.value);
             });
 
             els.ollama_model_select?.addEventListener("change", () => {

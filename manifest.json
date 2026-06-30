@@ -58,7 +58,12 @@
     "content_scripts": [
         {
             "matches": ["<all_urls>"],
-            "js": ["libs/shared-config.js", "dist/content.bundle.js"],
+            "js": [
+                "libs/shared-config.js",
+                "libs/i18n-messages.js",
+                "libs/i18n.js",
+                "dist/content.bundle.js"
+            ],
             "css": ["styles/content-light.css"],
             "run_at": "document_idle",
             "all_frames": false

@@ -51,8 +51,10 @@ import { handleSyncMessage } from "./sync-manager.js";
 import { initContextMenu } from "./context-menu.js";
 import { initOnboarding } from "./onboarding.js";
 import { initSettingsCache } from "./settings-cache.js";
+import { initBackgroundI18n } from "./i18n.js";
 
 void ensureTermStoreReady();
+void initBackgroundI18n();
 initContextMenu();
 initOnboarding();
 initSettingsCache();

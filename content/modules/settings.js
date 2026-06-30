@@ -81,6 +81,12 @@
                             app.resolveContextMode(state.runtimeSettings);
                     }
                     app.applyTheme(state.runtimeSettings.theme_mode || "auto");
+                    if (global.JYT_I18N?.setLang) {
+                        global.JYT_I18N.setLang(
+                            state.runtimeSettings.ui_lang || "auto",
+                        );
+                        app.refreshBubbleI18n?.();
+                    }
                 });
             }
 

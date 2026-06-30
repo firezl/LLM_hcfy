@@ -1,3 +1,17 @@
+import { I18N_MESSAGES } from "../libs/i18n-messages.mjs";
+
+const PROMPT_TEXT = I18N_MESSAGES.en || {};
+
+function pt(key, vars) {
+    let text = String(PROMPT_TEXT[key] ?? key);
+    if (vars && typeof vars === "object") {
+        for (const [name, value] of Object.entries(vars)) {
+            text = text.replaceAll(`{${name}}`, String(value ?? ""));
+        }
+    }
+    return text;
+}
+
 export function resolveLanguagePair(request) {
     const sourceSetting = request?.settings?.source_lang || "auto";
     const targetSetting = request?.settings?.target_lang || "auto";
@@ -24,16 +38,16 @@ export function resolveLanguagePair(request) {
 export function getLanguageDisplayName(lang) {
     const normalized = String(lang || "").toLowerCase();
     const names = {
-        zh: "中文",
-        en: "英文",
-        ja: "日文",
-        ko: "韩文",
-        fr: "法文",
-        de: "德文",
-        es: "西班牙文",
-        ru: "俄文",
+        zh: "Chinese",
+        en: "English",
+        ja: "Japanese",
+        ko: "Korean",
+        fr: "French",
+        de: "German",
+        es: "Spanish",
+        ru: "Russian",
     };
-    return names[normalized] || `${normalized}语言`;
+    return names[normalized] || `${normalized} language`;
 }
 
 function normalizeLangTag(lang) {
@@ -85,14 +99,16 @@ function buildGlossaryConstraint(glossaryTerms) {
         if (!source || !target) {
             continue;
         }
-        lines.push(`- ${source} => ${target}`);
+        lines.push(
+            pt("prompt.glossaryLine", { source, target }),
+        );
     }
 
     if (lines.length === 0) {
         return "";
     }
 
-    return `\n术语约束（若原文命中，请优先使用以下术语翻译）：\n${lines.join("\n")}`;
+    return `\n${pt("prompt.glossaryConstraint")}\n${lines.join("\n")}`;
 }
 
 function buildGlossaryLines(glossaryTerms) {
@@ -107,7 +123,7 @@ function buildGlossaryLines(glossaryTerms) {
         if (!source || !target) {
             continue;
         }
-        lines.push(`- ${source} => ${target}`);
+        lines.push(pt("prompt.glossaryLine", { source, target }));
     }
 
     return lines.join("\n");
@@ -140,25 +156,25 @@ export function buildContextBlock(context) {
     const fields = getContextFieldValues(context);
     const parts = [];
     if (fields.pageTitle) {
-        parts.push(`网页标题: ${fields.pageTitle}`);
+        parts.push(`Page title: ${fields.pageTitle}`);
     }
     if (fields.pageDomain) {
-        parts.push(`网页域名: ${fields.pageDomain}`);
+        parts.push(`Page domain: ${fields.pageDomain}`);
     }
     if (fields.pageLang) {
-        parts.push(`网页语言: ${fields.pageLang}`);
+        parts.push(`Page language: ${fields.pageLang}`);
     }
     if (fields.block) {
-        parts.push(`当前段落: ${fields.block}`);
+        parts.push(`Current paragraph: ${fields.block}`);
     }
     if (fields.before) {
-        parts.push(`前文: ${fields.before}`);
+        parts.push(`Before: ${fields.before}`);
     }
     if (fields.after) {
-        parts.push(`后文: ${fields.after}`);
+        parts.push(`After: ${fields.after}`);
     }
     if (fields.selectedText) {
-        parts.push(`划选文本: ${fields.selectedText}`);
+        parts.push(`Selected text: ${fields.selectedText}`);
     }
 
     return parts.join("\n");
@@ -187,31 +203,20 @@ function buildDefaultSystemPrompt(_text, to, options) {
 
     if (mode === "lightweight") {
         return appendGlossaryConstraint(
-            [
-                `请把【划选文本】翻译成${targetLang}。前后文只用于判断含义，不要翻译前后文。只输出译文。`,
-            ],
+            [pt("prompt.default.system.lightweight", { targetLang })],
             glossaryTerms,
         );
     }
 
     if (mode === "enhanced") {
         return appendGlossaryConstraint(
-            [
-                "你是一个浏览器划词翻译插件的翻译引擎。",
-                `请根据网页上下文，将用户划选文本翻译成简洁自然的${targetLang}。`,
-                "要求：",
-                "1. 只翻译划选文本。",
-                "2. 前文、后文和当前段落只用于消歧。",
-                "3. 不要解释。",
-                "4. 不要翻译整个段落。",
-                "5. 保留代码、变量名、公式、URL。",
-            ],
+            [pt("prompt.default.system.enhanced", { targetLang })],
             glossaryTerms,
         );
     }
 
     return appendGlossaryConstraint(
-        [`请将以下内容翻译成${targetLang}，只输出译文。`],
+        [pt("prompt.default.system.simple", { targetLang })],
         glossaryTerms,
     );
 }
@@ -223,24 +228,23 @@ function buildDefaultUserPrompt(text, to, options) {
     const selected = String(text || "");
 
     if (mode === "lightweight") {
-        return [
-            `前文：${fields.before}`,
-            `划选文本：${selected}`,
-            `后文：${fields.after}`,
-        ].join("\n");
+        return pt("prompt.default.user.lightweight", {
+            before: fields.before,
+            selected,
+            after: fields.after,
+        });
     }
 
     if (mode === "enhanced") {
-        return [
-            `网页标题：${fields.pageTitle}`,
-            `网页域名：${fields.pageDomain}`,
-            `前文：${fields.before}`,
-            `划选文本：${selected}`,
-            `后文：${fields.after}`,
-            `当前段落：${fields.block}`,
-            "",
-            `${targetLang}译文：`,
-        ].join("\n");
+        return pt("prompt.default.user.enhanced", {
+            pageTitle: fields.pageTitle,
+            pageDomain: fields.pageDomain,
+            before: fields.before,
+            selected,
+            after: fields.after,
+            block: fields.block,
+            targetLang,
+        });
     }
 
     return selected;
@@ -289,7 +293,7 @@ function buildPromptWithTemplate(
         .replaceAll("{page_lang}", fields.pageLang);
 
     if (appendTextWhenMissing && !normalizedTemplate.includes("{text}")) {
-        prompt += `\n输入:\n${text}`;
+        prompt += `\n${pt("prompt.legacy.fallback", { targetLang, text })}`;
     }
 
     return prompt;
@@ -309,7 +313,7 @@ function renderPromptTemplate(template, text, to, options) {
 export function buildPrompt(text, to, options) {
     const targetLang = getLanguageDisplayName(to);
     const glossaryBlock = buildGlossaryConstraint(options?.glossaryTerms);
-    return `${glossaryBlock}\n请把这段文字翻译为${targetLang}，不要有多余的输出。输入:\n${text}`;
+    return `${glossaryBlock}\n${pt("prompt.legacy.fallback", { targetLang, text })}`;
 }
 
 export function buildPromptWithUserTemplate(text, to, options) {

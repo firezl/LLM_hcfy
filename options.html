@@ -2,115 +2,124 @@
 <html>
     <head>
         <meta charset="utf-8" />
-        <title>LLM划词翻译 - 设置</title>
+        <title data-i18n="options.page.title"></title>
         <link rel="stylesheet" href="styles.css" />
     </head>
     <body id="jyt-options-body">
         <div class="jyt-form">
             <div class="jyt-options-heading">
-                <h2>LLM划词翻译 设置</h2>
+                <h2 data-i18n="options.page.heading"></h2>
                 <div class="jyt-heading-actions">
                     <a class="jyt-help-link" href="help.html" target="_blank"
-                        >快速上手</a
+                         data-i18n="options.page.helpLink"></a
                     >
                 </div>
             </div>
 
             <div class="jyt-tabs" id="options_tabs">
-                <div class="jyt-tab active" data-tab="tab_general">通用</div>
-                <div class="jyt-tab" data-tab="tab_engine">引擎</div>
-                <div class="jyt-tab" data-tab="tab_glossary">术语</div>
-                <div class="jyt-tab" data-tab="tab_history">历史</div>
-                <div class="jyt-tab" data-tab="tab_sync">同步与数据</div>
+                <div class="jyt-tab active" data-tab="tab_general" data-i18n="options.tab.general"></div>
+                <div class="jyt-tab" data-tab="tab_engine" data-i18n="options.tab.engine"></div>
+                <div class="jyt-tab" data-tab="tab_glossary" data-i18n="options.tab.glossary"></div>
+                <div class="jyt-tab" data-tab="tab_history" data-i18n="options.tab.history"></div>
+                <div class="jyt-tab" data-tab="tab_sync" data-i18n="options.tab.sync"></div>
             </div>
 
             <div class="jyt-tab-content active" id="tab_general">
                 <div class="jyt-section">
-                    <div class="jyt-section-title">基础设置</div>
-                    <label>是否启用划词翻译</label>
+                    <div class="jyt-section-title" data-i18n="options.general.section.basic"></div>
+                    <label data-i18n="options.general.enableSelect.label"></label>
                     <select id="enable_select" data-jyt-setting="enable_select">
-                        <option value="on">开启</option>
-                        <option value="off">关闭（使用快捷键）</option>
+                        <option value="on" data-i18n="options.general.enableSelect.on"></option>
+                        <option value="off" data-i18n="options.general.enableSelect.off"></option>
                     </select>
 
-                    <label>翻译快捷键</label>
+                    <label data-i18n="options.general.translateShortcut.label"></label>
                     <input
                         id="translate_shortcut"
                         type="text"
-                        placeholder="例如: Alt+T / Ctrl+Shift+Y" data-jyt-setting="translate_shortcut">
-                    <div class="jyt-hint">
-                        点击输入框后直接按键录制快捷键；留空表示不启用快捷键。
-                    </div>
+                        data-i18n-ph="options.general.translateShortcut.placeholder" data-i18n-ph="options.general.translateShortcut.placeholder" placeholder="例如: Alt+T / Ctrl+Shift+Y" data-jyt-setting="translate_shortcut">
+                    <div class="jyt-hint" data-i18n="options.general.translateShortcut.hint"></div>
 
-                    <label>首选翻译引擎</label>
+                    <label data-i18n="options.general.engineSelect.label"></label>
                     <select id="engine_select" data-jyt-setting="engine_select">
-                        <option value="auto">自动（优先 OpenAI API）</option>
-                        <option value="llm">大模型翻译</option>
-                        <option value="google">谷歌翻译</option>
-                        <option value="bing">Bing翻译</option>
-                        <option value="deepl">DeepL 翻译</option>
-                        <option value="deeplx">DeepLX 翻译</option>
-                        <option value="browser" id="browser_engine_option">
-                            浏览器 AI（实验，仅划词）
-                        </option>
+                        <option value="auto" data-i18n="options.general.engineSelect.auto"></option>
+                        <option value="llm" data-i18n="options.general.engineSelect.llm"></option>
+                        <option value="google" data-i18n="options.general.engineSelect.google"></option>
+                        <option value="bing" data-i18n="options.general.engineSelect.bing"></option>
+                        <option value="deepl" data-i18n="options.general.engineSelect.deepl"></option>
+                        <option value="deeplx" data-i18n="options.general.engineSelect.deeplx"></option>
+                        <option value="browser" id="browser_engine_option" data-i18n="options.general.engineSelect.browser"></option>
                     </select>
-                    <div class="jyt-hint" id="browser_engine_hint">
-                        仅在网页划词时生效（页面内调用 Chrome/Edge Translation API，不经过扩展后台）。不支持 Firefox，可能会下载模型。
-                    </div>
+                    <div class="jyt-hint" id="browser_engine_hint" data-i18n="options.general.browserEngine.hint"></div>
 
-                    <label>源语言</label>
+                    <label data-i18n="options.general.sourceLang.label"></label>
                     <select id="source_lang" data-jyt-setting="source_lang">
-                        <option value="auto">自动检测</option>
-                        <option value="zh">中文</option>
-                        <option value="en">英文</option>
-                        <option value="ja">日文</option>
-                        <option value="ko">韩文</option>
-                        <option value="fr">法文</option>
-                        <option value="de">德文</option>
-                        <option value="es">西班牙文</option>
-                        <option value="ru">俄文</option>
+                        <option value="auto" data-i18n="options.general.sourceLang.auto"></option>
+                        <option value="zh" data-i18n="options.general.lang.zh"></option>
+                        <option value="en" data-i18n="options.general.lang.en"></option>
+                        <option value="ja" data-i18n="options.general.lang.ja"></option>
+                        <option value="ko" data-i18n="options.general.lang.ko"></option>
+                        <option value="fr" data-i18n="options.general.lang.fr"></option>
+                        <option value="de" data-i18n="options.general.lang.de"></option>
+                        <option value="es" data-i18n="options.general.lang.es"></option>
+                        <option value="ru" data-i18n="options.general.lang.ru"></option>
                     </select>
 
-                    <label>目标语言</label>
+                    <label data-i18n="options.general.targetLang.label"></label>
                     <select id="target_lang" data-jyt-setting="target_lang">
-                        <option value="auto">自动选择</option>
-                        <option value="zh">中文</option>
-                        <option value="en">英文</option>
-                        <option value="ja">日文</option>
-                        <option value="ko">韩文</option>
-                        <option value="fr">法文</option>
-                        <option value="de">德文</option>
-                        <option value="es">西班牙文</option>
-                        <option value="ru">俄文</option>
+                        <option value="auto" data-i18n="options.general.targetLang.auto"></option>
+                        <option value="zh" data-i18n="options.general.lang.zh"></option>
+                        <option value="en" data-i18n="options.general.lang.en"></option>
+                        <option value="ja" data-i18n="options.general.lang.ja"></option>
+                        <option value="ko" data-i18n="options.general.lang.ko"></option>
+                        <option value="fr" data-i18n="options.general.lang.fr"></option>
+                        <option value="de" data-i18n="options.general.lang.de"></option>
+                        <option value="es" data-i18n="options.general.lang.es"></option>
+                        <option value="ru" data-i18n="options.general.lang.ru"></option>
                     </select>
 
-                    <label>智能上下文翻译（仅大模型）</label>
+                    <label data-i18n="options.general.contextMode.label"></label>
                     <select id="context_translate_mode" data-jyt-setting="context_translate_mode">
-                        <option value="off">关闭</option>
-                        <option value="lightweight">轻量（前后文消歧）</option>
-                        <option value="enhanced">增强（全上下文）</option>
+                        <option value="off" data-i18n="options.general.contextMode.off"></option>
+                        <option value="lightweight" data-i18n="options.general.contextMode.lightweight"></option>
+                        <option value="enhanced" data-i18n="options.general.contextMode.enhanced"></option>
                     </select>
-                    <div class="jyt-hint">
-                        仅对大模型引擎生效。关闭则回退纯划选翻译。
-                    </div>
+                    <div class="jyt-hint" data-i18n="options.general.contextMode.hint"></div>
                 </div>
 
                 <div class="jyt-section">
-                    <div class="jyt-section-title">外观设置</div>
-                    <label>主题模式</label>
-                    <select id="theme_mode" data-jyt-setting="theme_mode">
-                        <option value="auto">自动（跟随系统）</option>
-                        <option value="light">明亮</option>
-                        <option value="dark">黑暗</option>
+                    <div class="jyt-section-title" data-i18n="options.general.section.appearance"></div>
+                    
+                    <label data-i18n="uiLang.label"></label>
+                    <select id="ui_lang" data-jyt-setting="ui_lang">
+                        <option value="auto" data-i18n="uiLang.auto"></option>
+                        <option value="zh-CN" data-i18n="uiLang.option.zh-CN"></option>
+                        <option value="zh-TW" data-i18n="uiLang.option.zh-TW"></option>
+                        <option value="en" data-i18n="uiLang.option.en"></option>
+                        <option value="ja" data-i18n="uiLang.option.ja"></option>
+                        <option value="ko" data-i18n="uiLang.option.ko"></option>
+                        <option value="fr" data-i18n="uiLang.option.fr"></option>
+                        <option value="de" data-i18n="uiLang.option.de"></option>
+                        <option value="es" data-i18n="uiLang.option.es"></option>
+                        <option value="ru" data-i18n="uiLang.option.ru"></option>
+                        <option value="pt" data-i18n="uiLang.option.pt"></option>
                     </select>
 
-                    <label>自定义字体</label>
+
+                    <label data-i18n="options.general.themeMode.label"></label>
+                    <select id="theme_mode" data-jyt-setting="theme_mode">
+                        <option value="auto" data-i18n="options.general.themeMode.auto"></option>
+                        <option value="light" data-i18n="options.general.themeMode.light"></option>
+                        <option value="dark" data-i18n="options.general.themeMode.dark"></option>
+                    </select>
+
+                    <label data-i18n="options.general.fontFamily.label"></label>
                     <input
                         id="font_family"
                         type="text"
-                        placeholder="例如: 'Microsoft YaHei', 'Segoe UI'" data-jyt-setting="font_family">
+                        data-i18n-ph="options.general.fontFamily.placeholder" placeholder="例如: 'Microsoft YaHei', 'Segoe UI'" data-jyt-setting="font_family">
 
-                    <label>最大宽度占比 (5-95%)</label>
+                    <label data-i18n="options.general.bubbleWidth.label"></label>
                     <input
                         id="bubble_width_percent"
                         type="number"
@@ -119,7 +128,7 @@
                         step="1"
                         placeholder="20" data-jyt-setting="bubble_width_percent">
 
-                    <label>最大高度占比 (5-95%)</label>
+                    <label data-i18n="options.general.bubbleHeight.label"></label>
                     <input
                         id="bubble_height_percent"
                         type="number"
@@ -132,205 +141,197 @@
 
             <div class="jyt-tab-content" id="tab_engine">
                 <div class="jyt-section jyt-hidden" id="llm_engine_section" data-jyt-panel="llm">
-                    <div class="jyt-section-title">大模型翻译</div>
-                    <label>大模型提供方</label>
+                    <div class="jyt-section-title" data-i18n="options.engine.llm.sectionTitle"></div>
+                    <label data-i18n="options.engine.llm.providerLabel"></label>
                     <select id="llm_engine_select" data-jyt-setting="llm_engine_select">
-                        <option value="openai">OpenAI</option>
-                        <option value="custom_openai">
-                            自定义 OpenAI 兼容
-                        </option>
-                        <option value="openrouter">OpenRouter</option>
-                        <option value="gemini">Gemini</option>
-                        <option value="claude">Claude</option>
-                        <option value="qwen">Qwen</option>
-                        <option value="deepseek">DeepSeek</option>
-                        <option value="siliconflow">硅基流动 SiliconFlow</option>
-                        <option value="glm">GLM</option>
-                        <option value="xiaomi">Xiaomi Mimo</option>
-                        <option value="grok">xAI Grok</option>
-                        <option value="nim">NVIDIA NIM</option>
-                        <option value="ollama">Ollama 本地服务</option>
+                        <option value="openai" data-i18n="options.engine.provider.openai"></option>
+                        <option value="custom_openai" data-i18n="options.engine.provider.customOpenai"></option>
+                        <option value="openrouter" data-i18n="options.engine.provider.openrouter"></option>
+                        <option value="gemini" data-i18n="options.engine.provider.gemini"></option>
+                        <option value="claude" data-i18n="options.engine.provider.claude"></option>
+                        <option value="qwen" data-i18n="options.engine.provider.qwen"></option>
+                        <option value="deepseek" data-i18n="options.engine.provider.deepseek"></option>
+                        <option value="siliconflow" data-i18n="options.engine.provider.siliconflow"></option>
+                        <option value="glm" data-i18n="options.engine.provider.glm"></option>
+                        <option value="xiaomi" data-i18n="options.engine.provider.xiaomi"></option>
+                        <option value="grok" data-i18n="options.engine.provider.grok"></option>
+                        <option value="nim" data-i18n="options.engine.provider.nim"></option>
+                        <option value="ollama" data-i18n="options.engine.provider.ollama"></option>
                     </select>
-                    <div class="jyt-hint">
-                        先在“通用”里选择“大模型翻译”，再在这里选择具体模型来源。
-                    </div>
+                    <div class="jyt-hint" data-i18n="options.engine.llm.hint"></div>
                 </div>
 
                 <div class="jyt-section" id="openai_section" data-jyt-engine="openai" data-jyt-shared-openai="true">
-                    <div class="jyt-section-title">OpenAI / 大模型配置</div>
-                    <label>API 地址</label>
+                    <div class="jyt-section-title" data-i18n="options.engine.openai.sectionTitle"></div>
+                    <label data-i18n="options.engine.shared.apiUrl"></label>
                     <input
                         id="openai_api_url"
                         type="text"
                         placeholder="https://api.openai.com/v1/chat/completions" data-jyt-setting="openai_api_url">
-                    <label>API Key</label>
+                    <label data-i18n="options.engine.shared.apiKey"></label>
                     <input
                         id="openai_api_key"
                         type="password"
                         placeholder="sk-..." data-jyt-setting="openai_api_key">
-                    <label>翻译模型</label>
+                    <label data-i18n="options.engine.shared.model"></label>
                     <select id="openai_model" data-jyt-setting="openai_model">
-                        <option value="">正在加载模型列表...</option>
-                        <option value="custom">自定义模型名</option>
+                        <option value="" data-i18n="options.engine.shared.loadingModels"></option>
+                        <option value="custom" data-i18n="options.engine.shared.customModel"></option>
                     </select>
-                    <label>自定义模型名</label>
+                    <label data-i18n="options.engine.shared.customModel"></label>
                     <input
                         id="openai_custom_model"
                         type="text"
-                        placeholder="例如: gpt-4o-mini" data-jyt-setting="openai_custom_model">
+                        data-i18n-ph="options.engine.shared.customModelPlaceholder" placeholder="例如: gpt-4o-mini" data-jyt-setting="openai_custom_model">
                     <div class="jyt-connection-test-container">
-                        <button type="button" class="jyt-btn-connection-test" data-engine="openai">测试连接</button>
+                        <button type="button" class="jyt-btn-connection-test" data-engine="openai" data-i18n="common.testConnection"></button>
                         <span class="jyt-connection-test-status"></span>
                     </div>
-                    <label>是否开启思考模式</label>
+                    <label data-i18n="options.engine.shared.showThoughts"></label>
                     <select id="show_thoughts" data-jyt-setting="show_thoughts">
-                        <option value="false">否</option>
-                        <option value="true">是</option>
+                        <option value="false" data-i18n="common.no"></option>
+                        <option value="true" data-i18n="common.yes"></option>
                     </select>
-                    <label>思考模型类型</label>
+                    <label data-i18n="options.engine.shared.thinkingModelType"></label>
                     <select id="openai_thinking_model_type" data-jyt-setting="openai_thinking_model_type">
-                        <option value="auto">自动检测</option>
-                        <option value="openai_reasoning">OpenAI 推理模型 (o系列/gpt-5)</option>
-                        <option value="none">非思考模型</option>
+                        <option value="auto" data-i18n="options.general.sourceLang.auto"></option>
+                        <option value="openai_reasoning" data-i18n="options.engine.shared.thinkingType.openaiReasoning"></option>
+                        <option value="none" data-i18n="options.engine.shared.thinkingType.none"></option>
                     </select>
-                    <label>OpenAI 推理强度</label>
+                    <label data-i18n="options.engine.shared.openaiReasoningEffort"></label>
                     <select id="openai_reasoning_effort" data-jyt-setting="openai_reasoning_effort">
-                        <option value="none">none</option>
-                        <option value="minimal">minimal</option>
-                        <option value="low">low</option>
-                        <option value="medium">medium</option>
-                        <option value="high">high</option>
-                        <option value="xhigh">xhigh</option>
+                        <option value="none" data-i18n="options.engine.shared.effort.none"></option>
+                        <option value="minimal" data-i18n="options.engine.shared.effort.minimal"></option>
+                        <option value="low" data-i18n="options.engine.shared.effort.low"></option>
+                        <option value="medium" data-i18n="options.engine.shared.effort.medium"></option>
+                        <option value="high" data-i18n="options.engine.shared.effort.high"></option>
+                        <option value="xhigh" data-i18n="options.engine.shared.effort.xhigh"></option>
                     </select>
-                    <label>OpenAI 最大输出 Token（0=自动）</label>
+                    <label data-i18n="options.engine.shared.openaiMaxTokens"></label>
                     <input
                         id="openai_max_completion_tokens"
                         type="number"
                         min="0"
                         step="1"
                         placeholder="0" data-jyt-setting="openai_max_completion_tokens">
-                    <label>自定义翻译 Prompt（仅 OpenAI 生效）</label>
+                    <label data-i18n="options.engine.openai.customPromptNote"></label>
                     <textarea
                         id="openai_custom_prompt"
                         rows="4"
-                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="openai_custom_prompt"></textarea>
+                        data-i18n-ph="options.engine.shared.customPromptPlaceholder" placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="openai_custom_prompt"></textarea>
                 </div>
 
                 <div class="jyt-section jyt-hidden" id="custom_openai_section" data-jyt-engine="custom_openai">
-                    <div class="jyt-section-title">自定义 OpenAI 兼容配置</div>
-                    <label>API 地址</label>
+                    <div class="jyt-section-title" data-i18n="options.engine.customOpenai.sectionTitle"></div>
+                    <label data-i18n="options.engine.shared.apiUrl"></label>
                     <input
                         id="custom_openai_api_url"
                         type="text"
                         placeholder="https://your-endpoint/v1/chat/completions" data-jyt-setting="custom_openai_api_url">
-                    <label>API Key</label>
+                    <label data-i18n="options.engine.shared.apiKey"></label>
                     <input
                         id="custom_openai_api_key"
                         type="password"
                         placeholder="sk-..." data-jyt-setting="custom_openai_api_key">
-                    <label>模型</label>
+                    <label data-i18n="options.engine.shared.modelShort"></label>
                     <select id="custom_openai_model" data-jyt-setting="custom_openai_model">
-                        <option value="">正在加载模型列表...</option>
-                        <option value="custom">自定义模型名</option>
+                        <option value="" data-i18n="options.engine.shared.loadingModels"></option>
+                        <option value="custom" data-i18n="options.engine.shared.customModel"></option>
                     </select>
-                    <label>自定义模型名</label>
+                    <label data-i18n="options.engine.shared.customModel"></label>
                     <input
                         id="custom_openai_custom_model"
                         type="text"
-                        placeholder="例如: gpt-4o-mini" data-jyt-setting="custom_openai_custom_model">
+                        data-i18n-ph="options.engine.shared.customModelPlaceholder" placeholder="例如: gpt-4o-mini" data-jyt-setting="custom_openai_custom_model">
                     <div class="jyt-connection-test-container">
-                        <button type="button" class="jyt-btn-connection-test" data-engine="custom_openai">测试连接</button>
+                        <button type="button" class="jyt-btn-connection-test" data-engine="custom_openai" data-i18n="common.testConnection"></button>
                         <span class="jyt-connection-test-status"></span>
                     </div>
-                    <label>是否开启思考模式</label>
+                    <label data-i18n="options.engine.shared.showThoughts"></label>
                     <select id="custom_openai_show_thoughts" data-jyt-setting="custom_openai_show_thoughts">
-                        <option value="false">否</option>
-                        <option value="true">是</option>
+                        <option value="false" data-i18n="common.no"></option>
+                        <option value="true" data-i18n="common.yes"></option>
                     </select>
-                    <label>思考模型类型</label>
+                    <label data-i18n="options.engine.shared.thinkingModelType"></label>
                     <select id="custom_openai_thinking_model_type" data-jyt-setting="custom_openai_thinking_model_type">
-                        <option value="auto">自动检测</option>
-                        <option value="openai_reasoning">OpenAI 推理模型 (o系列/gpt-5)</option>
-                        <option value="deepseek_style">DeepSeek 风格 (DeepSeek/GLM/MiMo/Kimi)</option>
-                        <option value="qwen_style">Qwen 风格 (Qwen/Gemma)</option>
-                        <option value="none">非思考模型</option>
+                        <option value="auto" data-i18n="options.general.sourceLang.auto"></option>
+                        <option value="openai_reasoning" data-i18n="options.engine.shared.thinkingType.openaiReasoning"></option>
+                        <option value="deepseek_style" data-i18n="options.engine.shared.thinkingType.deepseekStyle"></option>
+                        <option value="qwen_style" data-i18n="options.engine.shared.thinkingType.qwenStyle"></option>
+                        <option value="none" data-i18n="options.engine.shared.thinkingType.none"></option>
                     </select>
-                    <div class="jyt-hint">
-                        自动检测会根据模型名判断；如果检测不准确，请手动选择。
-                    </div>
-                    <label>推理强度</label>
+                    <div class="jyt-hint" data-i18n="options.engine.shared.thinkingTypeHint"></div>
+                    <label data-i18n="options.engine.shared.reasoningEffort"></label>
                     <select id="custom_openai_reasoning_effort" data-jyt-setting="custom_openai_reasoning_effort">
-                        <option value="none">none</option>
-                        <option value="minimal">minimal</option>
-                        <option value="low">low</option>
-                        <option value="medium">medium</option>
-                        <option value="high">high</option>
-                        <option value="xhigh">xhigh</option>
+                        <option value="none" data-i18n="options.engine.shared.effort.none"></option>
+                        <option value="minimal" data-i18n="options.engine.shared.effort.minimal"></option>
+                        <option value="low" data-i18n="options.engine.shared.effort.low"></option>
+                        <option value="medium" data-i18n="options.engine.shared.effort.medium"></option>
+                        <option value="high" data-i18n="options.engine.shared.effort.high"></option>
+                        <option value="xhigh" data-i18n="options.engine.shared.effort.xhigh"></option>
                     </select>
-                    <label>最大输出 Token（0=自动）</label>
+                    <label data-i18n="options.engine.shared.maxCompletionTokens"></label>
                     <input
                         id="custom_openai_max_completion_tokens"
                         type="number"
                         min="0"
                         step="1"
                         placeholder="0" data-jyt-setting="custom_openai_max_completion_tokens">
-                    <label>自定义翻译 Prompt（仅自定义 OpenAI 生效）</label>
+                    <label data-i18n="options.engine.customOpenai.customPromptNote"></label>
                     <textarea
                         id="custom_openai_custom_prompt"
                         rows="4"
-                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="custom_openai_custom_prompt"></textarea>
+                        data-i18n-ph="options.engine.shared.customPromptPlaceholder" placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="custom_openai_custom_prompt"></textarea>
                 </div>
 
                 <div class="jyt-section jyt-hidden" id="openrouter_section" data-jyt-engine="openrouter">
-                    <div class="jyt-section-title">OpenRouter 配置</div>
-                    <label>API 地址</label>
+                    <div class="jyt-section-title" data-i18n="options.engine.openrouter.sectionTitle"></div>
+                    <label data-i18n="options.engine.shared.apiUrl"></label>
                     <input
                         id="openrouter_api_url"
                         type="text"
                         placeholder="https://openrouter.ai/api/v1/chat/completions" data-jyt-setting="openrouter_api_url">
-                    <label>API Key</label>
+                    <label data-i18n="options.engine.shared.apiKey"></label>
                     <input
                         id="openrouter_api_key"
                         type="password"
                         placeholder="sk-or-v1-..." data-jyt-setting="openrouter_api_key">
-                    <label>模型</label>
+                    <label data-i18n="options.engine.shared.modelShort"></label>
                     <select id="openrouter_model" data-jyt-setting="openrouter_model">
-                        <option value="openrouter/free">
-                            openrouter/free（自动免费模型）
-                        </option>
-                        <option value="custom">自定义模型名</option>
+                        <option value="openrouter/free" data-i18n="options.engine.openrouter.freeModel"></option>
+                        <option value="custom" data-i18n="options.engine.shared.customModel"></option>
                     </select>
-                    <label>自定义模型名</label>
+                    <label data-i18n="options.engine.shared.customModel"></label>
                     <input
                         id="openrouter_custom_model"
                         type="text"
                         placeholder="例如: qwen/qwen3-14b:free" data-jyt-setting="openrouter_custom_model">
                     <div class="jyt-connection-test-container">
-                        <button type="button" class="jyt-btn-connection-test" data-engine="openrouter">测试连接</button>
+                        <button type="button" class="jyt-btn-connection-test" data-engine="openrouter" data-i18n="common.testConnection"></button>
                         <span class="jyt-connection-test-status"></span>
                     </div>
-                    <label>是否开启思考模式</label>
+                    <label data-i18n="options.engine.shared.showThoughts"></label>
                     <select id="openrouter_show_thoughts" data-jyt-setting="openrouter_show_thoughts">
-                        <option value="false">否</option>
-                        <option value="true">是</option>
+                        <option value="false" data-i18n="common.no"></option>
+                        <option value="true" data-i18n="common.yes"></option>
                     </select>
-                    <label>推理强度</label>
+                    <label data-i18n="options.engine.shared.reasoningEffort"></label>
                     <select id="openrouter_reasoning_effort" data-jyt-setting="openrouter_reasoning_effort">
-                        <option value="none">none</option>
-                        <option value="minimal">minimal</option>
-                        <option value="low">low</option>
-                        <option value="medium">medium</option>
-                        <option value="high">high</option>
-                        <option value="xhigh">xhigh</option>
+                        <option value="none" data-i18n="options.engine.shared.effort.none"></option>
+                        <option value="minimal" data-i18n="options.engine.shared.effort.minimal"></option>
+                        <option value="low" data-i18n="options.engine.shared.effort.low"></option>
+                        <option value="medium" data-i18n="options.engine.shared.effort.medium"></option>
+                        <option value="high" data-i18n="options.engine.shared.effort.high"></option>
+                        <option value="xhigh" data-i18n="options.engine.shared.effort.xhigh"></option>
                     </select>
-                    <label>最大输出 Token（0=自动）</label>
+                    <label data-i18n="options.engine.shared.maxCompletionTokens"></label>
                     <input
                         id="openrouter_max_completion_tokens"
                         type="number"
                         min="0"
                         step="1"
                         placeholder="0" data-jyt-setting="openrouter_max_completion_tokens">
-                    <label>自定义翻译 Prompt（仅 OpenRouter 生效）</label>
+                    <label data-i18n="options.engine.openrouter.customPromptNote"></label>
                     <textarea
                         id="openrouter_custom_prompt"
                         rows="4"
@@ -343,506 +344,498 @@
                 </div>
 
                 <div class="jyt-section jyt-hidden" id="deepseek_section" data-jyt-engine="deepseek">
-                    <div class="jyt-section-title">DeepSeek 配置</div>
-                    <label>API 地址</label>
+                    <div class="jyt-section-title" data-i18n="options.engine.deepseek.sectionTitle"></div>
+                    <label data-i18n="options.engine.shared.apiUrl"></label>
                     <input
                         id="deepseek_api_url"
                         type="text"
                         placeholder="https://api.deepseek.com/chat/completions" data-jyt-setting="deepseek_api_url">
-                    <label>API Key</label>
+                    <label data-i18n="options.engine.shared.apiKey"></label>
                     <input
                         id="deepseek_api_key"
                         type="password"
                         placeholder="sk-..." data-jyt-setting="deepseek_api_key">
-                    <label>模型</label>
+                    <label data-i18n="options.engine.shared.modelShort"></label>
                     <select id="deepseek_model" data-jyt-setting="deepseek_model">
-                        <option value="">正在加载模型列表...</option>
-                        <option value="custom">自定义模型名</option>
+                        <option value="" data-i18n="options.engine.shared.loadingModels"></option>
+                        <option value="custom" data-i18n="options.engine.shared.customModel"></option>
                     </select>
-                    <label>自定义模型名</label>
+                    <label data-i18n="options.engine.shared.customModel"></label>
                     <input
                         id="deepseek_custom_model"
                         type="text"
                         placeholder="例如: deepseek-v4-flash" data-jyt-setting="deepseek_custom_model">
                     <div class="jyt-connection-test-container">
-                        <button type="button" class="jyt-btn-connection-test" data-engine="deepseek">测试连接</button>
+                        <button type="button" class="jyt-btn-connection-test" data-engine="deepseek" data-i18n="common.testConnection"></button>
                         <span class="jyt-connection-test-status"></span>
                     </div>
-                    <label>是否开启思考模式</label>
+                    <label data-i18n="options.engine.shared.showThoughts"></label>
                     <select id="deepseek_show_thoughts" data-jyt-setting="deepseek_show_thoughts">
-                        <option value="false">否</option>
-                        <option value="true">是</option>
+                        <option value="false" data-i18n="common.no"></option>
+                        <option value="true" data-i18n="common.yes"></option>
                     </select>
-                    <label>思考模型类型</label>
+                    <label data-i18n="options.engine.shared.thinkingModelType"></label>
                     <select id="deepseek_thinking_model_type" data-jyt-setting="deepseek_thinking_model_type">
-                        <option value="auto">自动检测</option>
-                        <option value="deepseek_style">DeepSeek 风格 (DeepSeek/GLM/MiMo/Kimi)</option>
-                        <option value="none">非思考模型</option>
+                        <option value="auto" data-i18n="options.general.sourceLang.auto"></option>
+                        <option value="deepseek_style" data-i18n="options.engine.shared.thinkingType.deepseekStyle"></option>
+                        <option value="none" data-i18n="options.engine.shared.thinkingType.none"></option>
                     </select>
-                    <label>自定义翻译 Prompt（仅 DeepSeek 生效）</label>
+                    <label data-i18n="options.engine.deepseek.customPromptNote"></label>
                     <textarea
                         id="deepseek_custom_prompt"
                         rows="4"
-                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="deepseek_custom_prompt"></textarea>
+                        data-i18n-ph="options.engine.shared.customPromptPlaceholder" placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="deepseek_custom_prompt"></textarea>
                 </div>
 
                 <div class="jyt-section jyt-hidden" id="siliconflow_section" data-jyt-engine="siliconflow">
-                    <div class="jyt-section-title">硅基流动 SiliconFlow 配置</div>
-                    <label>API 地址</label>
+                    <div class="jyt-section-title" data-i18n="options.engine.siliconflow.sectionTitle"></div>
+                    <label data-i18n="options.engine.shared.apiUrl"></label>
                     <input
                         id="siliconflow_api_url"
                         type="text"
                         placeholder="https://api.siliconflow.cn/v1/chat/completions" data-jyt-setting="siliconflow_api_url">
-                    <label>API Key</label>
+                    <label data-i18n="options.engine.shared.apiKey"></label>
                     <input
                         id="siliconflow_api_key"
                         type="password"
                         placeholder="sk-..." data-jyt-setting="siliconflow_api_key">
-                    <label>模型</label>
+                    <label data-i18n="options.engine.shared.modelShort"></label>
                     <select id="siliconflow_model" data-jyt-setting="siliconflow_model">
-                        <option value="">正在加载模型列表...</option>
-                        <option value="custom">自定义模型名</option>
+                        <option value="" data-i18n="options.engine.shared.loadingModels"></option>
+                        <option value="custom" data-i18n="options.engine.shared.customModel"></option>
                     </select>
-                    <label>自定义模型名</label>
+                    <label data-i18n="options.engine.shared.customModel"></label>
                     <input
                         id="siliconflow_custom_model"
                         type="text"
                         placeholder="例如: deepseek-ai/DeepSeek-V3" data-jyt-setting="siliconflow_custom_model">
                     <div class="jyt-connection-test-container">
-                        <button type="button" class="jyt-btn-connection-test" data-engine="siliconflow">测试连接</button>
+                        <button type="button" class="jyt-btn-connection-test" data-engine="siliconflow" data-i18n="common.testConnection"></button>
                         <span class="jyt-connection-test-status"></span>
                     </div>
-                    <label>是否开启思考模式</label>
+                    <label data-i18n="options.engine.shared.showThoughts"></label>
                     <select id="siliconflow_show_thoughts" data-jyt-setting="siliconflow_show_thoughts">
-                        <option value="false">否</option>
-                        <option value="true">是</option>
+                        <option value="false" data-i18n="common.no"></option>
+                        <option value="true" data-i18n="common.yes"></option>
                     </select>
-                    <label>思考模型类型</label>
+                    <label data-i18n="options.engine.shared.thinkingModelType"></label>
                     <select id="siliconflow_thinking_model_type" data-jyt-setting="siliconflow_thinking_model_type">
-                        <option value="auto">自动检测</option>
-                        <option value="deepseek_style">DeepSeek 风格 (DeepSeek/GLM/MiMo/Kimi)</option>
-                        <option value="none">非思考模型</option>
+                        <option value="auto" data-i18n="options.general.sourceLang.auto"></option>
+                        <option value="deepseek_style" data-i18n="options.engine.shared.thinkingType.deepseekStyle"></option>
+                        <option value="none" data-i18n="options.engine.shared.thinkingType.none"></option>
                     </select>
-                    <div class="jyt-hint">
-                        推理模型（如 DeepSeek-R1）可开启思考过程；普通对话模型请保持关闭。
-                    </div>
-                    <label>自定义翻译 Prompt（仅硅基流动生效）</label>
+                    <div class="jyt-hint" data-i18n="options.engine.siliconflow.hint"></div>
+                    <label data-i18n="options.engine.siliconflow.customPromptNote"></label>
                     <textarea
                         id="siliconflow_custom_prompt"
                         rows="4"
-                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="siliconflow_custom_prompt"></textarea>
+                        data-i18n-ph="options.engine.shared.customPromptPlaceholder" placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="siliconflow_custom_prompt"></textarea>
                 </div>
 
                 <div class="jyt-section jyt-hidden" id="qwen_section" data-jyt-engine="qwen">
-                    <div class="jyt-section-title">Qwen DashScope 配置</div>
-                    <label>API 地址</label>
+                    <div class="jyt-section-title" data-i18n="options.engine.qwen.sectionTitle"></div>
+                    <label data-i18n="options.engine.shared.apiUrl"></label>
                     <input
                         id="qwen_api_url"
                         type="text"
                         placeholder="https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions" data-jyt-setting="qwen_api_url">
-                    <label>API Key</label>
+                    <label data-i18n="options.engine.shared.apiKey"></label>
                     <input
                         id="qwen_api_key"
                         type="password"
                         placeholder="sk-..." data-jyt-setting="qwen_api_key">
-                    <label>模型</label>
+                    <label data-i18n="options.engine.shared.modelShort"></label>
                     <select id="qwen_model" data-jyt-setting="qwen_model">
-                        <option value="">正在加载模型列表...</option>
-                        <option value="custom">自定义模型名</option>
+                        <option value="" data-i18n="options.engine.shared.loadingModels"></option>
+                        <option value="custom" data-i18n="options.engine.shared.customModel"></option>
                     </select>
-                    <label>自定义模型名</label>
+                    <label data-i18n="options.engine.shared.customModel"></label>
                     <input
                         id="qwen_custom_model"
                         type="text"
                         placeholder="例如: qwen3.5-plus" data-jyt-setting="qwen_custom_model">
                     <div class="jyt-connection-test-container">
-                        <button type="button" class="jyt-btn-connection-test" data-engine="qwen">测试连接</button>
+                        <button type="button" class="jyt-btn-connection-test" data-engine="qwen" data-i18n="common.testConnection"></button>
                         <span class="jyt-connection-test-status"></span>
                     </div>
-                    <label>是否开启思考模式</label>
+                    <label data-i18n="options.engine.shared.showThoughts"></label>
                     <select id="qwen_show_thoughts" data-jyt-setting="qwen_show_thoughts">
-                        <option value="false">否</option>
-                        <option value="true">是</option>
+                        <option value="false" data-i18n="common.no"></option>
+                        <option value="true" data-i18n="common.yes"></option>
                     </select>
-                    <label>思考预算（0=自动）</label>
+                    <label data-i18n="options.engine.qwen.thinkingBudget"></label>
                     <input
                         id="qwen_thinking_budget"
                         type="number"
                         min="0"
                         step="1"
                         placeholder="0" data-jyt-setting="qwen_thinking_budget">
-                    <label>保留历史思考</label>
+                    <label data-i18n="options.engine.qwen.preserveThinking"></label>
                     <select id="qwen_preserve_thinking" data-jyt-setting="qwen_preserve_thinking">
-                        <option value="false">否</option>
-                        <option value="true">是</option>
+                        <option value="false" data-i18n="common.no"></option>
+                        <option value="true" data-i18n="common.yes"></option>
                     </select>
-                    <label>自定义翻译 Prompt（仅 Qwen 生效）</label>
+                    <label data-i18n="options.engine.qwen.customPromptNote"></label>
                     <textarea
                         id="qwen_custom_prompt"
                         rows="4"
-                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="qwen_custom_prompt"></textarea>
+                        data-i18n-ph="options.engine.shared.customPromptPlaceholder" placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="qwen_custom_prompt"></textarea>
                 </div>
 
                 <div class="jyt-section jyt-hidden" id="glm_section" data-jyt-engine="glm">
-                    <div class="jyt-section-title">GLM 配置</div>
-                    <label>API 地址</label>
+                    <div class="jyt-section-title" data-i18n="options.engine.glm.sectionTitle"></div>
+                    <label data-i18n="options.engine.shared.apiUrl"></label>
                     <input
                         id="glm_api_url"
                         type="text"
                         placeholder="https://open.bigmodel.cn/api/paas/v4/chat/completions" data-jyt-setting="glm_api_url">
-                    <label>API Key</label>
+                    <label data-i18n="options.engine.shared.apiKey"></label>
                     <input
                         id="glm_api_key"
                         type="password"
                         placeholder="Bearer token" data-jyt-setting="glm_api_key">
-                    <label>模型</label>
+                    <label data-i18n="options.engine.shared.modelShort"></label>
                     <select id="glm_model" data-jyt-setting="glm_model">
-                        <option value="">正在加载模型列表...</option>
-                        <option value="custom">自定义模型名</option>
+                        <option value="" data-i18n="options.engine.shared.loadingModels"></option>
+                        <option value="custom" data-i18n="options.engine.shared.customModel"></option>
                     </select>
-                    <label>自定义模型名</label>
+                    <label data-i18n="options.engine.shared.customModel"></label>
                     <input
                         id="glm_custom_model"
                         type="text"
                         placeholder="例如: glm-5.1" data-jyt-setting="glm_custom_model">
                     <div class="jyt-connection-test-container">
-                        <button type="button" class="jyt-btn-connection-test" data-engine="glm">测试连接</button>
+                        <button type="button" class="jyt-btn-connection-test" data-engine="glm" data-i18n="common.testConnection"></button>
                         <span class="jyt-connection-test-status"></span>
                     </div>
-                    <label>是否开启思考模式</label>
+                    <label data-i18n="options.engine.shared.showThoughts"></label>
                     <select id="glm_show_thoughts" data-jyt-setting="glm_show_thoughts">
-                        <option value="false">否</option>
-                        <option value="true">是</option>
+                        <option value="false" data-i18n="common.no"></option>
+                        <option value="true" data-i18n="common.yes"></option>
                     </select>
-                    <label>思考模型类型</label>
+                    <label data-i18n="options.engine.shared.thinkingModelType"></label>
                     <select id="glm_thinking_model_type" data-jyt-setting="glm_thinking_model_type">
-                        <option value="auto">自动检测</option>
-                        <option value="deepseek_style">DeepSeek 风格 (DeepSeek/GLM/MiMo/Kimi)</option>
-                        <option value="none">非思考模型</option>
+                        <option value="auto" data-i18n="options.general.sourceLang.auto"></option>
+                        <option value="deepseek_style" data-i18n="options.engine.shared.thinkingType.deepseekStyle"></option>
+                        <option value="none" data-i18n="options.engine.shared.thinkingType.none"></option>
                     </select>
-                    <label>清理历史思考上下文</label>
+                    <label data-i18n="options.engine.glm.clearThinking"></label>
                     <select id="glm_clear_thinking" data-jyt-setting="glm_clear_thinking">
-                        <option value="true">是</option>
-                        <option value="false">否</option>
+                        <option value="true" data-i18n="common.yes"></option>
+                        <option value="false" data-i18n="common.no"></option>
                     </select>
-                    <label>自定义翻译 Prompt（仅 GLM 生效）</label>
+                    <label data-i18n="options.engine.glm.customPromptNote"></label>
                     <textarea
                         id="glm_custom_prompt"
                         rows="4"
-                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="glm_custom_prompt"></textarea>
+                        data-i18n-ph="options.engine.shared.customPromptPlaceholder" placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="glm_custom_prompt"></textarea>
                 </div>
 
                 <div class="jyt-section jyt-hidden" id="xiaomi_section" data-jyt-engine="xiaomi">
-                    <div class="jyt-section-title">Xiaomi MiMo 配置</div>
-                    <label>API 地址</label>
+                    <div class="jyt-section-title" data-i18n="options.engine.xiaomi.sectionTitle"></div>
+                    <label data-i18n="options.engine.shared.apiUrl"></label>
                     <input
                         id="xiaomi_api_url"
                         type="text"
                         placeholder="https://api.xiaomimimo.com/v1/chat/completions" data-jyt-setting="xiaomi_api_url">
-                    <label>API Key</label>
+                    <label data-i18n="options.engine.shared.apiKey"></label>
                     <input
                         id="xiaomi_api_key"
                         type="password"
                         placeholder="mimo-key" data-jyt-setting="xiaomi_api_key">
-                    <label>模型</label>
+                    <label data-i18n="options.engine.shared.modelShort"></label>
                     <select id="xiaomi_model" data-jyt-setting="xiaomi_model">
-                        <option value="">正在加载模型列表...</option>
-                        <option value="custom">自定义模型名</option>
+                        <option value="" data-i18n="options.engine.shared.loadingModels"></option>
+                        <option value="custom" data-i18n="options.engine.shared.customModel"></option>
                     </select>
-                    <label>自定义模型名</label>
+                    <label data-i18n="options.engine.shared.customModel"></label>
                     <input
                         id="xiaomi_custom_model"
                         type="text"
                         placeholder="例如: mimo-v2.5" data-jyt-setting="xiaomi_custom_model">
                     <div class="jyt-connection-test-container">
-                        <button type="button" class="jyt-btn-connection-test" data-engine="xiaomi">测试连接</button>
+                        <button type="button" class="jyt-btn-connection-test" data-engine="xiaomi" data-i18n="common.testConnection"></button>
                         <span class="jyt-connection-test-status"></span>
                     </div>
-                    <label>是否开启思考模式</label>
+                    <label data-i18n="options.engine.shared.showThoughts"></label>
                     <select id="xiaomi_show_thoughts" data-jyt-setting="xiaomi_show_thoughts">
-                        <option value="false">否</option>
-                        <option value="true">是</option>
+                        <option value="false" data-i18n="common.no"></option>
+                        <option value="true" data-i18n="common.yes"></option>
                     </select>
-                    <label>思考模型类型</label>
+                    <label data-i18n="options.engine.shared.thinkingModelType"></label>
                     <select id="xiaomi_thinking_model_type" data-jyt-setting="xiaomi_thinking_model_type">
-                        <option value="auto">自动检测</option>
-                        <option value="deepseek_style">DeepSeek 风格 (DeepSeek/GLM/MiMo/Kimi)</option>
-                        <option value="none">非思考模型</option>
+                        <option value="auto" data-i18n="options.general.sourceLang.auto"></option>
+                        <option value="deepseek_style" data-i18n="options.engine.shared.thinkingType.deepseekStyle"></option>
+                        <option value="none" data-i18n="options.engine.shared.thinkingType.none"></option>
                     </select>
-                    <label>最大输出 Token（0=自动）</label>
+                    <label data-i18n="options.engine.shared.maxCompletionTokens"></label>
                     <input
                         id="xiaomi_max_completion_tokens"
                         type="number"
                         min="0"
                         step="1"
                         placeholder="0" data-jyt-setting="xiaomi_max_completion_tokens">
-                    <label>自定义翻译 Prompt（仅 Xiaomi 生效）</label>
+                    <label data-i18n="options.engine.xiaomi.customPromptNote"></label>
                     <textarea
                         id="xiaomi_custom_prompt"
                         rows="4"
-                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="xiaomi_custom_prompt"></textarea>
+                        data-i18n-ph="options.engine.shared.customPromptPlaceholder" placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="xiaomi_custom_prompt"></textarea>
                 </div>
 
                 <div class="jyt-section jyt-hidden" id="nim_section" data-jyt-engine="nim">
-                    <div class="jyt-section-title">NVIDIA NIM 配置</div>
-                    <label>API 地址</label>
+                    <div class="jyt-section-title" data-i18n="options.engine.nim.sectionTitle"></div>
+                    <label data-i18n="options.engine.shared.apiUrl"></label>
                     <input
                         id="nim_api_url"
                         type="text"
                         placeholder="https://integrate.api.nvidia.com/v1/chat/completions" data-jyt-setting="nim_api_url">
-                    <label>API Key</label>
+                    <label data-i18n="options.engine.shared.apiKey"></label>
                     <input
                         id="nim_api_key"
                         type="password"
                         placeholder="nvapi-..." data-jyt-setting="nim_api_key">
-                    <label>模型</label>
+                    <label data-i18n="options.engine.shared.modelShort"></label>
                     <select id="nim_model" data-jyt-setting="nim_model">
-                        <option value="">正在加载模型列表...</option>
-                        <option value="custom">自定义模型名</option>
+                        <option value="" data-i18n="options.engine.shared.loadingModels"></option>
+                        <option value="custom" data-i18n="options.engine.shared.customModel"></option>
                     </select>
-                    <label>自定义模型名</label>
+                    <label data-i18n="options.engine.shared.customModel"></label>
                     <input
                         id="nim_custom_model"
                         type="text"
                         placeholder="例如: meta/llama-3.1-70b-instruct" data-jyt-setting="nim_custom_model">
                     <div class="jyt-connection-test-container">
-                        <button type="button" class="jyt-btn-connection-test" data-engine="nim">测试连接</button>
+                        <button type="button" class="jyt-btn-connection-test" data-engine="nim" data-i18n="common.testConnection"></button>
                         <span class="jyt-connection-test-status"></span>
                     </div>
-                    <label>是否开启思考模式</label>
+                    <label data-i18n="options.engine.shared.showThoughts"></label>
                     <select id="nim_show_thoughts" data-jyt-setting="nim_show_thoughts">
-                        <option value="false">否</option>
-                        <option value="true">是</option>
+                        <option value="false" data-i18n="common.no"></option>
+                        <option value="true" data-i18n="common.yes"></option>
                     </select>
-                    <label>思考模型类型</label>
+                    <label data-i18n="options.engine.shared.thinkingModelType"></label>
                     <select id="nim_thinking_model_type" data-jyt-setting="nim_thinking_model_type">
-                        <option value="auto">自动检测</option>
-                        <option value="deepseek_style">DeepSeek 风格 (DeepSeek/GLM/MiMo/Kimi)</option>
-                        <option value="openai_reasoning">OpenAI 推理模型 (o系列/gpt-5)</option>
-                        <option value="none">非思考模型</option>
+                        <option value="auto" data-i18n="options.general.sourceLang.auto"></option>
+                        <option value="deepseek_style" data-i18n="options.engine.shared.thinkingType.deepseekStyle"></option>
+                        <option value="openai_reasoning" data-i18n="options.engine.shared.thinkingType.openaiReasoning"></option>
+                        <option value="none" data-i18n="options.engine.shared.thinkingType.none"></option>
                     </select>
-                    <label>最大输出 Token</label>
+                    <label data-i18n="options.engine.shared.maxTokens"></label>
                     <input
                         id="nim_max_tokens"
                         type="number"
                         min="0"
                         placeholder="0" data-jyt-setting="nim_max_tokens">
-                    <div class="jyt-hint">
-                        NIM 部分模型要求设置 max_tokens。填 0 时使用默认 4096。
-                    </div>
-                    <label>自定义翻译 Prompt（仅 NVIDIA NIM 生效）</label>
+                    <div class="jyt-hint" data-i18n="options.engine.nim.hint"></div>
+                    <label data-i18n="options.engine.nim.customPromptNote"></label>
                     <textarea
                         id="nim_custom_prompt"
                         rows="4"
-                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="nim_custom_prompt"></textarea>
+                        data-i18n-ph="options.engine.shared.customPromptPlaceholder" placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="nim_custom_prompt"></textarea>
                 </div>
 
                 <div class="jyt-section jyt-hidden" id="grok_section" data-jyt-engine="grok">
-                    <div class="jyt-section-title">xAI Grok 配置</div>
-                    <label>API 地址</label>
+                    <div class="jyt-section-title" data-i18n="options.engine.grok.sectionTitle"></div>
+                    <label data-i18n="options.engine.shared.apiUrl"></label>
                     <input
                         id="grok_api_url"
                         type="text"
                         placeholder="https://api.x.ai/v1/chat/completions" data-jyt-setting="grok_api_url">
-                    <label>API Key</label>
+                    <label data-i18n="options.engine.shared.apiKey"></label>
                     <input
                         id="grok_api_key"
                         type="password"
                         placeholder="xai-..." data-jyt-setting="grok_api_key">
-                    <label>模型</label>
+                    <label data-i18n="options.engine.shared.modelShort"></label>
                     <select id="grok_model" data-jyt-setting="grok_model">
-                        <option value="">正在加载模型列表...</option>
-                        <option value="custom">自定义模型名</option>
+                        <option value="" data-i18n="options.engine.shared.loadingModels"></option>
+                        <option value="custom" data-i18n="options.engine.shared.customModel"></option>
                     </select>
-                    <label>自定义模型名</label>
+                    <label data-i18n="options.engine.shared.customModel"></label>
                     <input
                         id="grok_custom_model"
                         type="text"
                         placeholder="例如: grok-4.3" data-jyt-setting="grok_custom_model">
                     <div class="jyt-connection-test-container">
-                        <button type="button" class="jyt-btn-connection-test" data-engine="grok">测试连接</button>
+                        <button type="button" class="jyt-btn-connection-test" data-engine="grok" data-i18n="common.testConnection"></button>
                         <span class="jyt-connection-test-status"></span>
                     </div>
-                    <label>是否开启思考模式</label>
+                    <label data-i18n="options.engine.shared.showThoughts"></label>
                     <select id="grok_show_thoughts" data-jyt-setting="grok_show_thoughts">
-                        <option value="false">否</option>
-                        <option value="true">是</option>
+                        <option value="false" data-i18n="common.no"></option>
+                        <option value="true" data-i18n="common.yes"></option>
                     </select>
-                    <label>思考模型类型</label>
+                    <label data-i18n="options.engine.shared.thinkingModelType"></label>
                     <select id="grok_thinking_model_type" data-jyt-setting="grok_thinking_model_type">
-                        <option value="auto">自动检测</option>
-                        <option value="openai_reasoning">OpenAI 推理模型 (o系列/gpt-5)</option>
-                        <option value="none">非思考模型</option>
+                        <option value="auto" data-i18n="options.general.sourceLang.auto"></option>
+                        <option value="openai_reasoning" data-i18n="options.engine.shared.thinkingType.openaiReasoning"></option>
+                        <option value="none" data-i18n="options.engine.shared.thinkingType.none"></option>
                     </select>
-                    <label>自定义翻译 Prompt（仅 Grok 生效）</label>
+                    <label data-i18n="options.engine.grok.customPromptNote"></label>
                     <textarea
                         id="grok_custom_prompt"
                         rows="4"
-                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="grok_custom_prompt"></textarea>
+                        data-i18n-ph="options.engine.shared.customPromptPlaceholder" placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="grok_custom_prompt"></textarea>
                 </div>
 
                 <div class="jyt-section jyt-hidden" id="claude_section" data-jyt-engine="claude">
-                    <div class="jyt-section-title">Claude 配置</div>
-                    <label>API 地址</label>
+                    <div class="jyt-section-title" data-i18n="options.engine.claude.sectionTitle"></div>
+                    <label data-i18n="options.engine.shared.apiUrl"></label>
                     <input
                         id="claude_api_url"
                         type="text"
                         placeholder="https://api.anthropic.com/v1/messages" data-jyt-setting="claude_api_url">
-                    <label>API Key</label>
+                    <label data-i18n="options.engine.shared.apiKey"></label>
                     <input
                         id="claude_api_key"
                         type="password"
                         placeholder="sk-ant-..." data-jyt-setting="claude_api_key">
-                    <label>模型</label>
+                    <label data-i18n="options.engine.shared.modelShort"></label>
                     <select id="claude_model" data-jyt-setting="claude_model">
-                        <option value="">正在加载模型列表...</option>
-                        <option value="custom">自定义模型名</option>
+                        <option value="" data-i18n="options.engine.shared.loadingModels"></option>
+                        <option value="custom" data-i18n="options.engine.shared.customModel"></option>
                     </select>
-                    <label>自定义模型名</label>
+                    <label data-i18n="options.engine.shared.customModel"></label>
                     <input
                         id="claude_custom_model"
                         type="text"
                         placeholder="例如: claude-sonnet-4-6" data-jyt-setting="claude_custom_model">
                     <div class="jyt-connection-test-container">
-                        <button type="button" class="jyt-btn-connection-test" data-engine="claude">测试连接</button>
+                        <button type="button" class="jyt-btn-connection-test" data-engine="claude" data-i18n="common.testConnection"></button>
                         <span class="jyt-connection-test-status"></span>
                     </div>
-                    <label>是否开启思考模式</label>
+                    <label data-i18n="options.engine.shared.showThoughts"></label>
                     <select id="claude_show_thoughts" data-jyt-setting="claude_show_thoughts">
-                        <option value="false">否</option>
-                        <option value="true">是</option>
+                        <option value="false" data-i18n="common.no"></option>
+                        <option value="true" data-i18n="common.yes"></option>
                     </select>
-                    <label>思考模式</label>
+                    <label data-i18n="options.engine.claude.thinkingMode"></label>
                     <select id="claude_thinking_mode" data-jyt-setting="claude_thinking_mode">
-                        <option value="adaptive">adaptive（推荐）</option>
-                        <option value="enabled">enabled（手动预算）</option>
+                        <option value="adaptive" data-i18n="options.engine.claude.thinkingMode.adaptive"></option>
+                        <option value="enabled" data-i18n="options.engine.claude.thinkingMode.enabled"></option>
                     </select>
-                    <label>思考预算（enabled 模式）</label>
+                    <label data-i18n="options.engine.claude.thinkingBudget"></label>
                     <input
                         id="claude_thinking_budget"
                         type="number"
                         min="1024"
                         step="1"
                         placeholder="2048" data-jyt-setting="claude_thinking_budget">
-                    <label>adaptive 思考强度</label>
+                    <label data-i18n="options.engine.claude.thinkingEffort"></label>
                     <select id="claude_thinking_effort" data-jyt-setting="claude_thinking_effort">
-                        <option value="low">low</option>
-                        <option value="medium">medium</option>
-                        <option value="high">high</option>
+                        <option value="low" data-i18n="options.engine.shared.effort.low"></option>
+                        <option value="medium" data-i18n="options.engine.shared.effort.medium"></option>
+                        <option value="high" data-i18n="options.engine.shared.effort.high"></option>
                     </select>
-                    <label>最大输出 Token</label>
+                    <label data-i18n="options.engine.shared.maxTokens"></label>
                     <input
                         id="claude_max_tokens"
                         type="number"
                         min="1"
                         step="1"
                         placeholder="4096" data-jyt-setting="claude_max_tokens">
-                    <label>自定义翻译 Prompt（仅 Claude 生效）</label>
+                    <label data-i18n="options.engine.claude.customPromptNote"></label>
                     <textarea
                         id="claude_custom_prompt"
                         rows="4"
-                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="claude_custom_prompt"></textarea>
+                        data-i18n-ph="options.engine.shared.customPromptPlaceholder" placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="claude_custom_prompt"></textarea>
                 </div>
 
                 <div class="jyt-section jyt-hidden" id="gemini_section" data-jyt-engine="gemini">
-                    <div class="jyt-section-title">Gemini 配置</div>
-                    <label>API 地址</label>
+                    <div class="jyt-section-title" data-i18n="options.engine.gemini.sectionTitle"></div>
+                    <label data-i18n="options.engine.shared.apiUrl"></label>
                     <input
                         id="gemini_api_url"
                         type="text"
                         placeholder="https://generativelanguage.googleapis.com/v1beta/models" data-jyt-setting="gemini_api_url">
-                    <label>API Key</label>
+                    <label data-i18n="options.engine.shared.apiKey"></label>
                     <input
                         id="gemini_api_key"
                         type="password"
                         placeholder="AIza..." data-jyt-setting="gemini_api_key">
-                    <label>模型</label>
+                    <label data-i18n="options.engine.shared.modelShort"></label>
                     <select id="gemini_model" data-jyt-setting="gemini_model">
-                        <option value="">正在加载模型列表...</option>
-                        <option value="custom">自定义模型名</option>
+                        <option value="" data-i18n="options.engine.shared.loadingModels"></option>
+                        <option value="custom" data-i18n="options.engine.shared.customModel"></option>
                     </select>
-                    <label>自定义模型名</label>
+                    <label data-i18n="options.engine.shared.customModel"></label>
                     <input
                         id="gemini_custom_model"
                         type="text"
                         placeholder="例如: gemini-flash-latest" data-jyt-setting="gemini_custom_model">
                     <div class="jyt-connection-test-container">
-                        <button type="button" class="jyt-btn-connection-test" data-engine="gemini">测试连接</button>
+                        <button type="button" class="jyt-btn-connection-test" data-engine="gemini" data-i18n="common.testConnection"></button>
                         <span class="jyt-connection-test-status"></span>
                     </div>
-                    <label>是否开启思考模式</label>
+                    <label data-i18n="options.engine.shared.showThoughts"></label>
                     <select id="gemini_show_thoughts" data-jyt-setting="gemini_show_thoughts">
-                        <option value="false">否</option>
-                        <option value="true">是</option>
+                        <option value="false" data-i18n="common.no"></option>
+                        <option value="true" data-i18n="common.yes"></option>
                     </select>
-                    <label>Gemini 3 思考等级</label>
+                    <label data-i18n="options.engine.gemini.thinkingLevel"></label>
                     <select id="gemini_thinking_level" data-jyt-setting="gemini_thinking_level">
-                        <option value="minimal">minimal</option>
-                        <option value="low">low</option>
-                        <option value="medium">medium</option>
-                        <option value="high">high</option>
+                        <option value="minimal" data-i18n="options.engine.shared.effort.minimal"></option>
+                        <option value="low" data-i18n="options.engine.shared.effort.low"></option>
+                        <option value="medium" data-i18n="options.engine.shared.effort.medium"></option>
+                        <option value="high" data-i18n="options.engine.shared.effort.high"></option>
                     </select>
-                    <label>Gemini 2.5 思考预算（-1 动态，0 关闭）</label>
+                    <label data-i18n="options.engine.gemini.thinkingBudget"></label>
                     <input
                         id="gemini_thinking_budget"
                         type="number"
                         min="-1"
                         step="1"
                         placeholder="-1" data-jyt-setting="gemini_thinking_budget">
-                    <label>自定义翻译 Prompt（仅 Gemini 生效）</label>
+                    <label data-i18n="options.engine.gemini.customPromptNote"></label>
                     <textarea
                         id="gemini_custom_prompt"
                         rows="4"
-                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="gemini_custom_prompt"></textarea>
+                        data-i18n-ph="options.engine.shared.customPromptPlaceholder" placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="gemini_custom_prompt"></textarea>
                 </div>
 
                 <div class="jyt-section jyt-hidden" id="ollama_section" data-jyt-engine="ollama">
-                    <div class="jyt-section-title">Ollama 配置</div>
-                    <label>Ollama 地址</label>
+                    <div class="jyt-section-title" data-i18n="options.engine.ollama.sectionTitle"></div>
+                    <label data-i18n="options.engine.shared.ollamaUrl"></label>
                     <input
                         id="ollama_api_url"
                         type="text"
                         placeholder="http://localhost:11434/api/chat" data-jyt-setting="ollama_api_url">
-                    <div class="jyt-hint">
-                        默认使用本地 Ollama 服务地址，可修改为远端地址。
-                    </div>
-                    <label>模型</label>
+                    <div class="jyt-hint" data-i18n="options.engine.ollama.hint"></div>
+                    <label data-i18n="options.engine.shared.modelShort"></label>
                     <select id="ollama_model_select" data-jyt-setting="ollama_model_select">
-                        <option value="">正在加载模型列表...</option>
-                        <option value="custom">自定义模型名</option>
+                        <option value="" data-i18n="options.engine.shared.loadingModels"></option>
+                        <option value="custom" data-i18n="options.engine.shared.customModel"></option>
                     </select>
-                    <label>自定义模型名</label>
+                    <label data-i18n="options.engine.shared.customModel"></label>
                     <input
                         id="ollama_custom_model"
                         type="text"
                         placeholder="例如: qwen3.5:latest" data-jyt-setting="ollama_custom_model">
                     <div class="jyt-connection-test-container">
-                        <button type="button" class="jyt-btn-connection-test" data-engine="ollama">测试连接</button>
+                        <button type="button" class="jyt-btn-connection-test" data-engine="ollama" data-i18n="common.testConnection"></button>
                         <span class="jyt-connection-test-status"></span>
                     </div>
-                    <label>是否开启思考模式</label>
+                    <label data-i18n="options.engine.shared.showThoughts"></label>
                     <select id="ollama_show_thoughts" data-jyt-setting="ollama_show_thoughts">
-                        <option value="false">否</option>
-                        <option value="true">是</option>
+                        <option value="false" data-i18n="common.no"></option>
+                        <option value="true" data-i18n="common.yes"></option>
                     </select>
-                    <div class="jyt-hint">
-                        自动检测模型来自 /api/tags 的 models[].name。
-                    </div>
-                    <label>自定义翻译 Prompt（仅 Ollama 生效）</label>
+                    <div class="jyt-hint" data-i18n="options.engine.ollama.tagsHint"></div>
+                    <label data-i18n="options.engine.ollama.customPromptNote"></label>
                     <textarea
                         id="ollama_custom_prompt"
                         rows="4"
-                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="ollama_custom_prompt"></textarea>
+                        data-i18n-ph="options.engine.shared.customPromptPlaceholder" placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="ollama_custom_prompt"></textarea>
                 </div>
 
                 <div class="jyt-section jyt-hidden" id="deepl_section" data-jyt-engine="deepl">
-                    <div class="jyt-section-title">DeepL 翻译</div>
-                    <label>API 地址</label>
+                    <div class="jyt-section-title" data-i18n="options.engine.deepl.sectionTitle"></div>
+                    <label data-i18n="options.engine.shared.apiUrl"></label>
                     <input
                         id="deepl_api_url"
                         type="text"
                         placeholder="https://api-free.deepl.com/v2/translate" data-jyt-setting="deepl_api_url">
-                    <label>API Key</label>
+                    <label data-i18n="options.engine.shared.apiKey"></label>
                     <input
                         id="deepl_api_key"
                         type="password"
@@ -860,23 +853,23 @@
                         申请 API Key。
                     </div>
                     <div class="jyt-connection-test-container">
-                        <button type="button" class="jyt-btn-connection-test" data-engine="deepl">测试连接</button>
+                        <button type="button" class="jyt-btn-connection-test" data-engine="deepl" data-i18n="common.testConnection"></button>
                         <span class="jyt-connection-test-status"></span>
                     </div>
                 </div>
 
                 <div class="jyt-section jyt-hidden" id="deeplx_section" data-jyt-engine="deeplx">
-                    <div class="jyt-section-title">DeepLX 翻译</div>
-                    <label>API 地址</label>
+                    <div class="jyt-section-title" data-i18n="options.engine.deeplx.sectionTitle"></div>
+                    <label data-i18n="options.engine.shared.apiUrl"></label>
                     <input
                         id="deeplx_api_url"
                         type="text"
                         placeholder="http://localhost:1188/translate" data-jyt-setting="deeplx_api_url">
-                    <label>访问令牌（可选）</label>
+                    <label data-i18n="options.engine.shared.accessToken"></label>
                     <input
                         id="deeplx_api_key"
                         type="password"
-                        placeholder="若 DeepLX 启用了 TOKEN 则填写" data-jyt-setting="deeplx_api_key">
+                        data-i18n-ph="options.engine.deeplx.tokenPlaceholder" placeholder="若 DeepLX 启用了 TOKEN 则填写" data-jyt-setting="deeplx_api_key">
                     <div class="jyt-hint">
                         连接自托管 DeepLX 服务。默认使用
                         <code>/translate</code> 端点；若填写
@@ -884,7 +877,7 @@
                         格式。本地服务通常不需要令牌。
                     </div>
                     <div class="jyt-connection-test-container">
-                        <button type="button" class="jyt-btn-connection-test" data-engine="deeplx">测试连接</button>
+                        <button type="button" class="jyt-btn-connection-test" data-engine="deeplx" data-i18n="common.testConnection"></button>
                         <span class="jyt-connection-test-status"></span>
                     </div>
                 </div>
@@ -892,71 +885,67 @@
 
             <div class="jyt-tab-content" id="tab_glossary">
                 <div class="jyt-section" id="glossary_section">
-                    <div class="jyt-section-title">术语管理</div>
+                    <div class="jyt-section-title" data-i18n="options.glossary.sectionTitle"></div>
                     <div class="jyt-glossary-editor">
                         <div class="jyt-glossary-lang-row">
                             <div>
-                                <label>源语言</label>
+                                <label data-i18n="options.general.sourceLang.label"></label>
                                 <select id="glossary_source_lang">
-                                    <option value="zh">中文</option>
-                                    <option value="en">英文</option>
-                                    <option value="ja">日文</option>
-                                    <option value="ko">韩文</option>
-                                    <option value="fr">法文</option>
-                                    <option value="de">德文</option>
-                                    <option value="es">西班牙文</option>
-                                    <option value="ru">俄文</option>
+                                    <option value="zh" data-i18n="options.general.lang.zh"></option>
+                                    <option value="en" data-i18n="options.general.lang.en"></option>
+                                    <option value="ja" data-i18n="options.general.lang.ja"></option>
+                                    <option value="ko" data-i18n="options.general.lang.ko"></option>
+                                    <option value="fr" data-i18n="options.general.lang.fr"></option>
+                                    <option value="de" data-i18n="options.general.lang.de"></option>
+                                    <option value="es" data-i18n="options.general.lang.es"></option>
+                                    <option value="ru" data-i18n="options.general.lang.ru"></option>
                                 </select>
                             </div>
                             <div>
-                                <label>目标语言</label>
+                                <label data-i18n="options.general.targetLang.label"></label>
                                 <select id="glossary_target_lang">
-                                    <option value="zh">中文</option>
-                                    <option value="en">英文</option>
-                                    <option value="ja">日文</option>
-                                    <option value="ko">韩文</option>
-                                    <option value="fr">法文</option>
-                                    <option value="de">德文</option>
-                                    <option value="es">西班牙文</option>
-                                    <option value="ru">俄文</option>
+                                    <option value="zh" data-i18n="options.general.lang.zh"></option>
+                                    <option value="en" data-i18n="options.general.lang.en"></option>
+                                    <option value="ja" data-i18n="options.general.lang.ja"></option>
+                                    <option value="ko" data-i18n="options.general.lang.ko"></option>
+                                    <option value="fr" data-i18n="options.general.lang.fr"></option>
+                                    <option value="de" data-i18n="options.general.lang.de"></option>
+                                    <option value="es" data-i18n="options.general.lang.es"></option>
+                                    <option value="ru" data-i18n="options.general.lang.ru"></option>
                                 </select>
                             </div>
                         </div>
-                        <label>原文</label>
+                        <label data-i18n="options.glossary.sourceTerm"></label>
                         <input id="glossary_source_term" type="text" />
-                        <label>译文</label>
+                        <label data-i18n="options.glossary.targetTerm"></label>
                         <input id="glossary_target_term" type="text" />
                         <div class="jyt-glossary-options">
                             <div>
-                                <label>大小写敏感</label>
+                                <label data-i18n="options.glossary.caseSensitive"></label>
                                 <select id="glossary_case_sensitive">
-                                    <option value="false">否</option>
-                                    <option value="true">是</option>
+                                    <option value="false" data-i18n="common.no"></option>
+                                    <option value="true" data-i18n="common.yes"></option>
                                 </select>
                             </div>
                             <div>
-                                <label>整词匹配</label>
+                                <label data-i18n="options.glossary.wholeWord"></label>
                                 <select id="glossary_whole_word">
-                                    <option value="auto">自动</option>
-                                    <option value="true">是</option>
-                                    <option value="false">否</option>
+                                    <option value="auto" data-i18n="common.auto"></option>
+                                    <option value="true" data-i18n="common.yes"></option>
+                                    <option value="false" data-i18n="common.no"></option>
                                 </select>
                             </div>
                         </div>
                         <div class="jyt-btn-group jyt-btn-group-secondary">
-                            <button id="glossary_save" type="button">
-                                保存
-                            </button>
-                            <button id="glossary_cancel_edit" type="button">
-                                取消
-                            </button>
+                            <button id="glossary_save" type="button" data-i18n="common.save"></button>
+                            <button id="glossary_cancel_edit" type="button" data-i18n="common.cancel"></button>
                         </div>
                     </div>
                     <div id="glossary_list" class="jyt-glossary-list"></div>
                     <div class="jyt-btn-group jyt-btn-group-secondary">
-                        <button id="glossary_import" type="button">导入</button>
-                        <button id="glossary_export" type="button">导出</button>
-                        <button id="glossary_clear" type="button">清空</button>
+                        <button id="glossary_import" type="button" data-i18n="common.import"></button>
+                        <button id="glossary_export" type="button" data-i18n="common.export"></button>
+                        <button id="glossary_clear" type="button" data-i18n="common.clear"></button>
                     </div>
                     <input
                         id="glossary_import_file"
@@ -973,21 +962,21 @@
 
             <div class="jyt-tab-content" id="tab_history">
                 <div class="jyt-section" id="history_section">
-                    <div class="jyt-section-title">翻译历史</div>
+                    <div class="jyt-section-title" data-i18n="options.history.sectionTitle"></div>
                     <div class="jyt-history-toolbar">
                         <input
                             id="history_search"
                             type="text"
-                            placeholder="搜索原文、译文、标题或网址"
+                            data-i18n-ph="options.history.searchPlaceholder" placeholder="搜索原文、译文、标题或网址"
                         />
                         <select id="history_filter">
-                            <option value="all">全部</option>
-                            <option value="favorite">仅收藏</option>
+                            <option value="all" data-i18n="common.all"></option>
+                            <option value="favorite" data-i18n="options.history.filter.favorite"></option>
                         </select>
                     </div>
                     <div class="jyt-btn-group jyt-btn-group-secondary">
-                        <button id="history_refresh" type="button">刷新</button>
-                        <button id="history_clear" type="button">清空历史</button>
+                        <button id="history_refresh" type="button" data-i18n="common.refresh"></button>
+                        <button id="history_clear" type="button" data-i18n="options.history.clear"></button>
                     </div>
                     <div id="history_list" class="jyt-history-list"></div>
                     <div
@@ -999,18 +988,18 @@
 
             <div class="jyt-tab-content" id="tab_sync">
                 <div class="jyt-section" id="sync_section">
-                    <div class="jyt-section-title">WebDAV 同步</div>
-                    <label>URL</label>
+                    <div class="jyt-section-title" data-i18n="options.sync.webdav.sectionTitle"></div>
+                    <label data-i18n="options.sync.webdav.url"></label>
                     <input
                         id="webdav_base_url"
                         type="text"
                         placeholder="https://dav.example.com"
                     />
-                    <label>账号</label>
+                    <label data-i18n="options.sync.webdav.username"></label>
                     <input id="webdav_username" type="text" />
-                    <label>密码</label>
+                    <label data-i18n="options.sync.webdav.password"></label>
                     <input id="webdav_password" type="password" />
-                    <label>目录 (如 /jyt-sync)</label>
+                    <label data-i18n="options.sync.webdav.remoteDir"></label>
                     <input
                         id="webdav_remote_dir"
                         type="text"
@@ -1018,34 +1007,22 @@
                     />
 
                     <div class="jyt-btn-group jyt-btn-group-secondary">
-                        <button id="webdav_save_local" type="button">
-                            保存凭证
-                        </button>
-                        <button id="sync_test" type="button">测试连接</button>
+                        <button id="webdav_save_local" type="button" data-i18n="options.sync.webdav.saveCredentials"></button>
+                        <button id="sync_test" type="button" data-i18n="common.testConnection"></button>
                     </div>
                     <div class="jyt-btn-group jyt-btn-group-secondary">
-                        <button id="sync_upload" type="button">
-                            上传到云端
-                        </button>
-                        <button id="sync_download" type="button">
-                            从云端下载
-                        </button>
-                        <button id="sync_bidirectional" type="button">
-                            双向同步
-                        </button>
+                        <button id="sync_upload" type="button" data-i18n="options.sync.webdav.upload"></button>
+                        <button id="sync_download" type="button" data-i18n="options.sync.webdav.download"></button>
+                        <button id="sync_bidirectional" type="button" data-i18n="options.sync.webdav.bidirectional"></button>
                     </div>
                     <div id="sync_status" class="jyt-current-pdf-status"></div>
                 </div>
 
                 <div class="jyt-section" id="config_section">
-                    <div class="jyt-section-title">本地配置备份</div>
+                    <div class="jyt-section-title" data-i18n="options.sync.config.sectionTitle"></div>
                     <div class="jyt-btn-group jyt-btn-group-secondary">
-                        <button id="config_import" type="button">
-                            导入配置
-                        </button>
-                        <button id="config_export" type="button">
-                            导出配置
-                        </button>
+                        <button id="config_import" type="button" data-i18n="options.sync.config.import"></button>
+                        <button id="config_export" type="button" data-i18n="options.sync.config.export"></button>
                     </div>
                     <input
                         id="config_import_file"
@@ -1063,12 +1040,12 @@
             <div
                 class="jyt-btn-group jyt-options-actions"
             >
-                <button id="save">保存所有设置</button>
-                <button id="reset">恢复默认</button>
+                <button id="save" data-i18n="options.actions.saveAll"></button>
+                <button id="reset" data-i18n="options.actions.reset"></button>
             </div>
 
             <div class="jyt-btn-group jyt-btn-group-secondary jyt-pdf-actions">
-                <button id="open_local_pdf" type="button">打开本地 PDF</button>
+                <button id="open_local_pdf" type="button" data-i18n="options.pdf.openLocal"></button>
             </div>
             <div id="current_pdf_status" class="jyt-current-pdf-status"></div>
         </div>
@@ -1087,14 +1064,12 @@
                 aria-labelledby="onboarding_title"
             >
                 <div class="jyt-onboarding-header">
-                    <h3 id="onboarding_title">欢迎使用 LLM 划词翻译</h3>
+                    <h3 id="onboarding_title" data-i18n="options.onboarding.title"></h3>
                     <button
                         type="button"
-                        id="onboarding_skip"
+                        id="onboarding_skip" data-i18n="common.skip"
                         class="jyt-onboarding-skip"
-                    >
-                        跳过
-                    </button>
+                    ></button>
                 </div>
 
                 <div
@@ -1107,16 +1082,16 @@
                     </p>
                     <div class="jyt-onboarding-grid">
                         <button type="button" data-preset="cloud">
-                            <strong>云端高质量</strong>
-                            <span>OpenAI 兼容模型，适合稳定高质量翻译。</span>
+                            <strong data-i18n="options.onboarding.preset.cloud.title"></strong>
+                            <span data-i18n="options.onboarding.preset.cloud.desc"></span>
                         </button>
                         <button type="button" data-preset="local">
-                            <strong>本地隐私</strong>
-                            <span>Ollama 本地服务，文本不离开本机。</span>
+                            <strong data-i18n="options.onboarding.preset.local.title"></strong>
+                            <span data-i18n="options.onboarding.preset.local.desc"></span>
                         </button>
                         <button type="button" data-preset="free">
-                            <strong>免费保底</strong>
-                            <span>OpenRouter 免费路由，适合轻量试用。</span>
+                            <strong data-i18n="options.onboarding.preset.free.title"></strong>
+                            <span data-i18n="options.onboarding.preset.free.desc"></span>
                         </button>
                     </div>
                 </div>
@@ -1125,9 +1100,7 @@
                     id="onboarding_step_credentials"
                     class="jyt-onboarding-step jyt-hidden"
                 >
-                    <p class="jyt-hint">
-                        填写 API Key 后即可测试连接并保存。密钥仅保存在本机，不会同步到云端。
-                    </p>
+                    <p class="jyt-hint" data-i18n="options.onboarding.credentialsHint"></p>
                     <label id="onboarding_api_key_label" for="onboarding_api_key"
                         >API Key</label
                     >
@@ -1156,9 +1129,7 @@
                             type="button"
                             id="onboarding_test_btn"
                             class="jyt-onboarding-test-btn"
-                        >
-                            测试连接
-                        </button>
+                         data-i18n="common.testConnection"></button>
                         <span
                             id="onboarding_test_status"
                             class="jyt-onboarding-test-status"
@@ -1170,12 +1141,8 @@
                     id="onboarding_step_done"
                     class="jyt-onboarding-step jyt-hidden"
                 >
-                    <p id="onboarding_done_title" class="jyt-onboarding-done-title">
-                        配置完成
-                    </p>
-                    <p class="jyt-hint">
-                        去任意网页选中文字，点击翻译按钮即可体验。更多选项可在设置页各标签中调整。
-                    </p>
+                    <p id="onboarding_done_title" class="jyt-onboarding-done-title" data-i18n="options.onboarding.doneTitle"></p>
+                    <p class="jyt-hint" data-i18n="options.onboarding.doneHint"></p>
                 </div>
 
                 <div
@@ -1186,18 +1153,16 @@
                 <div class="jyt-onboarding-footer">
                     <button
                         type="button"
-                        id="onboarding_back"
+                        id="onboarding_back" data-i18n="common.back"
                         class="jyt-onboarding-back jyt-hidden"
-                    >
-                        上一步
-                    </button>
-                    <button type="button" id="onboarding_next">
-                        请选择上方方案
-                    </button>
+                    ></button>
+                    <button type="button" id="onboarding_next" data-i18n="common.selectPreset"></button>
                 </div>
             </div>
         </div>
 
+        <script src="libs/i18n-messages.js"></script>
+        <script src="libs/i18n.js"></script>
         <script src="libs/shared-config.js"></script>
         <script src="options/modules/engines.js"></script>
         <script src="options/modules/config-storage.js"></script>

@@ -27,7 +27,7 @@
             async function copyTranslatedText(bubble) {
                 const text = app.getCleanTranslatedText();
                 if (!text) {
-                    setCopyButtonStatus(bubble, "无译文", true);
+                    setCopyButtonStatus(bubble, app.t("common.noTranslation"), true);
                     return;
                 }
 
@@ -45,9 +45,9 @@
                         document.execCommand("copy");
                         textarea.remove();
                     }
-                    setCopyButtonStatus(bubble, "已复制", false);
+                    setCopyButtonStatus(bubble, app.t("common.copySuccess"), false);
                 } catch (err) {
-                    setCopyButtonStatus(bubble, "复制失败", true);
+                    setCopyButtonStatus(bubble, app.t("common.copyFailed"), true);
                 }
             }
 
@@ -120,7 +120,9 @@
                     { term: entry },
                 );
                 if (!response?.ok) {
-                    throw new Error(response?.error || "术语保存失败");
+                    throw new Error(
+                        response?.error || app.t("bubble.term.saveFailed"),
+                    );
                 }
             }
 
@@ -138,7 +140,7 @@
                 clearTermEditorUI(false);
 
                 if (!sourceTerm || !targetTerm || !sourceLang || !targetLang) {
-                    setTermTip("术语添加失败：请先完成一次有效翻译。", true);
+                    setTermTip(app.t("bubble.term.needTranslation"), true);
                     return;
                 }
 
@@ -154,18 +156,21 @@
                 const cancelBtn = document.createElement("button");
 
                 titleEl.className = "jyt-term-editor-title";
-                titleEl.textContent = `添加术语（${sourceLang} -> ${targetLang}）`;
-                sourceLabelEl.textContent = "原文术语";
+                titleEl.textContent = app.t("bubble.term.addTitle", {
+                    sourceLang,
+                    targetLang,
+                });
+                sourceLabelEl.textContent = app.t("bubble.term.sourceLabel");
                 sourceInputEl.className = "jyt-term-source";
-                targetLabelEl.textContent = "目标术语";
+                targetLabelEl.textContent = app.t("bubble.term.targetLabel");
                 targetInputEl.className = "jyt-term-target";
                 actionsEl.className = "jyt-term-actions";
                 confirmBtn.className = "jyt-term-confirm";
                 confirmBtn.type = "button";
-                confirmBtn.textContent = "确认保存";
+                confirmBtn.textContent = app.t("bubble.term.confirm");
                 cancelBtn.className = "jyt-term-cancel";
                 cancelBtn.type = "button";
-                cancelBtn.textContent = "取消";
+                cancelBtn.textContent = app.t("bubble.term.cancel");
 
                 actionsEl.append(confirmBtn, cancelBtn);
                 editor.append(
@@ -190,7 +195,7 @@
                     const normalizedSource = app.normalizeTermText(sourceInputEl.value);
                     const normalizedTarget = app.normalizeTermText(targetInputEl.value);
                     if (!normalizedSource || !normalizedTarget) {
-                        setTermTip("术语添加失败：原文和译文都不能为空。", true);
+                        setTermTip(app.t("bubble.term.emptyFields"), true);
                         return;
                     }
 
@@ -206,12 +211,17 @@
 
                     upsertGlossaryTerm(termEntry)
                         .then(() => {
-                            setTermTip("术语已保存", false);
+                            setTermTip(app.t("bubble.term.saved"), false);
                             editor.remove();
                         })
                         .catch((err) => {
                             setTermTip(
-                                `术语保存失败: ${err && err.message ? err.message : String(err)}`,
+                                app.t("bubble.term.saveError", {
+                                    error:
+                                        err && err.message
+                                            ? err.message
+                                            : String(err),
+                                }),
                                 true,
                             );
                         });
@@ -261,6 +271,42 @@
                 return btn;
             }
 
+            function refreshBubbleI18n() {
+                const bubble = getUiBubble();
+                if (!bubble) return;
+
+                const titleEl = bubble.querySelector(".jyt-title");
+                if (titleEl) titleEl.textContent = app.t("bubble.title");
+
+                const copyBtn = bubble.querySelector(".jyt-copy");
+                if (copyBtn) copyBtn.title = app.t("bubble.copy.title");
+
+                const addTermBtn = bubble.querySelector(".jyt-add-term");
+                if (addTermBtn) {
+                    addTermBtn.title = app.t("bubble.addTerm.title");
+                    addTermBtn.textContent = app.t("bubble.addTerm.button");
+                }
+
+                const pinBtn = bubble.querySelector(".jyt-pin");
+                if (pinBtn) pinBtn.title = app.t("bubble.pin.title");
+
+                const closeBtn = bubble.querySelector(".jyt-close");
+                if (closeBtn) closeBtn.title = app.t("bubble.close.title");
+
+                const thoughtDetails = bubble.querySelector("#jyt-thought");
+                const thoughtSummary = thoughtDetails?.querySelector("summary");
+                if (thoughtSummary && thoughtDetails) {
+                    thoughtSummary.textContent = thoughtDetails.open
+                        ? app.t("bubble.thought.collapse")
+                        : app.t("bubble.thought.expand");
+                }
+
+                if (bubble.dataset.state === "loading") {
+                    const streamEl = bubble.querySelector("#jyt-stream");
+                    if (streamEl) streamEl.innerText = app.t("bubble.loading");
+                }
+            }
+
             function createBubble() {
                 if (app.ui?.bubble) {
                     return app.ui.bubble;
@@ -272,27 +318,28 @@
                 bubble.className = "jyt-bubble";
                 bubble.innerHTML = `
               <div class="jyt-header">
-                <span class="jyt-title">翻译</span>
+                <span class="jyt-title"></span>
                 <div class="jyt-controls">
-                  <button class="jyt-copy" title="复制译文" type="button">
+                  <button class="jyt-copy" type="button">
                     <svg viewBox="0 0 24 24"><path d="M16 1H4C2.9 1 2 1.9 2 3V17H4V3H16V1ZM19 5H8C6.9 5 6 5.9 6 7V21C6 22.1 6.9 23 8 23H19C20.1 23 21 22.1 21 21V7C21 5.9 20.1 5 19 5ZM19 21H8V7H19V21Z" /></svg>
                   </button>
-                  <button class="jyt-add-term" title="添加术语" type="button">术</button>
-                  <button class="jyt-pin" title="固定窗口">
+                  <button class="jyt-add-term" type="button"></button>
+                  <button class="jyt-pin" type="button">
                     <svg viewBox="0 0 24 24"><path d="M16,12V4H17V2H7V4H8V12L6,14V16H11.2V22H12.8V16H18V14L16,12Z" /></svg>
                   </button>
-                  <button class="jyt-close" title="关闭">
+                  <button class="jyt-close" type="button">
                     <svg viewBox="0 0 24 24"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z" /></svg>
                   </button>
                 </div>
               </div>
               <div class="jyt-content">
                 <div class="jyt-stream" id="jyt-stream"></div>
-                <details class="jyt-thought" id="jyt-thought"><summary>思考（展开）</summary><div id="jyt-thought-content"></div></details>
+                <details class="jyt-thought" id="jyt-thought"><summary></summary><div id="jyt-thought-content"></div></details>
               </div>
             `;
                 mount.appendChild(bubble);
                 app.ui.bubble = bubble;
+                refreshBubbleI18n();
 
                 bubble.addEventListener("mousedown", (e) => {
                     e.stopPropagation();
@@ -381,8 +428,8 @@
                 const updateThoughtSummary = () => {
                     if (!thoughtSummary || !thoughtDetails) return;
                     thoughtSummary.textContent = thoughtDetails.open
-                        ? "思考（收起）"
-                        : "思考（展开）";
+                        ? app.t("bubble.thought.collapse")
+                        : app.t("bubble.thought.expand");
                 };
                 thoughtDetails?.addEventListener("toggle", updateThoughtSummary);
                 updateThoughtSummary();
@@ -398,7 +445,7 @@
             function setBubbleLoading(bubble, loading) {
                 setBubbleState(bubble, loading ? "loading" : "");
                 bubble.querySelector("#jyt-stream").innerText = loading
-                    ? "加载中..."
+                    ? app.t("bubble.loading")
                     : "";
                 bubble.querySelector("#jyt-thought-content").innerText = "";
             }
@@ -430,6 +477,7 @@
             showAddTermDialog,
             applyBubbleSizeConfig,
             applyTheme,
+            refreshBubbleI18n,
             createButton,
             createBubble,
             updatePinState,

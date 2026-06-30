@@ -11,6 +11,8 @@
         "sync:config": "node scripts/sync-shared-config.mjs",
         "check:config": "node scripts/sync-shared-config.mjs --check",
         "validate:config": "node scripts/validate-shared-config.mjs",
+        "build:i18n": "node scripts/build-i18n.mjs",
+        "check:i18n": "node scripts/build-i18n.mjs --check",
         "test": "node --test tests/*.test.mjs"
     },
     "devDependencies": {

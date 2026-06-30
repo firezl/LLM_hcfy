@@ -2,6 +2,8 @@
 (function (global) {
     function install(app) {
         const state = app.state;
+        const t = (key, vars) =>
+            typeof app.t === "function" ? app.t(key, vars) : key;
 
             function maybeNormalizePdfSelectionText(text, engine) {
                 const pdfText = globalThis.JYT_PDF_TEXT || {};
@@ -89,7 +91,9 @@
                         app.setBubbleState(bubble, "done");
                         return;
                     } catch (err) {
-                        streamEl.innerText = "翻译失败: " + err.message;
+                        streamEl.innerText = t("bubble.translate.failed", {
+                            error: err.message,
+                        });
                         app.setBubbleState(bubble, "error");
                         return;
                     }
@@ -135,8 +139,7 @@
                     const openAIConfigured = !!settings.openai_api_url;
                     if (!openAIConfigured) {
                         try {
-                            streamEl.innerText =
-                                "未配置 OpenAI，正在使用浏览器 AI 翻译...";
+                            streamEl.innerText = t("bubble.translate.browserOnly");
                             const translatedText = await app.translateWithBrowserAPI(
                                 text,
                                 from,
@@ -162,10 +165,10 @@
                             app.setBubbleState(bubble, "done");
                             return;
                         } catch (err) {
-                            streamEl.innerText =
-                                "翻译失败: 未配置 OpenAI，且浏览器 AI 不可用（" +
-                                (err && err.message ? err.message : String(err)) +
-                                "）";
+                            streamEl.innerText = t("bubble.translate.noOpenaiNoBrowser", {
+                                error:
+                                    err && err.message ? err.message : String(err),
+                            });
                             app.setBubbleState(bubble, "error");
                             return;
                         }
@@ -214,7 +217,7 @@
 
                 const bubble = app.createBubble();
                 if (!bubble) {
-                    console.warn("LLM划词翻译: 无法创建翻译气泡");
+                    console.warn(t("bubble.error.cannotCreate"));
                     return;
                 }
                 app.clearTermEditorUI(true);

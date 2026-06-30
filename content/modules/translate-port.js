@@ -2,6 +2,8 @@
 (function (global) {
     function install(app) {
         const state = app.state;
+        const t = (key, vars) =>
+            typeof app.t === "function" ? app.t(key, vars) : key;
             function clearActiveRequestTimeout(request) {
                 if (!request?.responseTimeoutId) return;
                 window.clearTimeout(request.responseTimeoutId);
@@ -12,7 +14,7 @@
                 clearActiveRequestTimeout(request);
                 request.responseTimeoutId = window.setTimeout(() => {
                     if (state.activeRequest !== request) return;
-                    request.streamEl.innerText = "翻译请求超时，请重试";
+                    request.streamEl.innerText = t("bubble.translate.timeout");
                     app.setBubbleState(
                         request.streamEl?.closest(".jyt-bubble"),
                         "error",
@@ -52,7 +54,7 @@
 
                 state.activeRequest = null;
                 clearActiveRequestTimeout(currentRequest);
-                currentRequest.streamEl.innerText = "翻译连接已断开，请重试";
+                currentRequest.streamEl.innerText = t("bubble.translate.disconnected");
                 app.setBubbleState(
                     currentRequest.streamEl?.closest(".jyt-bubble"),
                     "error",
@@ -118,7 +120,7 @@
                     if (message.type === "TRANSLATE_ERROR") {
                         const currentRequest = state.activeRequest;
                         clearActiveRequestTimeout(currentRequest);
-                        const errorText = message.error || "未知错误";
+                        const errorText = message.error || t("common.unknownError");
                         app.setBubbleState(streamEl?.closest(".jyt-bubble"), "error");
 
                         if (
@@ -126,7 +128,7 @@
                             !currentRequest.browserFallbackTried
                         ) {
                             currentRequest.browserFallbackTried = true;
-                            streamEl.innerText = "OpenAI 不可用，正在回退浏览器 AI...";
+                            streamEl.innerText = t("bubble.translate.fallbackBrowser");
                             app.setBubbleState(streamEl?.closest(".jyt-bubble"), "loading");
 
                             app.translateWithBrowserAPI(
@@ -165,8 +167,11 @@
                                     const browserErr =
                                         fallbackErr && fallbackErr.message
                                             ? fallbackErr.message
-                                            : String(fallbackErr || "未知错误");
-                                    streamEl.innerText = `翻译失败: OpenAI 与浏览器 AI 均不可用（OpenAI: ${errorText}；浏览器: ${browserErr}）`;
+                                            : String(fallbackErr || t("common.unknownError"));
+                                    streamEl.innerText = t("bubble.translate.bothFailed", {
+                                        openaiError: errorText,
+                                        browserError: browserErr,
+                                    });
                                     app.setBubbleState(
                                         streamEl?.closest(".jyt-bubble"),
                                         "error",
@@ -176,7 +181,9 @@
                             return;
                         }
 
-                        streamEl.innerText = "翻译失败: " + errorText;
+                        streamEl.innerText = t("bubble.translate.failed", {
+                            error: errorText,
+                        });
                         state.activeRequest = null;
                         return;
                     }
@@ -422,7 +429,7 @@
                 if (!sent) {
                     clearActiveRequestTimeout(state.activeRequest);
                     streamEl.innerText =
-                        "翻译失败: 无法连接扩展后台（请刷新页面或重载扩展）";
+                        t("bubble.translate.backgroundUnreachable");
                     app.setBubbleState(streamEl?.closest(".jyt-bubble"), "error");
                     state.activeRequest = null;
                     return;
