@@ -66,7 +66,7 @@
                 return model;
             }
 
-            function loadRuntimeSettings() {
+            function loadRuntimeSettings(onReady) {
                 // content 仅持有非敏感的同步设置（引擎、语言、UI、prompt 等）；
                 // *_api_key 与 *_custom_headers 留在 background，避免凭据驻留任意网页上下文。
                 chrome.storage.sync.get(app.DEFAULT_SETTINGS, (syncItems) => {
@@ -85,7 +85,10 @@
                         global.JYT_I18N.setLang(
                             state.runtimeSettings.ui_lang || "auto",
                         );
-                        app.refreshBubbleI18n?.();
+                    }
+                    app.refreshBubbleI18n?.();
+                    if (typeof onReady === "function") {
+                        onReady();
                     }
                 });
             }

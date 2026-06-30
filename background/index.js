@@ -54,8 +54,9 @@ import { initSettingsCache } from "./settings-cache.js";
 import { initBackgroundI18n } from "./i18n.js";
 
 void ensureTermStoreReady();
-void initBackgroundI18n();
-initContextMenu();
+void initBackgroundI18n().then(() => {
+    initContextMenu();
+});
 initOnboarding();
 initSettingsCache();
 

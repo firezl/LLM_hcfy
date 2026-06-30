@@ -8,8 +8,9 @@
         }
 
         app.createButton();
-        app.createBubble();
-        app.loadRuntimeSettings();
+        app.loadRuntimeSettings(() => {
+            app.createBubble();
+        });
         app.registerPdfRuntimeListener();
         registerContextMenuListener(app, state);
         void app.restorePendingPdfPrompt();

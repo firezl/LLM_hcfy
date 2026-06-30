@@ -4,6 +4,11 @@ import { onLangChange, t } from "./i18n.js";
 
 const CONTEXT_MENU_ID = "jyt-translate-selection";
 
+/** Serialize menu mutations to avoid duplicate-id create races. */
+let menuTask = Promise.resolve();
+/** Whether our menu item was created in this service worker lifetime. */
+let menuRegistered = false;
+
 function drainContextMenuLastError(action) {
     const lastError = extensionApi.runtime?.lastError;
     if (lastError?.message) {
@@ -11,48 +16,112 @@ function drainContextMenuLastError(action) {
     }
 }
 
-function createContextMenuItem() {
+function runMenuTask(task) {
+    menuTask = menuTask.then(task).catch((err) => {
+        console.warn("LLM划词翻译: contextMenus 任务失败:", err);
+    });
+    return menuTask;
+}
+
+function promisifyContextMenuCall(method, ...args) {
+    return new Promise((resolve) => {
+        method(...args, () => {
+            const err = extensionApi.runtime?.lastError;
+            resolve(!err?.message);
+        });
+    });
+}
+
+function getMenuTitle() {
+    return t("contextMenu.translateSelection");
+}
+
+async function createContextMenuItem() {
     if (!extensionApi.contextMenus?.create) {
         console.warn("LLM划词翻译: contextMenus.create 不可用");
+        return false;
+    }
+
+    const ok = await promisifyContextMenuCall(
+        extensionApi.contextMenus.create.bind(extensionApi.contextMenus),
+        {
+            id: CONTEXT_MENU_ID,
+            title: getMenuTitle(),
+            contexts: ["selection"],
+        },
+    );
+    if (!ok) {
+        drainContextMenuLastError("create");
+    }
+    return ok;
+}
+
+async function updateContextMenuItem() {
+    if (!extensionApi.contextMenus?.update) {
+        return false;
+    }
+
+    const ok = await promisifyContextMenuCall(
+        extensionApi.contextMenus.update.bind(extensionApi.contextMenus),
+        CONTEXT_MENU_ID,
+        { title: getMenuTitle() },
+    );
+    if (!ok) {
+        drainContextMenuLastError("update");
+    }
+    return ok;
+}
+
+async function removeAllContextMenuItems() {
+    if (!extensionApi.contextMenus?.removeAll) {
         return;
     }
 
-    extensionApi.contextMenus.create({
-        id: CONTEXT_MENU_ID,
-        title: t("contextMenu.translateSelection"),
-        contexts: ["selection"],
-    });
-    drainContextMenuLastError("create");
+    await promisifyContextMenuCall(
+        extensionApi.contextMenus.removeAll.bind(extensionApi.contextMenus),
+    );
+    drainContextMenuLastError("removeAll");
 }
 
-function registerContextMenu() {
+async function ensureContextMenuItem() {
     if (!extensionApi.contextMenus?.create) {
         console.warn("LLM划词翻译: contextMenus API 不可用");
         return;
     }
 
+    if (menuRegistered) {
+        const updated = await updateContextMenuItem();
+        if (updated) {
+            return;
+        }
+        menuRegistered = false;
+    }
+
     if (isFirefoxExtension()) {
-        // Firefox 不会持久化菜单项，每次 Service Worker 启动都需同步创建。
-        createContextMenuItem();
+        const created = await createContextMenuItem();
+        menuRegistered = created;
         return;
     }
 
-    const removeAll = extensionApi.contextMenus.removeAll?.bind(
-        extensionApi.contextMenus,
-    );
-    if (!removeAll) {
-        createContextMenuItem();
-        return;
-    }
+    await removeAllContextMenuItems();
+    const created = await createContextMenuItem();
+    menuRegistered = created;
+}
 
-    const removed = removeAll();
-    if (removed && typeof removed.then === "function") {
-        void removed.then(() => createContextMenuItem());
-        return;
-    }
+function registerContextMenu() {
+    void runMenuTask(() => ensureContextMenuItem());
+}
 
-    removeAll(() => {
-        createContextMenuItem();
+function refreshContextMenuTitle() {
+    void runMenuTask(async () => {
+        if (menuRegistered) {
+            const updated = await updateContextMenuItem();
+            if (updated) {
+                return;
+            }
+            menuRegistered = false;
+        }
+        await ensureContextMenuItem();
     });
 }
 
@@ -104,11 +173,12 @@ export function initContextMenu() {
     }
 
     onLangChange(() => {
-        registerContextMenu();
+        refreshContextMenuTitle();
     });
 
     if (extensionApi.runtime?.onInstalled) {
         extensionApi.runtime.onInstalled.addListener(() => {
+            menuRegistered = false;
             registerContextMenu();
         });
     }
