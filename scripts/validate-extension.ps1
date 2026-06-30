@@ -25,6 +25,8 @@ $requiredPaths = @(
     "content/modules/state.js",
     "content/modules/bootstrap.js",
     "libs/shared-config.js",
+    "libs/i18n-messages.js",
+    "libs/i18n.js",
     "options/modules/dom-refs.js",
     "options/modules/ui-shell.js",
     "options/modules/messaging.js",
@@ -63,10 +65,16 @@ node scripts/validate-shared-config.mjs
 node --test tests/*.test.mjs
 
 $contentScript = @($manifest.content_scripts)[0]
+$expectedContentScripts = @(
+    "libs/shared-config.js",
+    "libs/i18n-messages.js",
+    "libs/i18n.js",
+    "dist/content.bundle.js"
+)
 Assert-True ($contentScript.matches -contains "<all_urls>") "content_scripts 需要覆盖 <all_urls>"
 Assert-True ($contentScript.js[0] -eq "libs/shared-config.js") "libs/shared-config.js 必须先于 content bundle 加载"
 Assert-True ($contentScript.js[-1] -eq "dist/content.bundle.js") "dist/content.bundle.js 必须为 content_scripts 最后一项"
-Assert-True ($contentScript.js.Count -eq 2) "content_scripts 应只加载 shared-config 与 content bundle"
+Assert-True (($contentScript.js | ForEach-Object { $_ }) -join "`n" -eq ($expectedContentScripts -join "`n")) "content_scripts 应按顺序加载 shared-config、i18n 与 content bundle"
 Assert-True ($contentScript.css.Count -eq 1) "content_scripts 应只注入一份 CSS"
 Assert-True ($contentScript.css[0] -eq "styles/content-light.css") "content_scripts 应注入 styles/content-light.css，而非完整 styles.css"
 
