@@ -78,7 +78,7 @@
                 state.lastSelectionContext = app.collectSelectionContext
                     ? app.collectSelectionContext(sel)
                     : null;
-                const btn = app.getTranslateBtn?.();
+                const btn = app.createButton?.();
                 if (btn) {
                     let x;
                     let y;
@@ -332,7 +332,7 @@
                 state.lastSelectionPoint = { x, y };
                 state.lastSelectionContext = null;
 
-                const btn = app.getTranslateBtn?.();
+                const btn = app.createButton?.();
                 if (btn) {
                     app.positionButton(btn, x, y);
                 }

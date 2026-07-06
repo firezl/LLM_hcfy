@@ -8,8 +8,15 @@
             bubble: null,
         };
 
+        function getMountPoint() {
+            return document.documentElement || document.body;
+        }
+
         function ensureUiRoot() {
-            if (app.ui.shadow && app.ui.root?.isConnected) {
+            if (app.ui.shadow && app.ui.root) {
+                if (!app.ui.root.isConnected) {
+                    getMountPoint().appendChild(app.ui.root);
+                }
                 return app.ui.shadow;
             }
 
@@ -21,7 +28,7 @@
             const host = document.createElement("div");
             host.id = app.ROOT_ID;
             host.dataset.jytUi = "root";
-            (document.body || document.documentElement).appendChild(host);
+            getMountPoint().appendChild(host);
 
             const shadow = host.attachShadow({ mode: "closed" });
             const style = document.createElement("style");

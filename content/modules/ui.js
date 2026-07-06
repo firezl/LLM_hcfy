@@ -252,11 +252,10 @@
             }
 
             function createButton() {
+                const mount = app.getUiMount?.() || document.documentElement;
                 if (app.ui?.btn) {
                     return app.ui.btn;
                 }
-
-                const mount = app.getUiMount?.() || document.body;
                 const btn = document.createElement("div");
                 btn.id = app.BUTTON_ID;
                 btn.className = "jyt-btn";
@@ -308,11 +307,10 @@
             }
 
             function createBubble() {
+                const mount = app.getUiMount?.() || document.documentElement;
                 if (app.ui?.bubble) {
                     return app.ui.bubble;
                 }
-
-                const mount = app.getUiMount?.() || document.body;
                 const bubble = document.createElement("div");
                 bubble.id = app.BUBBLE_ID;
                 bubble.className = "jyt-bubble";
