@@ -37,7 +37,7 @@
                     <input
                         id="translate_shortcut"
                         type="text"
-                        data-i18n-ph="options.general.translateShortcut.placeholder" placeholder="例如: Alt+T / Ctrl+Shift+Y" data-jyt-setting="translate_shortcut">
+                        data-i18n-ph="options.general.translateShortcut.placeholder" data-jyt-setting="translate_shortcut">
                     <div class="jyt-hint" data-i18n="options.general.translateShortcut.hint"></div>
 
                     <label data-i18n="options.general.engineSelect.label"></label>
@@ -117,7 +117,7 @@
                     <input
                         id="font_family"
                         type="text"
-                        data-i18n-ph="options.general.fontFamily.placeholder" placeholder="例如: 'Microsoft YaHei', 'Segoe UI'" data-jyt-setting="font_family">
+                        data-i18n-ph="options.general.fontFamily.placeholder" data-jyt-setting="font_family">
 
                     <label data-i18n="options.general.bubbleWidth.label"></label>
                     <input
@@ -188,7 +188,7 @@
                     <input
                         id="openai_custom_model"
                         type="text"
-                        data-i18n-ph="options.engine.shared.customModelPlaceholder" placeholder="例如: gpt-4o-mini" data-jyt-setting="openai_custom_model">
+                        data-i18n-ph="options.engine.shared.customModelPlaceholder" data-jyt-setting="openai_custom_model">
                     <div class="jyt-connection-test-container">
                         <button type="button" class="jyt-btn-connection-test" data-engine="openai" data-i18n="common.testConnection"></button>
                         <span class="jyt-connection-test-status"></span>
@@ -224,7 +224,7 @@
                     <textarea
                         id="openai_custom_prompt"
                         rows="4"
-                        data-i18n-ph="options.engine.shared.customPromptPlaceholder" placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="openai_custom_prompt"></textarea>
+                        data-i18n-ph="options.engine.shared.customPromptPlaceholder" data-jyt-setting="openai_custom_prompt"></textarea>
                 </div>
 
                 <div class="jyt-section jyt-hidden" id="custom_openai_section" data-jyt-engine="custom_openai">
@@ -248,7 +248,7 @@
                     <input
                         id="custom_openai_custom_model"
                         type="text"
-                        data-i18n-ph="options.engine.shared.customModelPlaceholder" placeholder="例如: gpt-4o-mini" data-jyt-setting="custom_openai_custom_model">
+                        data-i18n-ph="options.engine.shared.customModelPlaceholder" data-jyt-setting="custom_openai_custom_model">
                     <div class="jyt-connection-test-container">
                         <button type="button" class="jyt-btn-connection-test" data-engine="custom_openai" data-i18n="common.testConnection"></button>
                         <span class="jyt-connection-test-status"></span>
@@ -287,7 +287,7 @@
                     <textarea
                         id="custom_openai_custom_prompt"
                         rows="4"
-                        data-i18n-ph="options.engine.shared.customPromptPlaceholder" placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="custom_openai_custom_prompt"></textarea>
+                        data-i18n-ph="options.engine.shared.customPromptPlaceholder" data-jyt-setting="custom_openai_custom_prompt"></textarea>
                 </div>
 
                 <div class="jyt-section jyt-hidden" id="openrouter_section" data-jyt-engine="openrouter">
@@ -311,7 +311,7 @@
                     <input
                         id="openrouter_custom_model"
                         type="text"
-                        placeholder="例如: qwen/qwen3-14b:free" data-jyt-setting="openrouter_custom_model">
+                        data-i18n-ph="options.engine.openrouter.customModelPlaceholder" data-jyt-setting="openrouter_custom_model">
                     <div class="jyt-connection-test-container">
                         <button type="button" class="jyt-btn-connection-test" data-engine="openrouter" data-i18n="common.testConnection"></button>
                         <span class="jyt-connection-test-status"></span>
@@ -341,7 +341,7 @@
                     <textarea
                         id="openrouter_custom_prompt"
                         rows="4"
-                        data-i18n-ph="options.engine.shared.customPromptPlaceholder" placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="openrouter_custom_prompt"></textarea>
+                        data-i18n-ph="options.engine.shared.customPromptPlaceholder" data-jyt-setting="openrouter_custom_prompt"></textarea>
                     <div class="jyt-hint" data-i18n="options.engine.openrouter.hint"></div>
                 </div>
 
@@ -366,7 +366,7 @@
                     <input
                         id="deepseek_custom_model"
                         type="text"
-                        placeholder="例如: deepseek-v4-flash" data-jyt-setting="deepseek_custom_model">
+                        data-i18n-ph="options.engine.deepseek.customModelPlaceholder" data-jyt-setting="deepseek_custom_model">
                     <div class="jyt-connection-test-container">
                         <button type="button" class="jyt-btn-connection-test" data-engine="deepseek" data-i18n="common.testConnection"></button>
                         <span class="jyt-connection-test-status"></span>
@@ -386,7 +386,7 @@
                     <textarea
                         id="deepseek_custom_prompt"
                         rows="4"
-                        data-i18n-ph="options.engine.shared.customPromptPlaceholder" placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="deepseek_custom_prompt"></textarea>
+                        data-i18n-ph="options.engine.shared.customPromptPlaceholder" data-jyt-setting="deepseek_custom_prompt"></textarea>
                 </div>
 
                 <div class="jyt-section jyt-hidden" id="siliconflow_section" data-jyt-engine="siliconflow">
@@ -410,7 +410,7 @@
                     <input
                         id="siliconflow_custom_model"
                         type="text"
-                        placeholder="例如: deepseek-ai/DeepSeek-V3" data-jyt-setting="siliconflow_custom_model">
+                        data-i18n-ph="options.engine.siliconflow.customModelPlaceholder" data-jyt-setting="siliconflow_custom_model">
                     <div class="jyt-connection-test-container">
                         <button type="button" class="jyt-btn-connection-test" data-engine="siliconflow" data-i18n="common.testConnection"></button>
                         <span class="jyt-connection-test-status"></span>
@@ -431,7 +431,7 @@
                     <textarea
                         id="siliconflow_custom_prompt"
                         rows="4"
-                        data-i18n-ph="options.engine.shared.customPromptPlaceholder" placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="siliconflow_custom_prompt"></textarea>
+                        data-i18n-ph="options.engine.shared.customPromptPlaceholder" data-jyt-setting="siliconflow_custom_prompt"></textarea>
                 </div>
 
                 <div class="jyt-section jyt-hidden" id="qwen_section" data-jyt-engine="qwen">
@@ -455,7 +455,7 @@
                     <input
                         id="qwen_custom_model"
                         type="text"
-                        placeholder="例如: qwen3.5-plus" data-jyt-setting="qwen_custom_model">
+                        data-i18n-ph="options.engine.qwen.customModelPlaceholder" data-jyt-setting="qwen_custom_model">
                     <div class="jyt-connection-test-container">
                         <button type="button" class="jyt-btn-connection-test" data-engine="qwen" data-i18n="common.testConnection"></button>
                         <span class="jyt-connection-test-status"></span>
@@ -481,7 +481,7 @@
                     <textarea
                         id="qwen_custom_prompt"
                         rows="4"
-                        data-i18n-ph="options.engine.shared.customPromptPlaceholder" placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="qwen_custom_prompt"></textarea>
+                        data-i18n-ph="options.engine.shared.customPromptPlaceholder" data-jyt-setting="qwen_custom_prompt"></textarea>
                 </div>
 
                 <div class="jyt-section jyt-hidden" id="glm_section" data-jyt-engine="glm">
@@ -505,7 +505,7 @@
                     <input
                         id="glm_custom_model"
                         type="text"
-                        placeholder="例如: glm-5.1" data-jyt-setting="glm_custom_model">
+                        data-i18n-ph="options.engine.glm.customModelPlaceholder" data-jyt-setting="glm_custom_model">
                     <div class="jyt-connection-test-container">
                         <button type="button" class="jyt-btn-connection-test" data-engine="glm" data-i18n="common.testConnection"></button>
                         <span class="jyt-connection-test-status"></span>
@@ -530,7 +530,7 @@
                     <textarea
                         id="glm_custom_prompt"
                         rows="4"
-                        data-i18n-ph="options.engine.shared.customPromptPlaceholder" placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="glm_custom_prompt"></textarea>
+                        data-i18n-ph="options.engine.shared.customPromptPlaceholder" data-jyt-setting="glm_custom_prompt"></textarea>
                 </div>
 
                 <div class="jyt-section jyt-hidden" id="xiaomi_section" data-jyt-engine="xiaomi">
@@ -554,7 +554,7 @@
                     <input
                         id="xiaomi_custom_model"
                         type="text"
-                        placeholder="例如: mimo-v2.5" data-jyt-setting="xiaomi_custom_model">
+                        data-i18n-ph="options.engine.xiaomi.customModelPlaceholder" data-jyt-setting="xiaomi_custom_model">
                     <div class="jyt-connection-test-container">
                         <button type="button" class="jyt-btn-connection-test" data-engine="xiaomi" data-i18n="common.testConnection"></button>
                         <span class="jyt-connection-test-status"></span>
@@ -581,7 +581,7 @@
                     <textarea
                         id="xiaomi_custom_prompt"
                         rows="4"
-                        data-i18n-ph="options.engine.shared.customPromptPlaceholder" placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="xiaomi_custom_prompt"></textarea>
+                        data-i18n-ph="options.engine.shared.customPromptPlaceholder" data-jyt-setting="xiaomi_custom_prompt"></textarea>
                 </div>
 
                 <div class="jyt-section jyt-hidden" id="nim_section" data-jyt-engine="nim">
@@ -605,7 +605,7 @@
                     <input
                         id="nim_custom_model"
                         type="text"
-                        placeholder="例如: meta/llama-3.1-70b-instruct" data-jyt-setting="nim_custom_model">
+                        data-i18n-ph="options.engine.nim.customModelPlaceholder" data-jyt-setting="nim_custom_model">
                     <div class="jyt-connection-test-container">
                         <button type="button" class="jyt-btn-connection-test" data-engine="nim" data-i18n="common.testConnection"></button>
                         <span class="jyt-connection-test-status"></span>
@@ -633,7 +633,7 @@
                     <textarea
                         id="nim_custom_prompt"
                         rows="4"
-                        data-i18n-ph="options.engine.shared.customPromptPlaceholder" placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="nim_custom_prompt"></textarea>
+                        data-i18n-ph="options.engine.shared.customPromptPlaceholder" data-jyt-setting="nim_custom_prompt"></textarea>
                 </div>
 
                 <div class="jyt-section jyt-hidden" id="grok_section" data-jyt-engine="grok">
@@ -657,7 +657,7 @@
                     <input
                         id="grok_custom_model"
                         type="text"
-                        placeholder="例如: grok-4.3" data-jyt-setting="grok_custom_model">
+                        data-i18n-ph="options.engine.grok.customModelPlaceholder" data-jyt-setting="grok_custom_model">
                     <div class="jyt-connection-test-container">
                         <button type="button" class="jyt-btn-connection-test" data-engine="grok" data-i18n="common.testConnection"></button>
                         <span class="jyt-connection-test-status"></span>
@@ -677,7 +677,7 @@
                     <textarea
                         id="grok_custom_prompt"
                         rows="4"
-                        data-i18n-ph="options.engine.shared.customPromptPlaceholder" placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="grok_custom_prompt"></textarea>
+                        data-i18n-ph="options.engine.shared.customPromptPlaceholder" data-jyt-setting="grok_custom_prompt"></textarea>
                 </div>
 
                 <div class="jyt-section jyt-hidden" id="claude_section" data-jyt-engine="claude">
@@ -701,7 +701,7 @@
                     <input
                         id="claude_custom_model"
                         type="text"
-                        placeholder="例如: claude-sonnet-4-6" data-jyt-setting="claude_custom_model">
+                        data-i18n-ph="options.engine.claude.customModelPlaceholder" data-jyt-setting="claude_custom_model">
                     <div class="jyt-connection-test-container">
                         <button type="button" class="jyt-btn-connection-test" data-engine="claude" data-i18n="common.testConnection"></button>
                         <span class="jyt-connection-test-status"></span>
@@ -740,7 +740,7 @@
                     <textarea
                         id="claude_custom_prompt"
                         rows="4"
-                        data-i18n-ph="options.engine.shared.customPromptPlaceholder" placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="claude_custom_prompt"></textarea>
+                        data-i18n-ph="options.engine.shared.customPromptPlaceholder" data-jyt-setting="claude_custom_prompt"></textarea>
                 </div>
 
                 <div class="jyt-section jyt-hidden" id="gemini_section" data-jyt-engine="gemini">
@@ -764,7 +764,7 @@
                     <input
                         id="gemini_custom_model"
                         type="text"
-                        placeholder="例如: gemini-flash-latest" data-jyt-setting="gemini_custom_model">
+                        data-i18n-ph="options.engine.gemini.customModelPlaceholder" data-jyt-setting="gemini_custom_model">
                     <div class="jyt-connection-test-container">
                         <button type="button" class="jyt-btn-connection-test" data-engine="gemini" data-i18n="common.testConnection"></button>
                         <span class="jyt-connection-test-status"></span>
@@ -792,7 +792,7 @@
                     <textarea
                         id="gemini_custom_prompt"
                         rows="4"
-                        data-i18n-ph="options.engine.shared.customPromptPlaceholder" placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="gemini_custom_prompt"></textarea>
+                        data-i18n-ph="options.engine.shared.customPromptPlaceholder" data-jyt-setting="gemini_custom_prompt"></textarea>
                 </div>
 
                 <div class="jyt-section jyt-hidden" id="ollama_section" data-jyt-engine="ollama">
@@ -812,7 +812,7 @@
                     <input
                         id="ollama_custom_model"
                         type="text"
-                        placeholder="例如: qwen3.5:latest" data-jyt-setting="ollama_custom_model">
+                        data-i18n-ph="options.engine.ollama.customModelPlaceholder" data-jyt-setting="ollama_custom_model">
                     <div class="jyt-connection-test-container">
                         <button type="button" class="jyt-btn-connection-test" data-engine="ollama" data-i18n="common.testConnection"></button>
                         <span class="jyt-connection-test-status"></span>
@@ -827,7 +827,7 @@
                     <textarea
                         id="ollama_custom_prompt"
                         rows="4"
-                        data-i18n-ph="options.engine.shared.customPromptPlaceholder" placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="ollama_custom_prompt"></textarea>
+                        data-i18n-ph="options.engine.shared.customPromptPlaceholder" data-jyt-setting="ollama_custom_prompt"></textarea>
                 </div>
 
                 <div class="jyt-section jyt-hidden" id="deepl_section" data-jyt-engine="deepl">
@@ -860,7 +860,7 @@
                     <input
                         id="deeplx_api_key"
                         type="password"
-                        data-i18n-ph="options.engine.deeplx.tokenPlaceholder" placeholder="若 DeepLX 启用了 TOKEN 则填写" data-jyt-setting="deeplx_api_key">
+                        data-i18n-ph="options.engine.deeplx.tokenPlaceholder" data-jyt-setting="deeplx_api_key">
                     <div class="jyt-hint" data-i18n="options.engine.deeplx.hint"></div>
                     <div class="jyt-connection-test-container">
                         <button type="button" class="jyt-btn-connection-test" data-engine="deeplx" data-i18n="common.testConnection"></button>
@@ -953,7 +953,7 @@
                         <input
                             id="history_search"
                             type="text"
-                            data-i18n-ph="options.history.searchPlaceholder" placeholder="搜索原文、译文、标题或网址"
+                            data-i18n-ph="options.history.searchPlaceholder"
                         />
                         <select id="history_filter">
                             <option value="all" data-i18n="common.all"></option>
