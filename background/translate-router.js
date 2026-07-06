@@ -8,6 +8,7 @@ import {
     LLM_ENGINE_IDS,
     resolveTranslateEngine,
 } from "../libs/engine-registry.mjs";
+import { resolveAutoBackgroundEngine } from "../libs/auto-engine.mjs";
 import { sanitizeTranslateContext, resolveContextMode } from "../libs/context-collector.mjs";
 import { postTranslateError } from "./port-utils.js";
 import { getMatchedGlossaryTerms } from "./term.js";
@@ -21,9 +22,12 @@ export async function handleTranslateStart(message, port, state) {
         // settings/Key 由后台缓存作为权威来源，不信任 content script 传来的 settings，
         // 防止恶意网页篡改 endpoint/prompt/headers/key 外泄凭据。
         const settings = await getSettings();
-        const engine = message?.engine
+        let engine = message?.engine
             ? String(message.engine).trim()
             : resolveTranslateEngine(settings);
+        if (engine === "auto") {
+            engine = resolveAutoBackgroundEngine(settings);
+        }
         const glossaryTerms = await getMatchedGlossaryTerms({
             from: message?.preferredFrom || message?.from,
             to: message?.preferredTo || message?.to,
@@ -52,8 +56,7 @@ export async function handleTranslateStart(message, port, state) {
             ? settings[customPayloadSettingKey]
             : "";
 
-        const isLlm =
-            engine === "auto" || LLM_ENGINE_IDS.includes(engine);
+        const isLlm = LLM_ENGINE_IDS.includes(engine);
         const contextMode = resolveContextMode(settings);
         const context =
             contextMode !== "off" && isLlm && message?.context

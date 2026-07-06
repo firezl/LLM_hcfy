@@ -30,8 +30,8 @@ describe("engine-registry", () => {
         );
     });
 
-    it("maps auto to openai handler", () => {
-        assert.equal(getTranslateHandlerKey("auto"), "openai");
+    it("maps auto handler to google fallback", () => {
+        assert.equal(getTranslateHandlerKey("auto"), "google");
     });
 
     it("marks browser as content-only", () => {
@@ -60,14 +60,10 @@ describe("engine-registry", () => {
         assert.ok(names.includes("openai"));
     });
 
-    it("maps custom prompts", () => {
+    it("maps custom prompts for llm engines", () => {
         assert.equal(
             CUSTOM_PROMPT_SETTING_BY_ENGINE.glm,
             "glm_custom_prompt",
-        );
-        assert.equal(
-            CUSTOM_PROMPT_SETTING_BY_ENGINE.auto,
-            "openai_custom_prompt",
         );
     });
 

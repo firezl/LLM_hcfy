@@ -45,8 +45,7 @@ const RAW_ENGINE_DEFINITIONS = [
     {
         id: "auto",
         kind: "builtin",
-        handler: "openai",
-        usesSharedOpenAiSection: true,
+        sectionId: "auto_section",
     },
     { id: "google", kind: "builtin", handler: "google" },
     { id: "bing", kind: "builtin", handler: "bing" },
@@ -211,13 +210,7 @@ export function getEngineDefinition(engineId) {
  */
 export function shouldShowSharedOpenAiSection(effectiveEngine) {
     const def = getEngineDefinition(effectiveEngine);
-    if (def?.usesSharedOpenAiSection) {
-        return true;
-    }
-    if (effectiveEngine === "auto") {
-        return true;
-    }
-    return false;
+    return !!def?.usesSharedOpenAiSection;
 }
 
 /**
@@ -283,7 +276,11 @@ export function getCustomPayloadSettingKey(engineId) {
  * @param {string} engineId
  */
 export function getTranslateHandlerKey(engineId) {
-    const def = getEngineDefinition(engineId);
+    const id = String(engineId || "").trim();
+    if (id === "auto") {
+        return "google";
+    }
+    const def = getEngineDefinition(id);
     if (!def) {
         return "openai";
     }

@@ -3,7 +3,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const i18n = globalThis.JYT_I18N;
     if (i18n) {
         i18n.loadUiLangFromStorage();
-        i18n.bindStorageListener();
     }
 
     const t = (key, vars) => (i18n?.t ? i18n.t(key, vars) : key);
@@ -209,8 +208,37 @@ document.addEventListener("DOMContentLoaded", () => {
                 sectionsById: engineSectionsById,
             });
         }
+        if (typeof enginesModule.updateAutoPriorityHint === "function") {
+            const currentSettings =
+                typeof settingsForm?.collectCurrentFormSettings === "function"
+                    ? settingsForm.collectCurrentFormSettings()
+                    : DEFAULT_SETTINGS;
+            enginesModule.updateAutoPriorityHint({
+                engineSelect: els.engine_select,
+                priorityHintEl: document.getElementById("auto_priority_hint"),
+                settings: currentSettings,
+                t,
+            });
+        }
         const engine = getCurrentEffectiveEngine();
         modelLists.ensureActiveEngineModelListLoaded(engine);
+    }
+
+    if (i18n) {
+        i18n.bindStorageListener(() => {
+            updateEngineDependentUI();
+            if (typeof enginesModule.applyBrowserEngineOptionUX === "function") {
+                enginesModule.applyBrowserEngineOptionUX({
+                    engineSelect: els.engine_select,
+                    isFirefox: isFirefoxRuntime,
+                    t,
+                });
+            }
+            void pdfContext.refreshActivePdfContext();
+            glossaryController.resetEditor();
+            void glossaryController.refreshList().catch(() => {});
+            void historyController.refreshList().catch(() => {});
+        });
     }
 
     function isRunningInPopup() {
@@ -362,6 +390,7 @@ document.addEventListener("DOMContentLoaded", () => {
         enginesModule.applyBrowserEngineOptionUX({
             engineSelect: els.engine_select,
             isFirefox: isFirefoxRuntime,
+            t,
         });
     }
 

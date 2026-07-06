@@ -1,6 +1,10 @@
 (function (global) {
     function createSyncDataController(options) {
         const deps = options && typeof options === "object" ? options : {};
+        const t = (key, vars) =>
+            global.JYT_I18N?.t ? global.JYT_I18N.t(key, vars) : key;
+        const errMsg = (err) =>
+            err && err.message ? err.message : String(err);
         const elements = deps.elements || {};
         const defaultSettings = deps.defaultSettings || {};
         const messageTypes = deps.messageTypes || {};
@@ -231,19 +235,13 @@
         async function saveWebDavLocalSettings() {
             const payload = getWebDavFormData();
             if (isInsecureHttpEndpoint(payload.baseUrl)) {
-                setSyncStatus(
-                    "WebDAV 地址为 HTTP，密码将明文传输，建议改用 HTTPS。",
-                    true,
-                );
+                setSyncStatus(t("options.sync.insecureHttpWarning"), true);
             }
             const granted = await requestOptionalHostPermissions([
                 payload.baseUrl,
             ]);
             if (!granted) {
-                setSyncStatus(
-                    "未授予 WebDAV 访问权限，远端同步可能失败。",
-                    true,
-                );
+                setSyncStatus(t("options.sync.permissionDenied"), true);
             }
 
             if (
@@ -260,7 +258,7 @@
                 chrome.storage.local.set({ webdav_sync: payload }, () => {
                     const err = chrome.runtime.lastError;
                     if (err) {
-                        reject(new Error(err.message || "WebDAV 配置保存失败"));
+                        reject(new Error(err.message || t("options.sync.webdavSaveFailed")));
                         return;
                     }
                     resolve(payload);
@@ -295,7 +293,7 @@
                 chrome.storage.local.get({ webdav_sync: fallback }, (items) => {
                     const err = chrome.runtime.lastError;
                     if (err) {
-                        reject(new Error(err.message || "WebDAV 配置读取失败"));
+                        reject(new Error(err.message || t("options.sync.webdavLoadFailed")));
                         return;
                     }
 
@@ -331,15 +329,19 @@
                 : 0;
             const glossarySummary = conflict?.glossary || {};
             const message = [
-                "检测到云端和本地都有更新，请选择处理方式：",
+                t("options.sync.conflict.title"),
                 "",
-                `配置冲突字段: ${cfgCount}`,
-                `本地术语: ${glossarySummary.localCount || 0} 条`,
-                `云端术语: ${glossarySummary.remoteCount || 0} 条`,
+                t("options.sync.conflict.configFields", { count: cfgCount }),
+                t("options.sync.conflict.localTerms", {
+                    count: glossarySummary.localCount || 0,
+                }),
+                t("options.sync.conflict.remoteTerms", {
+                    count: glossarySummary.remoteCount || 0,
+                }),
                 "",
-                "输入 1 使用云端覆盖本地",
-                "输入 2 使用本地覆盖云端",
-                "输入 3 合并并保留最新更新时间",
+                t("options.sync.conflict.optionRemote"),
+                t("options.sync.conflict.optionLocal"),
+                t("options.sync.conflict.optionMerge"),
             ].join("\n");
 
             const answer = window.prompt(message, "3");
@@ -367,17 +369,22 @@
                 }
 
                 if (result?.errorCode !== "SYNC_CONFLICT") {
-                    throw new Error(result?.error || "双向同步失败");
+                    throw new Error(
+                        result?.error ||
+                            t("options.error.syncBidirectionalFailed", {
+                                error: "",
+                            }),
+                    );
                 }
 
                 const selected = await askConflictPolicy(result?.conflict || {});
                 if (!selected) {
-                    throw new Error("已取消同步");
+                    throw new Error(t("options.sync.cancelled"));
                 }
                 conflictPolicy = selected;
             }
 
-            throw new Error("同步冲突处理次数过多，请重试");
+            throw new Error(t("options.sync.conflictRetriesExceeded"));
         }
 
         async function exportConfig() {
@@ -386,14 +393,19 @@
                     messageTypes.CONFIG_EXPORT || "CONFIG_EXPORT",
                 );
                 if (!result?.ok) {
-                    throw new Error(result?.error || "配置导出失败");
+                    throw new Error(
+                        result?.error ||
+                            t("options.error.configExportFailed", { error: "" }),
+                    );
                 }
 
                 downloadJsonFile(result.payload || {}, "jyt-config");
-                setConfigStatus("配置导出完成", false);
+                setConfigStatus(t("options.sync.configExportDone"), false);
             } catch (err) {
                 setConfigStatus(
-                    `配置导出失败: ${err && err.message ? err.message : String(err)}`,
+                    t("options.error.configExportFailed", {
+                        error: errMsg(err),
+                    }),
                     true,
                 );
             }
@@ -409,10 +421,7 @@
             const file = elements.configImportFileInput?.files?.[0];
             if (!file) return;
             if (file.size > 5 * 1024 * 1024) {
-                setConfigStatus(
-                    "配置导入失败: 文件过大，请控制在 5MB 以内",
-                    true,
-                );
+                setConfigStatus(t("options.validation.fileTooLarge"), true);
                 return;
             }
 
@@ -442,14 +451,22 @@
                     },
                 );
                 if (!result?.ok) {
-                    throw new Error(result?.error || "配置导入失败");
+                    throw new Error(
+                        result?.error ||
+                            t("options.error.configImportFailed", { error: "" }),
+                    );
                 }
 
                 await new Promise((resolve, reject) => {
                     chrome.storage.local.set(localApiKeys, () => {
                         const err = chrome.runtime.lastError;
                         if (err) {
-                            reject(new Error(err.message || "导入本地密钥失败"));
+                            reject(
+                                new Error(
+                                    err.message ||
+                                        t("options.sync.localKeysImportFailed"),
+                                ),
+                            );
                             return;
                         }
                         resolve();
@@ -457,10 +474,12 @@
                 });
 
                 reloadSettings();
-                setConfigStatus("配置导入完成", false);
+                setConfigStatus(t("options.sync.configImportDone"), false);
             } catch (err) {
                 setConfigStatus(
-                    `配置导入失败: ${err && err.message ? err.message : String(err)}`,
+                    t("options.error.configImportFailed", {
+                        error: errMsg(err),
+                    }),
                     true,
                 );
             }
@@ -469,10 +488,10 @@
         async function saveLocalWebDavConfig() {
             try {
                 await saveWebDavLocalSettings();
-                setSyncStatus("WebDAV 配置已保存到本地", false);
+                setSyncStatus(t("options.sync.webdavSavedLocally"), false);
             } catch (err) {
                 setSyncStatus(
-                    `保存失败: ${err && err.message ? err.message : String(err)}`,
+                    t("options.toast.saveFailed", { error: errMsg(err) }),
                     true,
                 );
             }
@@ -481,7 +500,7 @@
         async function testWebDavConnection() {
             if (syncBusy) return;
             setSyncButtonsEnabled(false);
-            setSyncStatus("正在测试 WebDAV 连接...", false);
+            setSyncStatus(t("options.sync.testing"), false);
             try {
                 const webdav = getWebDavFormData();
                 await saveWebDavLocalSettings();
@@ -490,15 +509,23 @@
                     { webdav },
                 );
                 if (!result?.ok) {
-                    throw new Error(result?.error || "测试失败");
+                    throw new Error(
+                        result?.error ||
+                            t("options.error.webdavTestFailed", { error: "" }),
+                    );
                 }
                 setSyncStatus(
-                    `连接成功: config(${result.configStatus}) glossary(${result.glossaryStatus})`,
+                    t("options.sync.testSuccess", {
+                        configStatus: result.configStatus,
+                        glossaryStatus: result.glossaryStatus,
+                    }),
                     false,
                 );
             } catch (err) {
                 setSyncStatus(
-                    `测试失败: ${err && err.message ? err.message : String(err)}`,
+                    t("options.error.webdavTestFailed", {
+                        error: errMsg(err),
+                    }),
                     true,
                 );
             } finally {
@@ -509,7 +536,7 @@
         async function uploadSyncData() {
             if (syncBusy) return;
             setSyncButtonsEnabled(false);
-            setSyncStatus("正在上传配置与术语到 WebDAV...", false);
+            setSyncStatus(t("options.sync.uploading"), false);
             try {
                 const webdav = getWebDavFormData();
                 await saveWebDavLocalSettings();
@@ -518,15 +545,22 @@
                     { webdav },
                 );
                 if (!result?.ok) {
-                    throw new Error(result?.error || "上传失败");
+                    throw new Error(
+                        result?.error ||
+                            t("options.error.webdavUploadFailed", { error: "" }),
+                    );
                 }
                 setSyncStatus(
-                    `上传完成: 术语 ${result.summary?.glossaryCount || 0} 条`,
+                    t("options.sync.uploadDone", {
+                        count: result.summary?.glossaryCount || 0,
+                    }),
                     false,
                 );
             } catch (err) {
                 setSyncStatus(
-                    `上传失败: ${err && err.message ? err.message : String(err)}`,
+                    t("options.error.webdavUploadFailed", {
+                        error: errMsg(err),
+                    }),
                     true,
                 );
             } finally {
@@ -537,7 +571,7 @@
         async function downloadSyncData() {
             if (syncBusy) return;
             setSyncButtonsEnabled(false);
-            setSyncStatus("正在从 WebDAV 下载配置与术语...", false);
+            setSyncStatus(t("options.sync.downloading"), false);
             try {
                 const webdav = getWebDavFormData();
                 await saveWebDavLocalSettings();
@@ -546,19 +580,26 @@
                     { webdav },
                 );
                 if (!result?.ok) {
-                    throw new Error(result?.error || "下载失败");
+                    throw new Error(
+                        result?.error ||
+                            t("options.error.webdavDownloadFailed", { error: "" }),
+                    );
                 }
 
                 reloadSettings();
                 await glossary.refreshList?.();
                 glossary.resetEditor?.();
                 setSyncStatus(
-                    `下载完成: 术语 ${result.summary?.glossaryCount || 0} 条`,
+                    t("options.sync.downloadDone", {
+                        count: result.summary?.glossaryCount || 0,
+                    }),
                     false,
                 );
             } catch (err) {
                 setSyncStatus(
-                    `下载失败: ${err && err.message ? err.message : String(err)}`,
+                    t("options.error.webdavDownloadFailed", {
+                        error: errMsg(err),
+                    }),
                     true,
                 );
             } finally {
@@ -569,7 +610,7 @@
         async function bidirectionalSyncData() {
             if (syncBusy) return;
             setSyncButtonsEnabled(false);
-            setSyncStatus("正在执行双向同步...", false);
+            setSyncStatus(t("options.sync.bidirectionalRunning"), false);
             try {
                 const webdav = getWebDavFormData();
                 await saveWebDavLocalSettings();
@@ -579,12 +620,16 @@
                 await glossary.refreshList?.();
                 glossary.resetEditor?.();
                 setSyncStatus(
-                    `双向同步完成: 术语 ${result.summary?.glossaryCount || 0} 条`,
+                    t("options.sync.bidirectionalDone", {
+                        count: result.summary?.glossaryCount || 0,
+                    }),
                     false,
                 );
             } catch (err) {
                 setSyncStatus(
-                    `双向同步失败: ${err && err.message ? err.message : String(err)}`,
+                    t("options.error.syncBidirectionalFailed", {
+                        error: errMsg(err),
+                    }),
                     true,
                 );
             } finally {
@@ -630,7 +675,9 @@
                 })
                 .catch((err) => {
                     setSyncStatus(
-                        `本地同步配置读取失败: ${err && err.message ? err.message : String(err)}`,
+                        t("options.toast.syncConfigReadFailed", {
+                            error: errMsg(err),
+                        }),
                         true,
                     );
                 });

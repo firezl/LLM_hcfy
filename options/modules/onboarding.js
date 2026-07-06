@@ -10,7 +10,7 @@
             effectiveEngine: "openai",
             apiKey: {
                 field: "openai_api_key",
-                label: "OpenAI API Key",
+                labelKey: "options.onboarding.openaiApiKeyLabel",
                 placeholder: "sk-...",
             },
         },
@@ -26,7 +26,7 @@
             effectiveEngine: "openrouter",
             apiKey: {
                 field: "openrouter_api_key",
-                label: "OpenRouter API Key",
+                labelKey: "options.onboarding.openrouterApiKeyLabel",
                 placeholder: "sk-or-...",
             },
         },
@@ -231,7 +231,9 @@
                 const meta = getPresetMeta(activePreset);
                 if (meta?.apiKey) {
                     if (apiKeyLabel) {
-                        apiKeyLabel.textContent = meta.apiKey.label;
+                        apiKeyLabel.textContent = meta.apiKey.labelKey
+                            ? t(meta.apiKey.labelKey)
+                            : meta.apiKey.label || "API Key";
                     }
                     if (apiKeyInput) {
                         apiKeyInput.placeholder = meta.apiKey.placeholder || "";

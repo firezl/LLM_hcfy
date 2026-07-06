@@ -1,6 +1,8 @@
 // options/modules/messaging.js — background port and one-shot messages
 (function (global) {
     function createMessaging() {
+        const t = (key, vars) =>
+            global.JYT_I18N?.t ? global.JYT_I18N.t(key, vars) : key;
         let backgroundPort = null;
         const ollamaModelRequestResolvers = new Map();
         const openaiCompatModelRequestResolvers = new Map();
@@ -27,7 +29,7 @@
                     chrome.runtime.sendMessage(request, (resp) => {
                         const err = chrome.runtime.lastError;
                         if (err) {
-                            reject(new Error(err.message || "后台消息发送失败"));
+                            reject(new Error(err.message || t("options.error.messagingFailed")));
                             return;
                         }
                         resolve(resp);

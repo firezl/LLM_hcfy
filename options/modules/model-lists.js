@@ -219,15 +219,14 @@
 
                 const freeRouterOption = document.createElement("option");
                 freeRouterOption.value = DEFAULT_OPENROUTER_FREE_MODEL;
-                freeRouterOption.textContent =
-                    "openrouter/free（自动免费模型）";
+                freeRouterOption.textContent = t("options.engine.openrouter.freeModel");
                 els.openrouter_model.appendChild(freeRouterOption);
 
                 orderedItems.forEach((item) => {
                     const option = document.createElement("option");
                     option.value = item.id;
                     option.textContent = item.isFree
-                        ? `${item.id}（免费）`
+                        ? `${item.id}${t("options.modelList.freeTag")}`
                         : item.name && item.name !== item.id
                           ? `${item.name} (${item.id})`
                           : item.id;
@@ -285,7 +284,7 @@
                     const requestId = `ollama-models-${Date.now()}-${Math.random()}`;
                     const timer = setTimeout(() => {
                         ollamaModelRequestResolvers.delete(requestId);
-                        reject(new Error("请求 Ollama 模型列表超时"));
+                        reject(new Error(t("options.modelList.timeout.ollama")));
                     }, 8000);
 
                     ollamaModelRequestResolvers.set(requestId, (payload) => {
@@ -322,7 +321,7 @@
                     const requestId = `openai-compat-models-${Date.now()}-${Math.random()}`;
                     const timer = setTimeout(() => {
                         openaiCompatModelRequestResolvers.delete(requestId);
-                        reject(new Error("请求 OpenAI 兼容模型列表超时"));
+                        reject(new Error(t("options.modelList.timeout.openaiCompat")));
                     }, 8000);
 
                     openaiCompatModelRequestResolvers.set(requestId, (payload) => {
@@ -361,7 +360,7 @@
                     const requestId = `openrouter-models-${Date.now()}-${Math.random()}`;
                     const timer = setTimeout(() => {
                         openrouterModelRequestResolvers.delete(requestId);
-                        reject(new Error("请求 OpenRouter 模型列表超时"));
+                        reject(new Error(t("options.modelList.timeout.openrouter")));
                     }, 8000);
 
                     openrouterModelRequestResolvers.set(requestId, (payload) => {
@@ -395,7 +394,7 @@
                     const requestId = `claude-models-${Date.now()}-${Math.random()}`;
                     const timer = setTimeout(() => {
                         claudeModelRequestResolvers.delete(requestId);
-                        reject(new Error("请求 Claude 模型列表超时"));
+                        reject(new Error(t("options.modelList.timeout.claude")));
                     }, 8000);
 
                     claudeModelRequestResolvers.set(requestId, (payload) => {
@@ -428,7 +427,7 @@
                     const requestId = `gemini-models-${Date.now()}-${Math.random()}`;
                     const timer = setTimeout(() => {
                         geminiModelRequestResolvers.delete(requestId);
-                        reject(new Error("请求 Gemini 模型列表超时"));
+                        reject(new Error(t("options.modelList.timeout.gemini")));
                     }, 8000);
 
                     geminiModelRequestResolvers.set(requestId, (payload) => {

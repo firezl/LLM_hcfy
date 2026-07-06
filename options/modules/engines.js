@@ -19,10 +19,7 @@
 
     function shouldShowSharedOpenAiSection(effectiveEngine) {
         const def = ENGINE_DEFINITIONS.find((item) => item.id === effectiveEngine);
-        if (def?.usesSharedOpenAiSection) {
-            return true;
-        }
-        return effectiveEngine === "auto";
+        return !!def?.usesSharedOpenAiSection;
     }
 
     function shouldHideSharedOpenAiSection(effectiveEngine) {
@@ -82,7 +79,14 @@
             browserOptionId = "browser_engine_option",
             browserHintId = "browser_engine_hint",
             isFirefox = false,
+            t: translate,
         } = options || {};
+
+        const t =
+            typeof translate === "function"
+                ? translate
+                : (key) =>
+                      global.JYT_I18N?.t ? global.JYT_I18N.t(key) : key;
 
         const browserOption = document.getElementById(browserOptionId);
         const browserHint = document.getElementById(browserHintId);
@@ -94,8 +98,8 @@
 
         if (browserHint) {
             browserHint.textContent = isFirefox
-                ? "Firefox 不支持浏览器内置 Translation API，请改用「大模型翻译」或其他引擎。"
-                : "仅在网页划词时生效（页面内调用 Chrome/Edge Translation API，不经过扩展后台）。PDF 阅读器内请改用其他引擎。";
+                ? t("options.general.browserEngine.hintFirefox")
+                : t("options.general.browserEngine.hint");
         }
 
         if (
@@ -111,20 +115,14 @@
         const activeEngine = String(engine || "auto");
         const cbs = callbacks || {};
 
+        if (activeEngine === "auto") {
+            return;
+        }
+
         if (OPENAI_COMPAT_ENGINE_BY_NAME[activeEngine]) {
             if (typeof cbs.refreshOpenAICompat === "function") {
                 void cbs.refreshOpenAICompat(
                     OPENAI_COMPAT_ENGINE_BY_NAME[activeEngine],
-                    false,
-                );
-            }
-            return;
-        }
-
-        if (activeEngine === "auto") {
-            if (typeof cbs.refreshOpenAICompat === "function") {
-                void cbs.refreshOpenAICompat(
-                    OPENAI_COMPAT_ENGINE_BY_NAME.openai,
                     false,
                 );
             }
@@ -144,12 +142,47 @@
         }
     }
 
+    function updateAutoPriorityHint(options) {
+        const { engineSelect, priorityHintEl, settings, t } = options || {};
+        if (!priorityHintEl) {
+            return;
+        }
+        if (String(engineSelect?.value || "auto") !== "auto") {
+            priorityHintEl.textContent = "";
+            return;
+        }
+
+        const autoEngine = global.JYT_AUTO_ENGINE || {};
+        const buildCandidates =
+            typeof autoEngine.buildAutoTranslateCandidates === "function"
+                ? autoEngine.buildAutoTranslateCandidates
+                : null;
+        const getDisplayKey =
+            typeof autoEngine.getAutoEngineDisplayI18nKey === "function"
+                ? autoEngine.getAutoEngineDisplayI18nKey
+                : null;
+        if (!buildCandidates || !getDisplayKey) {
+            priorityHintEl.textContent = "";
+            return;
+        }
+
+        const primary = buildCandidates(settings || {})[0] || "browser";
+        const labelKey = getDisplayKey(primary);
+        const label =
+            typeof t === "function" ? t(labelKey) : labelKey || primary;
+        priorityHintEl.textContent =
+            typeof t === "function"
+                ? t("options.engine.auto.priorityHint", { engine: label })
+                : label;
+    }
+
     global.JYT_OPTION_ENGINES = {
         ENGINE_DEFINITIONS,
         OPENAI_COMPAT_MODEL_ENGINES,
         OPENAI_COMPAT_ENGINE_BY_NAME,
         resolveEffectiveEngine,
         updateEngineDependentUI,
+        updateAutoPriorityHint,
         applyBrowserEngineOptionUX,
         ensureActiveEngineModelListLoaded,
     };

@@ -113,6 +113,87 @@
                     openrouter: "openrouter_show_thoughts",
                 };
 
+                function getBackgroundThoughtSetting(engineId) {
+                    return BACKGROUND_ENGINE_THOUGHTS[engineId] || null;
+                }
+
+                function startAutoTranslateChain(
+                    text,
+                    from,
+                    to,
+                    settings,
+                    streamEl,
+                    thoughtEl,
+                    thoughtDetails,
+                    context,
+                ) {
+                    const autoEngine = global.JYT_AUTO_ENGINE || {};
+                    const buildCandidates =
+                        typeof autoEngine.buildAutoTranslateCandidates === "function"
+                            ? autoEngine.buildAutoTranslateCandidates
+                            : () => ["google", "bing", "browser"];
+                    const candidates = buildCandidates(settings);
+                    const first = candidates[0] || "browser";
+                    const rest = candidates.slice(1);
+
+                    if (first === "browser") {
+                        streamEl.innerText = t("bubble.translate.browserOnly");
+                        return app
+                            .translateWithBrowserAPI(text, from, to, streamEl)
+                            .then((translatedText) => {
+                                if (isStale()) return;
+                                const output =
+                                    translatedText || app.getCleanTranslatedText();
+                                state.lastTranslateContext = {
+                                    text,
+                                    translatedText: output,
+                                    from,
+                                    to,
+                                };
+                                app.saveTranslationHistory({
+                                    sourceText: text,
+                                    translatedText: output,
+                                    sourceLang: from,
+                                    targetLang: to,
+                                    engine: "browser",
+                                    model: "browser-translation-api",
+                                });
+                                app.setBubbleState(bubble, "done");
+                            })
+                            .catch((err) => {
+                                streamEl.innerText = t(
+                                    "bubble.translate.noCandidatesAvailable",
+                                    {
+                                        error:
+                                            err && err.message
+                                                ? err.message
+                                                : String(err),
+                                    },
+                                );
+                                app.setBubbleState(bubble, "error");
+                            });
+                    }
+
+                    const thoughtSetting = getBackgroundThoughtSetting(first);
+                    app.startBackgroundTranslate(
+                        text,
+                        from,
+                        to,
+                        settings,
+                        streamEl,
+                        thoughtEl,
+                        thoughtDetails,
+                        {
+                            engine: first,
+                            autoFallbackEngines: rest,
+                            isThinking: thoughtSetting
+                                ? !!settings[thoughtSetting]
+                                : undefined,
+                            context,
+                        },
+                    );
+                }
+
                 const backgroundEngine = BACKGROUND_ENGINE_THOUGHTS[engine];
                 if (backgroundEngine) {
                     app.startBackgroundTranslate(
@@ -132,47 +213,18 @@
                     return;
                 }
 
-
                 if (engine === "auto") {
-                    // content 不再持有 API Key，用 openai_api_url（非敏感，存于 sync）
-                    // 作为 OpenAI 是否已配置的判定依据；Key 缺失时后台会返回鉴权错误。
-                    const openAIConfigured = !!settings.openai_api_url;
-                    if (!openAIConfigured) {
-                        try {
-                            streamEl.innerText = t("bubble.translate.browserOnly");
-                            const translatedText = await app.translateWithBrowserAPI(
-                                text,
-                                from,
-                                to,
-                                streamEl,
-                            );
-                            if (isStale()) return;
-                            const output = translatedText || app.getCleanTranslatedText();
-                            state.lastTranslateContext = {
-                                text,
-                                translatedText: output,
-                                from,
-                                to,
-                            };
-                            app.saveTranslationHistory({
-                                sourceText: text,
-                                translatedText: output,
-                                sourceLang: from,
-                                targetLang: to,
-                                engine: "browser",
-                                model: "browser-translation-api",
-                            });
-                            app.setBubbleState(bubble, "done");
-                            return;
-                        } catch (err) {
-                            streamEl.innerText = t("bubble.translate.noOpenaiNoBrowser", {
-                                error:
-                                    err && err.message ? err.message : String(err),
-                            });
-                            app.setBubbleState(bubble, "error");
-                            return;
-                        }
-                    }
+                    startAutoTranslateChain(
+                        text,
+                        from,
+                        to,
+                        settings,
+                        streamEl,
+                        thoughtEl,
+                        thoughtDetails,
+                        state.lastSelectionContext,
+                    );
+                    return;
                 }
 
                 if (isStale()) return;
@@ -186,7 +238,6 @@
                     thoughtEl,
                     thoughtDetails,
                     {
-                        allowBrowserFallback: engine === "auto",
                         context: state.lastSelectionContext,
                     },
                 );

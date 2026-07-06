@@ -75,6 +75,151 @@
                 }
             }
 
+            const BACKGROUND_ENGINE_THOUGHTS = {
+                ollama: "ollama_show_thoughts",
+                claude: "claude_show_thoughts",
+                gemini: "gemini_show_thoughts",
+                deepseek: "deepseek_show_thoughts",
+                siliconflow: "siliconflow_show_thoughts",
+                qwen: "qwen_show_thoughts",
+                glm: "glm_show_thoughts",
+                xiaomi: "xiaomi_show_thoughts",
+                custom_openai: "custom_openai_show_thoughts",
+                openrouter: "openrouter_show_thoughts",
+            };
+
+            function getEngineDisplayName(engineId) {
+                const autoEngine = global.JYT_AUTO_ENGINE || {};
+                const key =
+                    typeof autoEngine.getAutoEngineDisplayI18nKey === "function"
+                        ? autoEngine.getAutoEngineDisplayI18nKey(engineId)
+                        : "";
+                if (key) {
+                    const label = t(key);
+                    if (label && label !== key) {
+                        return label;
+                    }
+                }
+                return String(engineId || "");
+            }
+
+            function tryBrowserAutoFallback(currentRequest, errorText) {
+                const { streamEl } = currentRequest;
+                currentRequest.browserFallbackTried = true;
+                streamEl.innerText = t("bubble.translate.fallbackBrowser");
+                app.setBubbleState(streamEl?.closest(".jyt-bubble"), "loading");
+
+                return app
+                    .translateWithBrowserAPI(
+                        currentRequest.text,
+                        currentRequest.from,
+                        currentRequest.to,
+                        streamEl,
+                    )
+                    .then((translatedText) => {
+                        if (state.activeRequest === currentRequest) {
+                            const output =
+                                translatedText || app.getCleanTranslatedText();
+                            app.saveTranslationHistory({
+                                sourceText: currentRequest.text,
+                                translatedText: output,
+                                sourceLang: currentRequest.from,
+                                targetLang: currentRequest.to,
+                                engine: "browser",
+                                model: "browser-translation-api",
+                            });
+                            state.lastTranslateContext = {
+                                text: currentRequest.text,
+                                translatedText: output,
+                                from: currentRequest.from,
+                                to: currentRequest.to,
+                            };
+                            app.setBubbleState(
+                                streamEl?.closest(".jyt-bubble"),
+                                "done",
+                            );
+                            state.activeRequest = null;
+                        }
+                    })
+                    .catch((fallbackErr) => {
+                        if (state.activeRequest !== currentRequest) return;
+                        const browserErr =
+                            fallbackErr && fallbackErr.message
+                                ? fallbackErr.message
+                                : String(
+                                      fallbackErr || t("common.unknownError"),
+                                  );
+                        streamEl.innerText = t("bubble.translate.allCandidatesFailed", {
+                            previousError: errorText,
+                            browserError: browserErr,
+                        });
+                        app.setBubbleState(
+                            streamEl?.closest(".jyt-bubble"),
+                            "error",
+                        );
+                        state.activeRequest = null;
+                    });
+            }
+
+            function retryAutoFallbackEngine(currentRequest, errorText) {
+                const remaining = Array.isArray(currentRequest.autoFallbackEngines)
+                    ? currentRequest.autoFallbackEngines
+                    : [];
+                if (remaining.length === 0) {
+                    currentRequest.streamEl.innerText = t("bubble.translate.failed", {
+                        error: errorText,
+                    });
+                    state.activeRequest = null;
+                    return;
+                }
+
+                const nextEngine = remaining[0];
+                const rest = remaining.slice(1);
+                const { streamEl } = currentRequest;
+
+                if (nextEngine === "browser") {
+                    void tryBrowserAutoFallback(currentRequest, errorText);
+                    return;
+                }
+
+                const settings = state.runtimeSettings || {};
+                const thoughtSetting = BACKGROUND_ENGINE_THOUGHTS[nextEngine];
+                currentRequest.engine = nextEngine;
+                currentRequest.autoFallbackEngines = rest;
+                currentRequest.buffer = "";
+                currentRequest.browserFallbackTried = false;
+                currentRequest.isThinking = thoughtSetting
+                    ? !!settings[thoughtSetting]
+                    : false;
+                currentRequest.model = app.getEffectiveModel(settings, nextEngine);
+
+                streamEl.innerText = t("bubble.translate.fallbackEngine", {
+                    engine: getEngineDisplayName(nextEngine),
+                    error: errorText,
+                });
+                app.setBubbleState(streamEl?.closest(".jyt-bubble"), "loading");
+
+                const sent = sendTranslateStart({
+                    type: app.MESSAGE_TYPES.TRANSLATE_START || "TRANSLATE_START",
+                    requestId: currentRequest.requestId,
+                    text: currentRequest.text,
+                    preferredFrom: currentRequest.from,
+                    preferredTo: currentRequest.to,
+                    engine: nextEngine,
+                    context: currentRequest.context ?? state.lastSelectionContext ?? null,
+                });
+
+                if (!sent) {
+                    retryAutoFallbackEngine(
+                        currentRequest,
+                        t("bubble.translate.backgroundUnreachable"),
+                    );
+                    return;
+                }
+
+                armActiveRequestTimeout(currentRequest);
+            }
+
             function ensureTranslatePort() {
                 if (state.translatePort) return state.translatePort;
 
@@ -124,60 +269,18 @@
                         app.setBubbleState(streamEl?.closest(".jyt-bubble"), "error");
 
                         if (
+                            Array.isArray(currentRequest.autoFallbackEngines) &&
+                            currentRequest.autoFallbackEngines.length > 0
+                        ) {
+                            retryAutoFallbackEngine(currentRequest, errorText);
+                            return;
+                        }
+
+                        if (
                             currentRequest.allowBrowserFallback &&
                             !currentRequest.browserFallbackTried
                         ) {
-                            currentRequest.browserFallbackTried = true;
-                            streamEl.innerText = t("bubble.translate.fallbackBrowser");
-                            app.setBubbleState(streamEl?.closest(".jyt-bubble"), "loading");
-
-                            app.translateWithBrowserAPI(
-                                currentRequest.text,
-                                currentRequest.from,
-                                currentRequest.to,
-                                streamEl,
-                            )
-                                .then((translatedText) => {
-                                    if (state.activeRequest === currentRequest) {
-                                        const output =
-                                            translatedText || app.getCleanTranslatedText();
-                                        app.saveTranslationHistory({
-                                            sourceText: currentRequest.text,
-                                            translatedText: output,
-                                            sourceLang: currentRequest.from,
-                                            targetLang: currentRequest.to,
-                                            engine: "browser",
-                                            model: "browser-translation-api",
-                                        });
-                                        state.lastTranslateContext = {
-                                            text: currentRequest.text,
-                                            translatedText: output,
-                                            from: currentRequest.from,
-                                            to: currentRequest.to,
-                                        };
-                                        app.setBubbleState(
-                                            streamEl?.closest(".jyt-bubble"),
-                                            "done",
-                                        );
-                                        state.activeRequest = null;
-                                    }
-                                })
-                                .catch((fallbackErr) => {
-                                    if (state.activeRequest !== currentRequest) return;
-                                    const browserErr =
-                                        fallbackErr && fallbackErr.message
-                                            ? fallbackErr.message
-                                            : String(fallbackErr || t("common.unknownError"));
-                                    streamEl.innerText = t("bubble.translate.bothFailed", {
-                                        openaiError: errorText,
-                                        browserError: browserErr,
-                                    });
-                                    app.setBubbleState(
-                                        streamEl?.closest(".jyt-bubble"),
-                                        "error",
-                                    );
-                                    state.activeRequest = null;
-                                });
+                            void tryBrowserAutoFallback(currentRequest, errorText);
                             return;
                         }
 
@@ -404,7 +507,14 @@
                     engine,
                     model,
                     allowBrowserFallback: !!extraOptions.allowBrowserFallback,
+                    autoFallbackEngines: Array.isArray(extraOptions.autoFallbackEngines)
+                        ? [...extraOptions.autoFallbackEngines]
+                        : [],
                     browserFallbackTried: false,
+                    context:
+                        extraOptions.context !== undefined
+                            ? extraOptions.context
+                            : state.lastSelectionContext || null,
                 };
 
                 state.lastTranslateContext = {

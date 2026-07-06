@@ -13,9 +13,6 @@ export function resolvePromptPrefix(engineId, def = {}) {
     if (def.promptPrefix) {
         return def.promptPrefix;
     }
-    if (engineId === "auto") {
-        return "openai";
-    }
     return engineId;
 }
 
@@ -72,7 +69,7 @@ export function hasDedicatedOptionsSection(raw) {
     if (raw.sectionId) {
         return true;
     }
-    if (id === "deepl" || id === "deeplx") {
+    if (id === "auto" || id === "deepl" || id === "deeplx") {
         return true;
     }
     if (kind === "llm" && id !== "openai") {
@@ -89,7 +86,7 @@ export function supportsPromptSettings(raw) {
         return false;
     }
     const { id, kind } = raw;
-    if (kind === "llm" || id === "auto") {
+    if (kind === "llm") {
         return true;
     }
     return false;

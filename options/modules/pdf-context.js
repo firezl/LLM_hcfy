@@ -3,6 +3,8 @@
     function createPdfContext(deps) {
         const { pdf, showToast, isFirefoxRuntime } = deps;
         const { openLocalPdfBtn, currentPdfStatusEl } = pdf;
+        const t = (key, vars) =>
+            global.JYT_I18N?.t ? global.JYT_I18N.t(key, vars) : key;
 
         let cachedActiveTab = null;
         let cachedCurrentPdfUrl = "";
@@ -91,23 +93,26 @@
                     const isFilePdf = currentPdfUrl.startsWith("file://");
 
                     if (isFirefoxRuntime && isFilePdf) {
-                        setOpenButtonLabel("选择本地 PDF（Firefox）");
-                        currentPdfStatusEl.textContent = `已检测到当前 PDF：${fileName}。Firefox 无法让扩展直接读取 file://，点击后会打开文件选择器，请选择该文件。`;
+                        setOpenButtonLabel(t("options.pdf.openLocalFirefox"));
+                        currentPdfStatusEl.textContent = t(
+                            "options.pdf.detectedFirefox",
+                            { fileName },
+                        );
                         return;
                     }
 
-                    setOpenButtonLabel("用 LLM 翻译器打开当前 PDF");
-                    currentPdfStatusEl.textContent = `已检测到当前 PDF：${fileName}`;
+                    setOpenButtonLabel(t("options.pdf.openCurrentPdf"));
+                    currentPdfStatusEl.textContent = t("options.pdf.detected", {
+                        fileName,
+                    });
                     return;
                 }
 
-                setOpenButtonLabel("打开本地 PDF（Firefox 兼容）");
+                setOpenButtonLabel(t("options.pdf.openLocalCompat"));
                 if (activeTab?.url) {
-                    currentPdfStatusEl.textContent =
-                        "当前标签页未检测到 PDF 链接。点击后将进入内置 PDF.js 页面并弹出文件选择器。";
+                    currentPdfStatusEl.textContent = t("options.pdf.noPdfDetected");
                 } else {
-                    currentPdfStatusEl.textContent =
-                        "未获取到当前标签页信息。点击后将进入内置 PDF.js 页面并弹出文件选择器。";
+                    currentPdfStatusEl.textContent = t("options.pdf.noTabInfo");
                 }
             }
 
@@ -155,9 +160,7 @@
                             viewerUrl = chrome.runtime.getURL(
                                 "vendor/pdfjs/web/viewer.html?file=&openFilePicker=1",
                             );
-                            showToast(
-                                "Firefox 安全策略不允许扩展直接读取 file:// 文件。将打开文件选择器，请选择当前 PDF。",
-                            );
+                            showToast(t("options.pdf.firefoxFilePickerHint"));
                         } else {
                             viewerUrl = chrome.runtime.getURL(
                                 `vendor/pdfjs/web/viewer.html?file=${encodeURIComponent(currentPdfUrl)}`,
@@ -176,7 +179,7 @@
                         }
                         window.close();
                     } catch (err) {
-                        showToast("打开内置 PDF 页面失败，请重试");
+                        showToast(t("options.pdf.openFailed"));
                     }
                 });
         }

@@ -1,6 +1,10 @@
 (function (global) {
     function createHistoryController(options) {
         const deps = options && typeof options === "object" ? options : {};
+        const t = (key, vars) =>
+            global.JYT_I18N?.t ? global.JYT_I18N.t(key, vars) : key;
+        const errMsg = (err) =>
+            err && err.message ? err.message : String(err);
         const elements = deps.elements || {};
         const messageTypes = deps.messageTypes || {};
         const sendBackgroundMessage = deps.sendBackgroundMessage;
@@ -54,7 +58,7 @@
             if (list.length === 0) {
                 const empty = document.createElement("div");
                 empty.className = "jyt-history-empty";
-                empty.textContent = "暂无历史记录。完成一次翻译后会自动保存。";
+                empty.textContent = t("options.history.empty");
                 elements.list.appendChild(empty);
                 return;
             }
@@ -95,17 +99,19 @@
                 const copyBtn = document.createElement("button");
                 copyBtn.type = "button";
                 copyBtn.className = "jyt-history-copy";
-                copyBtn.textContent = "复制译文";
+                copyBtn.textContent = t("options.history.copyTranslation");
 
                 const favoriteBtn = document.createElement("button");
                 favoriteBtn.type = "button";
                 favoriteBtn.className = "jyt-history-favorite";
-                favoriteBtn.textContent = item.favorite ? "取消收藏" : "收藏";
+                favoriteBtn.textContent = item.favorite
+                    ? t("common.unfavorite")
+                    : t("common.favorite");
 
                 const deleteBtn = document.createElement("button");
                 deleteBtn.type = "button";
                 deleteBtn.className = "jyt-history-delete";
-                deleteBtn.textContent = "删除";
+                deleteBtn.textContent = t("common.delete");
 
                 actions.append(copyBtn, favoriteBtn, deleteBtn);
                 row.append(meta, source, target, page, actions);
@@ -125,11 +131,13 @@
                 },
             );
             if (!result?.ok) {
-                throw new Error(result?.error || "历史记录读取失败");
+                throw new Error(
+                    result?.error || t("options.error.historyReadFailed"),
+                );
             }
             itemsCache = Array.isArray(result.items) ? result.items : [];
             renderList(itemsCache);
-            setStatus(`共 ${itemsCache.length} 条记录`, false);
+            setStatus(t("options.history.count", { count: itemsCache.length }), false);
         }
 
         async function handleListClick(event) {
@@ -142,7 +150,7 @@
             try {
                 if (event.target.closest(".jyt-history-copy")) {
                     await copyText(item.translatedText);
-                    showToast("译文已复制");
+                    showToast(t("options.toast.translationCopied"));
                     return;
                 }
 
@@ -153,7 +161,10 @@
                         { id, favorite: !item.favorite },
                     );
                     if (!result?.ok) {
-                        throw new Error(result?.error || "收藏状态更新失败");
+                        throw new Error(
+                            result?.error ||
+                                t("options.error.favoriteUpdateFailed"),
+                        );
                     }
                     await refreshList();
                     return;
@@ -165,20 +176,23 @@
                         { id },
                     );
                     if (!result?.ok) {
-                        throw new Error(result?.error || "历史记录删除失败");
+                        throw new Error(
+                            result?.error ||
+                                t("options.error.historyDeleteFailed"),
+                        );
                     }
                     await refreshList();
                 }
             } catch (err) {
                 setStatus(
-                    `操作失败: ${err && err.message ? err.message : String(err)}`,
+                    t("options.error.operationFailed", { error: errMsg(err) }),
                     true,
                 );
             }
         }
 
         async function clearHistory() {
-            const ok = window.confirm("确定清空翻译历史吗？收藏也会被清空。");
+            const ok = window.confirm(t("options.history.clearConfirm"));
             if (!ok) return;
 
             try {
@@ -186,12 +200,14 @@
                     messageTypes.HISTORY_CLEAR || "HISTORY_CLEAR",
                 );
                 if (!result?.ok) {
-                    throw new Error(result?.error || "历史记录清空失败");
+                    throw new Error(
+                        result?.error || t("options.error.historyClearFailed"),
+                    );
                 }
                 await refreshList();
             } catch (err) {
                 setStatus(
-                    `清空失败: ${err && err.message ? err.message : String(err)}`,
+                    t("options.error.operationFailed", { error: errMsg(err) }),
                     true,
                 );
             }
@@ -203,7 +219,9 @@
                 bindEvents.searchTimer = window.setTimeout(() => {
                     void refreshList().catch((err) =>
                         setStatus(
-                            `历史记录加载失败: ${err?.message || String(err)}`,
+                            t("options.error.historyLoadFailed", {
+                                error: errMsg(err),
+                            }),
                             true,
                         ),
                     );
@@ -212,7 +230,9 @@
             elements.filter?.addEventListener("change", () => {
                 void refreshList().catch((err) =>
                     setStatus(
-                        `历史记录加载失败: ${err?.message || String(err)}`,
+                        t("options.error.historyLoadFailed", {
+                            error: errMsg(err),
+                        }),
                         true,
                     ),
                 );
@@ -220,7 +240,9 @@
             elements.refreshButton?.addEventListener("click", () => {
                 void refreshList().catch((err) =>
                     setStatus(
-                        `历史记录加载失败: ${err?.message || String(err)}`,
+                        t("options.error.historyLoadFailed", {
+                            error: errMsg(err),
+                        }),
                         true,
                     ),
                 );

@@ -37,7 +37,7 @@
                     <input
                         id="translate_shortcut"
                         type="text"
-                        data-i18n-ph="options.general.translateShortcut.placeholder" data-i18n-ph="options.general.translateShortcut.placeholder" placeholder="例如: Alt+T / Ctrl+Shift+Y" data-jyt-setting="translate_shortcut">
+                        data-i18n-ph="options.general.translateShortcut.placeholder" placeholder="例如: Alt+T / Ctrl+Shift+Y" data-jyt-setting="translate_shortcut">
                     <div class="jyt-hint" data-i18n="options.general.translateShortcut.hint"></div>
 
                     <label data-i18n="options.general.engineSelect.label"></label>
@@ -140,6 +140,12 @@
             </div>
 
             <div class="jyt-tab-content" id="tab_engine">
+                <div class="jyt-section jyt-hidden" id="auto_section" data-jyt-engine="auto">
+                    <div class="jyt-section-title" data-i18n="options.engine.auto.sectionTitle"></div>
+                    <div class="jyt-hint" data-i18n="options.engine.auto.desc"></div>
+                    <div class="jyt-hint" id="auto_priority_hint"></div>
+                </div>
+
                 <div class="jyt-section jyt-hidden" id="llm_engine_section" data-jyt-panel="llm">
                     <div class="jyt-section-title" data-i18n="options.engine.llm.sectionTitle"></div>
                     <label data-i18n="options.engine.llm.providerLabel"></label>
@@ -161,7 +167,7 @@
                     <div class="jyt-hint" data-i18n="options.engine.llm.hint"></div>
                 </div>
 
-                <div class="jyt-section" id="openai_section" data-jyt-engine="openai" data-jyt-shared-openai="true">
+                <div class="jyt-section jyt-hidden" id="openai_section" data-jyt-engine="openai" data-jyt-shared-openai="true">
                     <div class="jyt-section-title" data-i18n="options.engine.openai.sectionTitle"></div>
                     <label data-i18n="options.engine.shared.apiUrl"></label>
                     <input
@@ -335,12 +341,8 @@
                     <textarea
                         id="openrouter_custom_prompt"
                         rows="4"
-                        placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 
-示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="openrouter_custom_prompt"></textarea>
-                    <div class="jyt-hint">
-                        默认使用 openrouter/free 自动路由；模型列表会优先显示 OpenRouter
-                        标记或定价为免费的模型。
-                    </div>
+                        data-i18n-ph="options.engine.shared.customPromptPlaceholder" placeholder="可用变量: {targetLang} {text} {glossary} {glossaryConstraint}. 示例：术语约束（若原文命中，请优先使用以下术语翻译）：{glossary}。将下面的语句翻译为{targetLang}，不要有多余的输出。" data-jyt-setting="openrouter_custom_prompt"></textarea>
+                    <div class="jyt-hint" data-i18n="options.engine.openrouter.hint"></div>
                 </div>
 
                 <div class="jyt-section jyt-hidden" id="deepseek_section" data-jyt-engine="deepseek">
@@ -840,18 +842,7 @@
                         id="deepl_api_key"
                         type="password"
                         placeholder="DeepL Auth Key" data-jyt-setting="deepl_api_key">
-                    <div class="jyt-hint">
-                        免费版默认使用
-                        <code>api-free.deepl.com</code>，Pro 订阅请改为
-                        <code>api.deepl.com/v2/translate</code>。需在
-                        <a
-                            href="https://www.deepl.com/pro-api"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            >DeepL 官网</a
-                        >
-                        申请 API Key。
-                    </div>
+                    <div class="jyt-hint" data-i18n="options.engine.deepl.hint"></div>
                     <div class="jyt-connection-test-container">
                         <button type="button" class="jyt-btn-connection-test" data-engine="deepl" data-i18n="common.testConnection"></button>
                         <span class="jyt-connection-test-status"></span>
@@ -870,12 +861,7 @@
                         id="deeplx_api_key"
                         type="password"
                         data-i18n-ph="options.engine.deeplx.tokenPlaceholder" placeholder="若 DeepLX 启用了 TOKEN 则填写" data-jyt-setting="deeplx_api_key">
-                    <div class="jyt-hint">
-                        连接自托管 DeepLX 服务。默认使用
-                        <code>/translate</code> 端点；若填写
-                        <code>/v2/translate</code> 则自动兼容官方 DeepL API
-                        格式。本地服务通常不需要令牌。
-                    </div>
+                    <div class="jyt-hint" data-i18n="options.engine.deeplx.hint"></div>
                     <div class="jyt-connection-test-container">
                         <button type="button" class="jyt-btn-connection-test" data-engine="deeplx" data-i18n="common.testConnection"></button>
                         <span class="jyt-connection-test-status"></span>
@@ -1076,10 +1062,7 @@
                     id="onboarding_step_welcome"
                     class="jyt-onboarding-step"
                 >
-                    <p class="jyt-hint">
-                        首次安装，请选择一个使用方案。我们会自动填入推荐的引擎与模型，你只需补全
-                        API Key（如需要）并保存。
-                    </p>
+                    <p class="jyt-hint" data-i18n="options.onboarding.welcomeHint"></p>
                     <div class="jyt-onboarding-grid">
                         <button type="button" data-preset="cloud">
                             <strong data-i18n="options.onboarding.preset.cloud.title"></strong>
@@ -1120,10 +1103,7 @@
                     id="onboarding_step_test"
                     class="jyt-onboarding-step jyt-hidden"
                 >
-                    <p class="jyt-hint">
-                        建议先测试连接，确认配置无误后再保存。本地 Ollama
-                        方案请确保服务已在运行。
-                    </p>
+                    <p class="jyt-hint" data-i18n="options.onboarding.testHint"></p>
                     <div class="jyt-onboarding-test-row">
                         <button
                             type="button"
@@ -1164,6 +1144,7 @@
         <script src="libs/i18n-messages.js"></script>
         <script src="libs/i18n.js"></script>
         <script src="libs/shared-config.js"></script>
+        <script src="libs/auto-engine-client.js"></script>
         <script src="options/modules/engines.js"></script>
         <script src="options/modules/config-storage.js"></script>
         <script src="options/modules/model-state.js"></script>

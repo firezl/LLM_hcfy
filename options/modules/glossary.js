@@ -67,6 +67,10 @@
 
     function createGlossaryController(options) {
         const deps = options && typeof options === "object" ? options : {};
+        const t = (key, vars) =>
+            global.JYT_I18N?.t ? global.JYT_I18N.t(key, vars) : key;
+        const errMsg = (err) =>
+            err && err.message ? err.message : String(err);
         const elements = deps.elements || {};
         const messageTypes = deps.messageTypes || {};
         const sendTermMessage = deps.sendTermMessage;
@@ -75,7 +79,7 @@
             deps.shouldOpenImportInNewTab || (() => false);
         const openImportInNewTab =
             deps.openImportInNewTab ||
-            (() => Promise.reject(new Error("无法打开导入页面")));
+            (() => Promise.reject(new Error(t("options.glossary.openImportFailed"))));
 
         let termsCache = [];
         let editingOriginal = null;
@@ -106,7 +110,7 @@
             if (elements.targetTerm) elements.targetTerm.value = "";
             if (elements.caseSensitive) elements.caseSensitive.value = "false";
             if (elements.wholeWord) elements.wholeWord.value = "auto";
-            if (elements.saveButton) elements.saveButton.textContent = "新增术语";
+            if (elements.saveButton) elements.saveButton.textContent = t("options.glossary.addTerm");
         }
 
         function populateEditor(term) {
@@ -134,7 +138,7 @@
                           ? "false"
                           : "auto";
             }
-            if (elements.saveButton) elements.saveButton.textContent = "更新术语";
+            if (elements.saveButton) elements.saveButton.textContent = t("options.glossary.updateTerm");
         }
 
         function renderList(terms) {
@@ -144,7 +148,7 @@
             if (list.length === 0) {
                 const emptyEl = document.createElement("div");
                 emptyEl.className = "jyt-glossary-empty";
-                emptyEl.textContent = "暂无术语，先添加一条吧。";
+                emptyEl.textContent = t("options.glossary.empty");
                 elements.list.appendChild(emptyEl);
                 return;
             }
@@ -154,7 +158,13 @@
 
             const thead = document.createElement("thead");
             const headRow = document.createElement("tr");
-            for (const label of ["语言对", "原文", "目标", "匹配", "操作"]) {
+            for (const label of [
+                t("options.glossary.table.langPair"),
+                t("options.glossary.table.source"),
+                t("options.glossary.table.target"),
+                t("options.glossary.table.match"),
+                t("options.glossary.table.actions"),
+            ]) {
                 const th = document.createElement("th");
                 th.textContent = label;
                 headRow.appendChild(th);
@@ -177,12 +187,12 @@
                 sourceCell.textContent = term.sourceTerm || "";
                 targetCell.textContent = term.targetTerm || "";
                 matchCell.textContent = [
-                    term.caseSensitive ? "大小写" : "",
+                    term.caseSensitive ? t("options.glossary.match.caseSensitive") : "",
                     normalizeWholeWord(term.wholeWord) === "auto"
-                        ? "整词自动"
+                        ? t("options.glossary.match.wholeWordAuto")
                         : normalizeWholeWord(term.wholeWord)
-                          ? "整词"
-                          : "包含",
+                          ? t("options.glossary.match.wholeWord")
+                          : t("options.glossary.match.contains"),
                 ]
                     .filter(Boolean)
                     .join(" / ");
@@ -190,12 +200,12 @@
                 editBtn.className = "jyt-glossary-row-edit";
                 editBtn.dataset.index = String(index);
                 editBtn.type = "button";
-                editBtn.textContent = "编辑";
+                editBtn.textContent = t("common.edit");
 
                 deleteBtn.className = "jyt-glossary-row-delete";
                 deleteBtn.dataset.index = String(index);
                 deleteBtn.type = "button";
-                deleteBtn.textContent = "删除";
+                deleteBtn.textContent = t("common.delete");
 
                 actionCell.append(editBtn, deleteBtn);
                 row.append(
@@ -216,7 +226,10 @@
                 messageTypes.TERM_LIST || "TERM_LIST",
             );
             if (!result?.ok) {
-                throw new Error(result?.error || "术语列表获取失败");
+                throw new Error(
+                    result?.error ||
+                        t("options.error.glossaryListFailed", { error: "" }),
+                );
             }
 
             const sorted = (
@@ -232,7 +245,10 @@
                     messageTypes.TERM_EXPORT || "TERM_EXPORT",
                 );
                 if (!result?.ok) {
-                    throw new Error(result?.error || "导出失败");
+                    throw new Error(
+                        result?.error ||
+                            t("options.error.operationFailed", { error: "" }),
+                    );
                 }
 
                 const payload = result.payload || {
@@ -257,11 +273,11 @@
                 a.remove();
                 URL.revokeObjectURL(url);
 
-                setStatus(`导出完成，共 ${terms.length} 条术语`, false);
+                setStatus(t("options.glossary.exportDone", { count: terms.length }), false);
                 await refreshList();
             } catch (err) {
                 setStatus(
-                    `导出失败: ${err && err.message ? err.message : String(err)}`,
+                    t("options.error.operationFailed", { error: errMsg(err) }),
                     true,
                 );
             }
@@ -273,14 +289,13 @@
             if (shouldOpenImportInNewTab()) {
                 void openImportInNewTab()
                     .then(() => {
-                        setStatus(
-                            "Firefox 弹窗模式下已在新标签页打开导入页面",
-                            false,
-                        );
+                        setStatus(t("options.glossary.importOpenedInNewTab"), false);
                     })
                     .catch((err) => {
                         setStatus(
-                            `打开导入页面失败: ${err && err.message ? err.message : String(err)}`,
+                            t("options.error.operationFailed", {
+                                error: errMsg(err),
+                            }),
                             true,
                         );
                     });
@@ -295,7 +310,7 @@
             const file = elements.importFileInput?.files?.[0];
             if (!file) return;
             if (file.size > 5 * 1024 * 1024) {
-                setStatus("导入失败: 文件过大，请控制在 5MB 以内", true);
+                setStatus(t("options.validation.fileTooLarge"), true);
                 return;
             }
 
@@ -311,18 +326,25 @@
                     { terms: importedTerms },
                 );
                 if (!result?.ok) {
-                    throw new Error(result?.error || "导入失败");
+                    throw new Error(
+                        result?.error ||
+                            t("options.error.operationFailed", { error: "" }),
+                    );
                 }
 
                 setStatus(
-                    `导入完成: 新增 ${result.created || 0}，覆盖 ${result.replaced || 0}，总计 ${result.total || 0}`,
+                    t("options.glossary.importDone", {
+                        created: result.created || 0,
+                        replaced: result.replaced || 0,
+                        total: result.total || 0,
+                    }),
                     false,
                 );
                 await refreshList();
                 resetEditor();
             } catch (err) {
                 setStatus(
-                    `导入失败: ${err && err.message ? err.message : String(err)}`,
+                    t("options.error.operationFailed", { error: errMsg(err) }),
                     true,
                 );
             }
@@ -336,7 +358,7 @@
                 !term.sourceTerm ||
                 !term.targetTerm
             ) {
-                setStatus("保存失败: 请完整填写术语字段", true);
+                setStatus(t("options.glossary.saveIncomplete"), true);
                 return;
             }
 
@@ -350,7 +372,10 @@
                         { term: editingOriginal },
                     );
                     if (!delRes?.ok) {
-                        throw new Error(delRes?.error || "旧术语删除失败");
+                        throw new Error(
+                            delRes?.error ||
+                                t("options.error.operationFailed", { error: "" }),
+                        );
                     }
                 }
 
@@ -359,22 +384,25 @@
                     { term },
                 );
                 if (!saveRes?.ok) {
-                    throw new Error(saveRes?.error || "术语保存失败");
+                    throw new Error(
+                        saveRes?.error ||
+                            t("options.error.glossarySaveFailed", { error: "" }),
+                    );
                 }
 
-                setStatus("术语已保存", false);
+                setStatus(t("options.glossary.saved"), false);
                 await refreshList();
                 resetEditor();
             } catch (err) {
                 setStatus(
-                    `保存失败: ${err && err.message ? err.message : String(err)}`,
+                    t("options.error.operationFailed", { error: errMsg(err) }),
                     true,
                 );
             }
         }
 
         async function clearTerms() {
-            const ok = window.confirm("确定清空术语库吗？该操作不可撤销。");
+            const ok = window.confirm(t("options.glossary.clearConfirm"));
             if (!ok) return;
 
             try {
@@ -382,14 +410,17 @@
                     messageTypes.TERM_CLEAR || "TERM_CLEAR",
                 );
                 if (!result?.ok) {
-                    throw new Error(result?.error || "清空失败");
+                    throw new Error(
+                        result?.error ||
+                            t("options.error.operationFailed", { error: "" }),
+                    );
                 }
                 await refreshList();
                 resetEditor();
-                setStatus("术语库已清空", false);
+                setStatus(t("options.glossary.cleared"), false);
             } catch (err) {
                 setStatus(
-                    `清空失败: ${err && err.message ? err.message : String(err)}`,
+                    t("options.error.operationFailed", { error: errMsg(err) }),
                     true,
                 );
             }
@@ -409,7 +440,7 @@
 
             if (editBtn) {
                 populateEditor(term);
-                setStatus("已载入术语，编辑后点击更新", false);
+                setStatus(t("options.glossary.loadedForEdit"), false);
                 return;
             }
 
@@ -419,17 +450,20 @@
                     { term },
                 );
                 if (!result?.ok) {
-                    throw new Error(result?.error || "删除失败");
+                    throw new Error(
+                        result?.error ||
+                            t("options.error.operationFailed", { error: "" }),
+                    );
                 }
 
                 await refreshList();
                 if (editingOriginal && termKey(editingOriginal) === termKey(term)) {
                     resetEditor();
                 }
-                setStatus("术语已删除", false);
+                setStatus(t("options.glossary.deleted"), false);
             } catch (err) {
                 setStatus(
-                    `删除失败: ${err && err.message ? err.message : String(err)}`,
+                    t("options.error.operationFailed", { error: errMsg(err) }),
                     true,
                 );
             }

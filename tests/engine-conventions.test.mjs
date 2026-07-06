@@ -37,10 +37,10 @@ describe("engine-conventions", () => {
         });
     });
 
-    it("maps auto prompts to openai keys", () => {
+    it("gives auto a dedicated options section", () => {
         const def = ENGINE_DEFINITIONS.find((item) => item.id === "auto");
-        assert.equal(def.customPromptKey, "openai_custom_prompt");
-        assert.equal(def.sectionId, undefined);
+        assert.equal(def.sectionId, "auto_section");
+        assert.equal(def.customPromptKey, undefined);
     });
 
     it("keeps openai compat defaults", () => {

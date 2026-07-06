@@ -50,6 +50,7 @@
             }
             global.JYT_I18N.setLang(value);
             global.JYT_I18N.applyDom(document);
+            updateEngineDependentUI();
         }
 
         const registry = global.JYT_ENGINE_REGISTRY || {};
