@@ -60,7 +60,6 @@
             "matches": ["<all_urls>"],
             "js": [
                 "libs/shared-config.js",
-                "libs/auto-engine-client.js",
                 "libs/i18n-messages.js",
                 "libs/i18n.js",
                 "dist/content.bundle.js"

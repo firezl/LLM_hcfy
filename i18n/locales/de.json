@@ -550,6 +550,8 @@
   "translate.router.initFailed": "Übersetzen init failed: {error}",
   "translate.router.testTimeout": "Connection test timed out (15s)",
   "translate.router.unsupportedEngine": "Unsupported engine: {engine}",
+  "translate.router.allAutoCandidatesFailed": "Translation failed: all auto candidates are unavailable",
+  "translate.router.emptyResponse": "Translation engine returned no response",
   "translate.router.unsupportedTestEngine": "Unsupported test engine: {engine}",
   "uiLang.auto": "Browser folgen",
   "uiLang.label": "Oberflächensprache",

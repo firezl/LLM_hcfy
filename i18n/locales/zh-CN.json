@@ -550,6 +550,8 @@
   "translate.router.initFailed": "翻译初始化失败: {error}",
   "translate.router.testTimeout": "连接测试超时 (15s)",
   "translate.router.unsupportedEngine": "未支持的翻译引擎: {engine}",
+  "translate.router.allAutoCandidatesFailed": "翻译失败：所有自动候选引擎均不可用",
+  "translate.router.emptyResponse": "翻译引擎未返回任何结果",
   "translate.router.unsupportedTestEngine": "未支持的测试引擎: {engine}",
   "uiLang.auto": "跟随浏览器",
   "uiLang.label": "界面语言",

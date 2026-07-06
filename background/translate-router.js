@@ -1,20 +1,19 @@
+import { buildAutoTranslateCandidates } from "../libs/auto-engine.mjs";
 import {
-    getCustomHeadersSettingKey,
-    getCustomPayloadSettingKey,
-    getCustomPromptSettingKey,
-    getPromptSettingKeys,
     getTranslateHandlerKey,
     isContentOnlyEngine,
-    LLM_ENGINE_IDS,
     resolveTranslateEngine,
 } from "../libs/engine-registry.mjs";
-import { resolveAutoBackgroundEngine } from "../libs/auto-engine.mjs";
-import { sanitizeTranslateContext, resolveContextMode } from "../libs/context-collector.mjs";
 import { postTranslateError } from "./port-utils.js";
 import { getMatchedGlossaryTerms } from "./term.js";
 import { TRANSLATE_HANDLERS } from "./translate-handlers.js";
 import { getSettings } from "./settings-cache.js";
 import { t } from "./i18n.js";
+import {
+    buildTranslateRequestForEngine,
+    runAutoTranslateChain,
+    tryTranslateHandlerOnce,
+} from "./auto-translate-chain.js";
 
 export async function handleTranslateStart(message, port, state) {
     const requestId = message?.requestId;
@@ -22,12 +21,9 @@ export async function handleTranslateStart(message, port, state) {
         // settings/Key 由后台缓存作为权威来源，不信任 content script 传来的 settings，
         // 防止恶意网页篡改 endpoint/prompt/headers/key 外泄凭据。
         const settings = await getSettings();
-        let engine = message?.engine
+        const engine = message?.engine
             ? String(message.engine).trim()
             : resolveTranslateEngine(settings);
-        if (engine === "auto") {
-            engine = resolveAutoBackgroundEngine(settings);
-        }
         const glossaryTerms = await getMatchedGlossaryTerms({
             from: message?.preferredFrom || message?.from,
             to: message?.preferredTo || message?.to,
@@ -36,48 +32,23 @@ export async function handleTranslateStart(message, port, state) {
             maxTerms: 20,
         });
 
-        const promptSettingKeys = getPromptSettingKeys(engine);
-        const customPromptSettingKey = getCustomPromptSettingKey(engine);
-        const customHeadersSettingKey = getCustomHeadersSettingKey(engine);
-        const customPayloadSettingKey = getCustomPayloadSettingKey(engine);
-        const legacyCustomPromptTemplate = customPromptSettingKey
-            ? String(settings[customPromptSettingKey] || "")
-            : "";
-        const systemPromptTemplate = promptSettingKeys.system
-            ? String(settings[promptSettingKeys.system] || "")
-            : "";
-        const userPromptTemplate = promptSettingKeys.user
-            ? String(settings[promptSettingKeys.user] || "")
-            : "";
-        const customHeaders = customHeadersSettingKey
-            ? settings[customHeadersSettingKey]
-            : [];
-        const customPayload = customPayloadSettingKey
-            ? settings[customPayloadSettingKey]
-            : "";
+        if (engine === "auto") {
+            await runAutoTranslateChain(
+                message,
+                port,
+                state,
+                settings,
+                glossaryTerms,
+            );
+            return;
+        }
 
-        const isLlm = LLM_ENGINE_IDS.includes(engine);
-        const contextMode = resolveContextMode(settings);
-        const context =
-            contextMode !== "off" && isLlm && message?.context
-                ? sanitizeTranslateContext(message.context, contextMode)
-                : null;
-
-        const requestWithGlossary = {
-            ...message,
-            // 覆盖 message 中可能存在的 settings（content 不再发送，但即便发送也不采信）。
+        const requestWithGlossary = buildTranslateRequestForEngine(
+            message,
             settings,
+            engine,
             glossaryTerms,
-            context,
-            customPromptTemplate: legacyCustomPromptTemplate,
-            promptTemplates: {
-                legacy: legacyCustomPromptTemplate,
-                system: systemPromptTemplate,
-                user: userPromptTemplate,
-            },
-            customHeaders,
-            customPayload,
-        };
+        );
 
         if (isContentOnlyEngine(engine)) {
             postTranslateError(
@@ -115,8 +86,7 @@ export async function handleTranslateStart(message, port, state) {
     }
 }
 
-export async function handleTestConnection(message) {
-    const { engine, settings } = message;
+async function runSingleEngineConnectionTest(engine, settings) {
     const handlerKey = getTranslateHandlerKey(engine);
     const handler = TRANSLATE_HANDLERS[handlerKey];
     if (!handler) {
@@ -144,55 +114,59 @@ export async function handleTestConnection(message) {
         customPayload: "",
     };
 
-    const responseChunks = [];
-    let responseError = null;
-    let resolvePromise;
-    const promise = new Promise((resolve) => {
-        resolvePromise = resolve;
-    });
-
     const mockPort = {
-        postMessage(msg) {
-            if (!msg) return;
-            if (msg.type === "TRANSLATE_CHUNK") {
-                responseChunks.push(msg.content);
-            } else if (msg.type === "TRANSLATE_ERROR") {
-                responseError = msg.error;
-                resolvePromise();
-            } else if (msg.type === "TRANSLATE_DONE") {
-                resolvePromise();
-            }
-        }
+        postMessage() {},
     };
-
     const mockState = {
         connected: true,
-        controllers: new Map()
+        controllers: new Map(),
     };
 
-    const timeoutId = setTimeout(() => {
-        if (mockState.connected) {
-            const controller = mockState.controllers.get(requestId);
-            if (controller) {
-                controller.abort();
+    const result = await Promise.race([
+        tryTranslateHandlerOnce(handler, request, mockPort, mockState),
+        new Promise((resolve) => {
+            setTimeout(
+                () =>
+                    resolve({
+                        ok: false,
+                        error: t("translate.router.testTimeout"),
+                    }),
+                15000,
+            );
+        }),
+    ]);
+
+    if (result.ok) {
+        return { ok: true };
+    }
+    return { ok: false, error: result.error };
+}
+
+export async function handleTestConnection(message) {
+    const engine = String(message?.engine || "").trim();
+    const settings = message?.settings || {};
+
+    if (engine === "auto") {
+        const candidates = buildAutoTranslateCandidates(settings);
+        let lastError = "";
+        for (const candidate of candidates) {
+            if (isContentOnlyEngine(candidate)) {
+                continue;
             }
-            responseError = t("translate.router.testTimeout");
-            resolvePromise();
+            const result = await runSingleEngineConnectionTest(
+                candidate,
+                settings,
+            );
+            if (result.ok) {
+                return result;
+            }
+            lastError = result.error || "";
         }
-    }, 15000);
-
-    try {
-        await handler(request, mockPort, mockState);
-    } catch (err) {
-        responseError = err && err.message ? err.message : String(err);
-        resolvePromise();
+        return {
+            ok: false,
+            error: lastError || t("translate.router.allAutoCandidatesFailed"),
+        };
     }
 
-    clearTimeout(timeoutId);
-    await promise;
-
-    if (responseError) {
-        return { ok: false, error: responseError };
-    }
-    return { ok: true };
+    return runSingleEngineConnectionTest(engine, settings);
 }

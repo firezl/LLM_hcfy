@@ -106,4 +106,64 @@ describe("handleTestConnection", () => {
 
         assert.deepEqual(result, { ok: true });
     });
+
+    it("auto mode tries configured candidates until one succeeds", async () => {
+        globalThis.fetch = async (url) => {
+            assert.equal(
+                url,
+                "https://openrouter.ai/api/v1/chat/completions",
+            );
+            const stream = new ReadableStream({
+                start(controller) {
+                    controller.enqueue(
+                        new TextEncoder().encode(
+                            'data: {"choices":[{"delta":{"content":"你好"}}]}\n\n',
+                        ),
+                    );
+                    controller.enqueue(new TextEncoder().encode("data: [DONE]\n\n"));
+                    controller.close();
+                },
+            });
+
+            return {
+                ok: true,
+                status: 200,
+                body: stream,
+            };
+        };
+
+        const result = await handleTestConnection({
+            engine: "auto",
+            settings: {
+                llm_engine: "openrouter",
+                openrouter_api_url:
+                    "https://openrouter.ai/api/v1/chat/completions",
+                openrouter_api_key: "sk-test",
+                openrouter_model: "openrouter/free",
+            },
+        });
+
+        assert.deepEqual(result, { ok: true });
+    });
+
+    it("auto mode returns last error when all backend candidates fail", async () => {
+        globalThis.fetch = async () => ({
+            ok: false,
+            status: 503,
+            async text() {
+                return "unavailable";
+            },
+        });
+
+        const result = await handleTestConnection({
+            engine: "auto",
+            settings: {
+                llm_engine: "openai",
+                openai_api_url: "",
+            },
+        });
+
+        assert.equal(result.ok, false);
+        assert.ok(result.error);
+    });
 });

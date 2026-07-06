@@ -113,87 +113,6 @@
                     openrouter: "openrouter_show_thoughts",
                 };
 
-                function getBackgroundThoughtSetting(engineId) {
-                    return BACKGROUND_ENGINE_THOUGHTS[engineId] || null;
-                }
-
-                function startAutoTranslateChain(
-                    text,
-                    from,
-                    to,
-                    settings,
-                    streamEl,
-                    thoughtEl,
-                    thoughtDetails,
-                    context,
-                ) {
-                    const autoEngine = global.JYT_AUTO_ENGINE || {};
-                    const buildCandidates =
-                        typeof autoEngine.buildAutoTranslateCandidates === "function"
-                            ? autoEngine.buildAutoTranslateCandidates
-                            : () => ["google", "bing", "browser"];
-                    const candidates = buildCandidates(settings);
-                    const first = candidates[0] || "browser";
-                    const rest = candidates.slice(1);
-
-                    if (first === "browser") {
-                        streamEl.innerText = t("bubble.translate.browserOnly");
-                        return app
-                            .translateWithBrowserAPI(text, from, to, streamEl)
-                            .then((translatedText) => {
-                                if (isStale()) return;
-                                const output =
-                                    translatedText || app.getCleanTranslatedText();
-                                state.lastTranslateContext = {
-                                    text,
-                                    translatedText: output,
-                                    from,
-                                    to,
-                                };
-                                app.saveTranslationHistory({
-                                    sourceText: text,
-                                    translatedText: output,
-                                    sourceLang: from,
-                                    targetLang: to,
-                                    engine: "browser",
-                                    model: "browser-translation-api",
-                                });
-                                app.setBubbleState(bubble, "done");
-                            })
-                            .catch((err) => {
-                                streamEl.innerText = t(
-                                    "bubble.translate.noCandidatesAvailable",
-                                    {
-                                        error:
-                                            err && err.message
-                                                ? err.message
-                                                : String(err),
-                                    },
-                                );
-                                app.setBubbleState(bubble, "error");
-                            });
-                    }
-
-                    const thoughtSetting = getBackgroundThoughtSetting(first);
-                    app.startBackgroundTranslate(
-                        text,
-                        from,
-                        to,
-                        settings,
-                        streamEl,
-                        thoughtEl,
-                        thoughtDetails,
-                        {
-                            engine: first,
-                            autoFallbackEngines: rest,
-                            isThinking: thoughtSetting
-                                ? !!settings[thoughtSetting]
-                                : undefined,
-                            context,
-                        },
-                    );
-                }
-
                 const backgroundEngine = BACKGROUND_ENGINE_THOUGHTS[engine];
                 if (backgroundEngine) {
                     app.startBackgroundTranslate(
@@ -205,7 +124,6 @@
                         thoughtEl,
                         thoughtDetails,
                         {
-                            allowBrowserFallback: false,
                             isThinking: !!settings[backgroundEngine],
                             context: state.lastSelectionContext,
                         },
@@ -214,7 +132,7 @@
                 }
 
                 if (engine === "auto") {
-                    startAutoTranslateChain(
+                    app.startBackgroundTranslate(
                         text,
                         from,
                         to,
@@ -222,7 +140,10 @@
                         streamEl,
                         thoughtEl,
                         thoughtDetails,
-                        state.lastSelectionContext,
+                        {
+                            engine: "auto",
+                            context: state.lastSelectionContext,
+                        },
                     );
                     return;
                 }
