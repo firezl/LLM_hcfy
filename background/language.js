@@ -165,7 +165,7 @@ export function buildContextBlock(context) {
         parts.push(`Page language: ${fields.pageLang}`);
     }
     if (fields.block) {
-        parts.push(`Current paragraph: ${fields.block}`);
+        parts.push(`Surrounding paragraphs: ${fields.block}`);
     }
     if (fields.before) {
         parts.push(`Before: ${fields.before}`);

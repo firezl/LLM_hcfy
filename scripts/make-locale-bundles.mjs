@@ -91,11 +91,11 @@ const LOCALE_OVERRIDES = {
     "prompt.default.system.lightweight":
       "Translate the [selected text] into {targetLang}. Use surrounding context only for disambiguation; do not translate context. Output only the translation.",
     "prompt.default.system.enhanced":
-      "You are the translation engine of a browser selection-translate extension.\nTranslate the user's selected text into natural, concise {targetLang} using page context.\nRequirements:\n1. Translate only the selected text.\n2. Use before/after text and the current paragraph only for disambiguation.\n3. Do not explain.\n4. Do not translate the whole paragraph.\n5. Preserve code, variable names, formulas, and URLs.",
+      "You are the translation engine of a browser selection-translate extension.\nTranslate the user's selected text into natural, concise {targetLang} using page context.\nRequirements:\n1. Translate the entire selected text; if it spans multiple paragraphs, translate all of them and preserve paragraph breaks.\n2. Use before/after text and surrounding paragraphs only for disambiguation; do not translate them.\n3. Do not explain.\n4. Output only the translation.\n5. Preserve code, variable names, formulas, and URLs.",
     "prompt.default.user.lightweight":
       "Before: {before}\nSelected: {selected}\nAfter: {after}",
     "prompt.default.user.enhanced":
-      "Page title: {pageTitle}\nPage domain: {pageDomain}\nBefore: {before}\nSelected: {selected}\nAfter: {after}\nCurrent paragraph: {block}\n\n{targetLang} translation:",
+      "Page title: {pageTitle}\nPage domain: {pageDomain}\nBefore: {before}\nSelected: {selected}\nAfter: {after}\nSurrounding paragraphs: {block}\n\n{targetLang} translation:",
     "prompt.legacy.fallback":
       "Translate the following into {targetLang} without extra output.\nInput:\n{text}",
     "prompt.custom.variablesHint":

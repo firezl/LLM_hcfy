@@ -49,14 +49,18 @@ class MockElement {
     }
 
     querySelectorAll(selector) {
-        if (selector !== 'span[role="presentation"]') {
-            return [];
-        }
         const out = [];
         const walk = (node) => {
             if (!node) return;
-            if (node.nodeType === 1 && node.getAttribute?.("role") === "presentation") {
-                out.push(node);
+            if (node.nodeType === 1) {
+                if (
+                    selector === 'span[role="presentation"]' &&
+                    node.getAttribute?.("role") === "presentation"
+                ) {
+                    out.push(node);
+                } else if (node.matches?.(selector)) {
+                    out.push(node);
+                }
             }
             for (const child of node._children || []) {
                 walk(child);
@@ -64,6 +68,80 @@ class MockElement {
         };
         walk(this);
         return out;
+    }
+
+    matches(selector) {
+        const tags = String(selector || "")
+            .split(",")
+            .map((item) => item.trim().toLowerCase())
+            .filter(Boolean);
+        const tag = String(this.tagName || "").toLowerCase();
+        if (tags.includes(tag)) {
+            return true;
+        }
+        if (
+            String(selector || "").includes(".textLayer") &&
+            this.classList?.contains("textLayer")
+        ) {
+            return true;
+        }
+        return false;
+    }
+
+    contains(other) {
+        if (!other || other === this) {
+            return other === this;
+        }
+        let node = other;
+        while (node) {
+            if (node === this) {
+                return true;
+            }
+            node = node.parentElement;
+        }
+        return false;
+    }
+
+    compareDocumentPosition(other) {
+        if (other === this) {
+            return 0;
+        }
+        const selfPath = [];
+        let node = this;
+        while (node) {
+            selfPath.unshift(node);
+            node = node.parentElement;
+        }
+        const otherPath = [];
+        node = other;
+        while (node) {
+            otherPath.unshift(node);
+            node = node.parentElement;
+        }
+        let i = 0;
+        while (
+            i < selfPath.length &&
+            i < otherPath.length &&
+            selfPath[i] === otherPath[i]
+        ) {
+            i += 1;
+        }
+        if (i >= selfPath.length) {
+            return 16; // FOLLOWING / contained
+        }
+        if (i >= otherPath.length) {
+            return 8; // CONTAINED_BY / preceding container
+        }
+        const parent = selfPath[i - 1];
+        const a = selfPath[i];
+        const b = otherPath[i];
+        const kids = parent?._children || [];
+        const ai = kids.indexOf(a);
+        const bi = kids.indexOf(b);
+        if (ai >= 0 && bi >= 0) {
+            return ai < bi ? 4 : 2; // FOLLOWING : PRECEDING
+        }
+        return 0;
     }
 
     getAttribute(name) {
@@ -156,6 +234,13 @@ function createParagraphSelection(paragraphText, selectedText) {
         endContainer: textNode,
         startOffset: 0,
         endOffset: selectedText.length,
+        intersectsNode(node) {
+            return (
+                node === paragraph ||
+                node === textNode ||
+                node?.contains?.(textNode)
+            );
+        },
     };
 
     return {
@@ -165,6 +250,55 @@ function createParagraphSelection(paragraphText, selectedText) {
             documentElement: { lang: "en-US" },
         },
         win: { location: { hostname: "example.com" } },
+    };
+}
+
+function createMultiParagraphSelection(paragraphTexts) {
+    const paragraphs = [];
+    const textNodes = [];
+    for (const text of paragraphTexts) {
+        const textNode = new MockTextNode(text);
+        const paragraph = new MockElement("p", {
+            innerText: text,
+            children: [textNode],
+        });
+        textNode.parentElement = paragraph;
+        paragraphs.push(paragraph);
+        textNodes.push(textNode);
+    }
+
+    const body = new MockElement("body", { children: paragraphs });
+    for (const paragraph of paragraphs) {
+        paragraph.parentElement = body;
+    }
+
+    const selectedText = paragraphTexts.join("\n\n");
+    const startNode = textNodes[0];
+    const endNode = textNodes[textNodes.length - 1];
+    const range = {
+        startContainer: startNode,
+        endContainer: endNode,
+        startOffset: 0,
+        endOffset: String(endNode.textContent || "").length,
+        intersectsNode(node) {
+            if (!node) {
+                return false;
+            }
+            if (paragraphs.includes(node) || textNodes.includes(node)) {
+                return true;
+            }
+            return paragraphs.some((p) => node.contains?.(p));
+        },
+    };
+
+    return {
+        selection: new MockSelection(range, selectedText),
+        doc: {
+            title: "Example Page",
+            documentElement: { lang: "en-US" },
+        },
+        win: { location: { hostname: "example.com" } },
+        paragraphs,
     };
 }
 
@@ -354,6 +488,29 @@ describe("context-collector", () => {
         assert.equal(context.page.title, "Example Page");
         assert.equal(context.page.domain, "example.com");
         assert.equal(context.page.lang, "en-US");
+    });
+
+    it("collects all spanned paragraphs for cross-block selection", () => {
+        const paragraphs = [
+            "Machine learning is a subset of artificial intelligence.",
+            "Deep learning uses neural networks with many layers.",
+            "Transfer learning adapts models across tasks.",
+        ];
+        const { selection, doc, win } = createMultiParagraphSelection(paragraphs);
+
+        const context = collectSelectionContext(selection, "enhanced", doc, win);
+        assert.ok(context);
+        assert.equal(context.mode, "enhanced");
+        assert.match(context.selectedText, /Machine learning/);
+        assert.match(context.selectedText, /Transfer learning/);
+        // truncateText normalizes whitespace, so joined paragraphs become spaces
+        assert.match(context.block, /Machine learning/);
+        assert.match(context.block, /Deep learning/);
+        assert.match(context.block, /Transfer learning/);
+        assert.ok(
+            context.block.includes("Deep learning"),
+            "block must include more than the first paragraph",
+        );
     });
 
     it("collects enhanced structured context from pdf text layer", () => {

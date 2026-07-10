@@ -112,8 +112,18 @@ describe("language prompt builders", () => {
             },
         });
         assert.match(parts.systemPrompt, /browser selection-translate extension/);
+        assert.match(
+            parts.systemPrompt,
+            /if it spans multiple paragraphs, translate all of them/,
+        );
+        assert.match(parts.systemPrompt, /Output only the translation/);
+        assert.doesNotMatch(
+            parts.systemPrompt,
+            /Do not translate the whole paragraph/,
+        );
         assert.match(parts.systemPrompt, /Preserve code, variable names, formulas, and URLs/);
         assert.match(parts.userPrompt, /Page title: Title/);
+        assert.match(parts.userPrompt, /Surrounding paragraphs: block/);
         assert.match(parts.userPrompt, /English translation:/);
     });
 

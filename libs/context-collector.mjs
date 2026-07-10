@@ -108,6 +108,142 @@ function findBlockElement(startNode, doc = document) {
     return block;
 }
 
+function isBlockRootElement(el) {
+    if (!el || el.nodeType !== 1) {
+        return false;
+    }
+    if (isPdfTextLayerBlock(el)) {
+        return true;
+    }
+    if (typeof el.matches === "function") {
+        return el.matches(BLOCK_SELECTOR);
+    }
+    const tag = String(el.tagName || "").toLowerCase();
+    return BLOCK_SELECTOR.split(",")
+        .map((item) => item.trim())
+        .includes(tag);
+}
+
+function rangeIntersectsNode(range, node) {
+    if (!range || !node) {
+        return false;
+    }
+    if (typeof range.intersectsNode === "function") {
+        try {
+            return range.intersectsNode(node);
+        } catch (_err) {
+            // fall through
+        }
+    }
+    if (typeof node.contains === "function") {
+        if (node.contains(range.startContainer) || node.contains(range.endContainer)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function compareDocumentOrder(a, b) {
+    if (a === b) {
+        return 0;
+    }
+    if (
+        typeof a?.compareDocumentPosition === "function" &&
+        typeof Node !== "undefined" &&
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ) {
+        const pos = a.compareDocumentPosition(b);
+        if (pos & Node.DOCUMENT_POSITION_FOLLOWING) {
+            return -1;
+        }
+        if (pos & Node.DOCUMENT_POSITION_PRECEDING) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/**
+ * Collect all block elements spanned by a selection range.
+ * Prefers leaf blocks (e.g. nested <p> over wrapping <div>).
+ */
+function collectBlocksInRange(range, doc = document) {
+    const startBlock = findBlockElement(range?.startContainer, doc);
+    if (!startBlock) {
+        return [];
+    }
+    const endBlock =
+        findBlockElement(range?.endContainer, doc) || startBlock;
+    if (startBlock === endBlock) {
+        return [startBlock];
+    }
+
+    let ancestor = startBlock.parentElement;
+    while (ancestor && typeof ancestor.contains === "function") {
+        if (ancestor.contains(endBlock)) {
+            break;
+        }
+        ancestor = ancestor.parentElement;
+    }
+    if (!ancestor) {
+        return [startBlock, endBlock];
+    }
+
+    const candidates = [];
+    if (typeof ancestor.querySelectorAll === "function") {
+        for (const el of ancestor.querySelectorAll(BLOCK_SELECTOR)) {
+            if (isExcludedContextElement(el)) {
+                continue;
+            }
+            if (!isBlockRootElement(el)) {
+                continue;
+            }
+            if (!rangeIntersectsNode(range, el)) {
+                continue;
+            }
+            candidates.push(el);
+        }
+    }
+
+    if (isBlockRootElement(ancestor) && !isExcludedContextElement(ancestor)) {
+        if (rangeIntersectsNode(range, ancestor)) {
+            candidates.unshift(ancestor);
+        }
+    }
+
+    if (!candidates.includes(startBlock)) {
+        candidates.push(startBlock);
+    }
+    if (!candidates.includes(endBlock)) {
+        candidates.push(endBlock);
+    }
+
+    const leafBlocks = candidates.filter(
+        (block) =>
+            !candidates.some(
+                (other) => other !== block && block.contains?.(other),
+            ),
+    );
+
+    leafBlocks.sort(compareDocumentOrder);
+
+    if (leafBlocks.length === 0) {
+        return [startBlock, endBlock];
+    }
+    return leafBlocks;
+}
+
+function joinBlockPlainTexts(blocks, isPdfBlock) {
+    const parts = [];
+    for (const block of blocks) {
+        const text = getBlockPlainText(block, isPdfBlock).trim();
+        if (text) {
+            parts.push(text);
+        }
+    }
+    return parts.join("\n\n");
+}
+
 function normalizePdfContextText(text) {
     return normalizePdfSelectionText(String(text || ""));
 }
@@ -213,21 +349,31 @@ function extractBeforeAfterFromBlock(block, selectedText, isPdfBlock = false) {
     };
 }
 
-function extractBeforeAfterFromRange(block, range) {
+function extractBeforeAfterFromRange(startBlock, endBlock, range) {
     try {
-        const blockRange = range.startContainer?.ownerDocument?.createRange?.();
-        if (!blockRange) {
+        const doc = range.startContainer?.ownerDocument;
+        const createRange = doc?.createRange?.bind(doc);
+        if (!createRange || !startBlock || !endBlock) {
             return { before: "", after: "" };
         }
-        blockRange.selectNodeContents(block);
 
+        const startBlockRange = createRange();
+        startBlockRange.selectNodeContents(startBlock);
         const beforeRange = range.cloneRange();
-        beforeRange.setStart(blockRange.startContainer, blockRange.startOffset);
+        beforeRange.setStart(
+            startBlockRange.startContainer,
+            startBlockRange.startOffset,
+        );
         beforeRange.setEnd(range.startContainer, range.startOffset);
 
+        const endBlockRange = createRange();
+        endBlockRange.selectNodeContents(endBlock);
         const afterRange = range.cloneRange();
         afterRange.setStart(range.endContainer, range.endOffset);
-        afterRange.setEnd(blockRange.endContainer, blockRange.endOffset);
+        afterRange.setEnd(
+            endBlockRange.endContainer,
+            endBlockRange.endOffset,
+        );
 
         return {
             before: beforeRange.toString(),
@@ -326,27 +472,32 @@ export function collectSelectionContext(
     }
 
     const range = sel.getRangeAt(0);
-    const block = findBlockElement(range.startContainer, doc);
-    if (!block) {
+    const blocks = collectBlocksInRange(range, doc);
+    const startBlock = blocks[0] || null;
+    const endBlock = blocks[blocks.length - 1] || startBlock;
+    if (!startBlock) {
         return null;
     }
 
     const isPdfBlock =
-        isPdfTextLayerBlock(block) ||
+        blocks.some((block) => isPdfTextLayerBlock(block)) ||
         isPdfViewerPage(doc?.location?.pathname || "") ||
         isSelectionFromPdfTextLayer(sel);
     const selectedText = isPdfBlock
         ? normalizePdfContextText(rawSelectedText)
         : rawSelectedText;
 
-    const fromBlock = extractBeforeAfterFromBlock(
-        block,
-        selectedText,
-        isPdfBlock,
-    );
+    const fromBlock =
+        blocks.length === 1
+            ? extractBeforeAfterFromBlock(
+                  startBlock,
+                  selectedText,
+                  isPdfBlock,
+              )
+            : null;
     const fromRange =
         fromBlock ||
-        extractBeforeAfterFromRange(block, range);
+        extractBeforeAfterFromRange(startBlock, endBlock, range);
 
     let before = fromRange.before;
     let after = fromRange.after;
@@ -367,7 +518,7 @@ export function collectSelectionContext(
     }
 
     const blockText = truncateText(
-        getBlockPlainText(block, isPdfBlock),
+        joinBlockPlainTexts(blocks, isPdfBlock),
         CONTEXT_LIMITS.blockText,
     );
     const pageMeta = isPdfBlock

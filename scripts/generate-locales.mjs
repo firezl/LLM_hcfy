@@ -431,9 +431,9 @@ const zhCN = {
   "prompt.glossaryLine": "{source} -> {target}",
   "prompt.default.system.simple": "请将以下内容翻译成{targetLang}，只输出译文。",
   "prompt.default.system.lightweight": "请把【划选文本】翻译成{targetLang}。前后文只用于判断含义，不要翻译前后文。只输出译文。",
-  "prompt.default.system.enhanced": "你是一个浏览器划词翻译插件的翻译引擎。\n请根据网页上下文，将用户划选文本翻译成简洁自然的{targetLang}。\n要求：\n1. 只翻译划选文本。\n2. 前文、后文和当前段落只用于消歧。\n3. 不要解释。\n4. 不要翻译整个段落。\n5. 保留代码、变量名、公式、URL。",
+  "prompt.default.system.enhanced": "你是一个浏览器划词翻译插件的翻译引擎。\n请根据网页上下文，将用户划选文本翻译成简洁自然的{targetLang}。\n要求：\n1. 翻译全部划选文本；若划选跨多段，须全部翻译并保留段落换行。\n2. 前文、后文和相关段落只用于消歧，不要翻译它们。\n3. 不要解释。\n4. 只输出译文。\n5. 保留代码、变量名、公式、URL。",
   "prompt.default.user.lightweight": "前文：{before}\n划选文本：{selected}\n后文：{after}",
-  "prompt.default.user.enhanced": "网页标题：{pageTitle}\n网页域名：{pageDomain}\n前文：{before}\n划选文本：{selected}\n后文：{after}\n当前段落：{block}\n\n{targetLang}译文：",
+  "prompt.default.user.enhanced": "网页标题：{pageTitle}\n网页域名：{pageDomain}\n前文：{before}\n划选文本：{selected}\n后文：{after}\n相关段落：{block}\n\n{targetLang}译文：",
   "prompt.legacy.fallback": "请把这段文字翻译为{targetLang}，不要有多余的输出。输入:\n{text}",
   "prompt.custom.variablesHint": "可用变量: {targetLang} {text} {glossary} {glossaryConstraint} {context} {before} {after} {block} {pageTitle} {pageDomain} {pageLang}",
 };
