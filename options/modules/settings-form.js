@@ -16,6 +16,7 @@
             collectMissingLocalApiKeys,
             stripApiKeyPayload,
             requestOptionalHostPermissions,
+            onUiLangApplied,
         } = deps;
 
         const {
@@ -51,6 +52,10 @@
             global.JYT_I18N.setLang(value);
             global.JYT_I18N.applyDom(document);
             updateEngineDependentUI();
+            // Dynamic textContent (PDF status / button labels) is not covered by data-i18n.
+            if (typeof onUiLangApplied === "function") {
+                onUiLangApplied(value);
+            }
         }
 
         const registry = global.JYT_ENGINE_REGISTRY || {};

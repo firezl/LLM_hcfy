@@ -340,6 +340,12 @@ document.addEventListener("DOMContentLoaded", () => {
         },
     });
 
+    const pdfContext = pdfModule.createPdfContext({
+        pdf: pdfEls,
+        showToast,
+        isFirefoxRuntime,
+    });
+
     settingsForm = settingsModule.createSettingsForm({
         els,
         showToast,
@@ -357,12 +363,16 @@ document.addEventListener("DOMContentLoaded", () => {
         stripApiKeyPayload,
         requestOptionalHostPermissions: (urls) =>
             syncDataController.requestOptionalHostPermissions(urls),
-    });
-
-    const pdfContext = pdfModule.createPdfContext({
-        pdf: pdfEls,
-        showToast,
-        isFirefoxRuntime,
+        onUiLangApplied: () => {
+            if (typeof enginesModule.applyBrowserEngineOptionUX === "function") {
+                enginesModule.applyBrowserEngineOptionUX({
+                    engineSelect: els.engine_select,
+                    isFirefox: isFirefoxRuntime,
+                    t,
+                });
+            }
+            void pdfContext.refreshActivePdfContext();
+        },
     });
 
     const onboardingController = onboardingModule.createOnboarding({
