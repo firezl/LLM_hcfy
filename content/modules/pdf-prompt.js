@@ -13,10 +13,16 @@
             const desc = state.pdfPromptEl.querySelector(".jyt-pdf-prompt-desc");
             const openBtn = state.pdfPromptEl.querySelector(".jyt-pdf-open");
             const browserBtn = state.pdfPromptEl.querySelector(".jyt-pdf-browser");
+            const closeBtn = state.pdfPromptEl.querySelector(".jyt-pdf-prompt-close");
             if (title) title.textContent = t("pdfPrompt.title");
             if (desc) desc.textContent = t("pdfPrompt.desc");
             if (openBtn) openBtn.textContent = t("pdfPrompt.open");
             if (browserBtn) browserBtn.textContent = t("pdfPrompt.browser");
+            if (closeBtn) {
+                const closeLabel = t("pdfPrompt.close");
+                closeBtn.title = closeLabel;
+                closeBtn.setAttribute("aria-label", closeLabel);
+            }
             if (state.pdfPromptState?.pdfUrl) {
                 const remain =
                     state.pdfPromptCountdownDeadline != null
@@ -24,6 +30,10 @@
                         : app.PDF_PROMPT_AUTO_CLOSE_MS;
                 updatePdfPromptCountdown(remain);
             }
+        }
+
+        function isPdfPromptFeatureEnabled() {
+            return state.runtimeSettings?.pdf_prompt_enabled !== "off";
         }
 
         function isLikelyPdfUrl(url) {
@@ -74,6 +84,7 @@
             state.pdfPromptEl = document.createElement("div");
             state.pdfPromptEl.className = "jyt-pdf-prompt";
             state.pdfPromptEl.innerHTML = `
+                    <button type="button" class="jyt-pdf-prompt-close" aria-label="">×</button>
                     <div class="jyt-pdf-prompt-title"></div>
                     <div class="jyt-pdf-prompt-desc"></div>
                     <div class="jyt-pdf-prompt-countdown"></div>
@@ -91,6 +102,9 @@
             const openBtn = state.pdfPromptEl.querySelector(".jyt-pdf-open");
             const browserBtn =
                 state.pdfPromptEl.querySelector(".jyt-pdf-browser");
+            const closeBtn = state.pdfPromptEl.querySelector(
+                ".jyt-pdf-prompt-close",
+            );
 
             openBtn.addEventListener("click", async () => {
                 clearPdfPromptAutoCloseTimer();
@@ -143,6 +157,10 @@
                 await openPdfInBrowser(currentState);
             });
 
+            closeBtn.addEventListener("click", () => {
+                void dismissPdfPrompt();
+            });
+
             document.body.appendChild(state.pdfPromptEl);
             return state.pdfPromptEl;
         }
@@ -162,6 +180,32 @@
             state.pdfPromptEl = null;
             state.pdfPromptState = null;
             state.pdfPromptCountdownDeadline = null;
+        }
+
+        async function dismissPdfPrompt() {
+            const currentState = state.pdfPromptState;
+            clearPdfPromptAutoCloseTimer();
+
+            if (
+                currentState?.source === "background" &&
+                currentState.pdfUrl
+            ) {
+                try {
+                    await app.sendTermMessage(
+                        app.MESSAGE_TYPES.PDF_PROMPT_DECISION ||
+                            "PDF_PROMPT_DECISION",
+                        {
+                            promptId: currentState.promptId,
+                            pdfUrl: currentState.pdfUrl,
+                            action: "skip",
+                        },
+                    );
+                } catch (err) {
+                    // ignore dismiss decision failures
+                }
+            }
+
+            hidePdfPrompt();
         }
 
         function clearPdfPromptAutoCloseTimer() {
@@ -284,6 +328,10 @@
         }
 
         function showPdfPrompt(options) {
+            if (!isPdfPromptFeatureEnabled()) {
+                return;
+            }
+
             state.pdfPromptState = {
                 source: options?.source || "click",
                 promptId: options?.promptId || "",
@@ -420,6 +468,10 @@
         }
 
         async function restorePendingPdfPrompt() {
+            if (!isPdfPromptFeatureEnabled()) {
+                return;
+            }
+
             try {
                 const result = await app.sendTermMessage(
                     app.MESSAGE_TYPES.PDF_GET_PENDING_PROMPT ||
@@ -446,6 +498,7 @@
             ensurePdfPrompt,
             updatePdfPromptStatus,
             hidePdfPrompt,
+            dismissPdfPrompt,
             clearPdfPromptAutoCloseTimer,
             updatePdfPromptCountdown,
             openPdfInBrowser,

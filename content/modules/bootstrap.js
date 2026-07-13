@@ -45,6 +45,12 @@
                             app.resolveContextMode?.(state.runtimeSettings) ||
                             state.runtimeSettings.context_translate_mode;
                     }
+                    if (
+                        key === "pdf_prompt_enabled" &&
+                        changes[key].newValue === "off"
+                    ) {
+                        void app.dismissPdfPrompt?.();
+                    }
                 }
                 return;
             }
@@ -170,6 +176,10 @@
             "click",
             (e) => {
                 if (state.runtimeSettings.enabled !== "on") {
+                    return;
+                }
+
+                if (state.runtimeSettings.pdf_prompt_enabled === "off") {
                     return;
                 }
 

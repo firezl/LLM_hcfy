@@ -1,6 +1,7 @@
 import { PDF_VIEWER_PATH } from "./constants.js";
 import { extensionApi } from "./extension-api.js";
 import { isSsrfRiskyHttpUrl } from "./ssrf-utils.js";
+import { getSettings } from "./settings-cache.js";
 
 const runtimeBaseUrl = extensionApi.runtime.getURL("");
 const isFirefoxExtensionRuntime = runtimeBaseUrl.startsWith("moz-extension://");
@@ -354,6 +355,10 @@ async function verifyThenOffer(tabId, promptId, pdfUrl) {
 }
 
 export function handleTabUpdated(tabId, changeInfo) {
+    void handleTabUpdatedAsync(tabId, changeInfo);
+}
+
+async function handleTabUpdatedAsync(tabId, changeInfo) {
     const nextUrl = changeInfo?.url;
     if (!nextUrl || typeof nextUrl !== "string") {
         return;
@@ -362,6 +367,11 @@ export function handleTabUpdated(tabId, changeInfo) {
     if (isInternalPdfViewerUrl(nextUrl)) {
         redirectingTabs.delete(tabId);
         pendingPdfPrompts.delete(tabId);
+        return;
+    }
+
+    const settings = await getSettings();
+    if (String(settings?.pdf_prompt_enabled || "on") !== "on") {
         return;
     }
 

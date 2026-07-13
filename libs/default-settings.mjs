@@ -1,6 +1,7 @@
 /** Single source of truth for extension default settings (synced to shared-config.js). */
 export const DEFAULT_SETTINGS = {
     enabled: "on",
+    pdf_prompt_enabled: "on",
     engine: "auto",
     llm_engine: "openai",
     translate_shortcut: "",

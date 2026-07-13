@@ -2,6 +2,7 @@
 (function (global) {
     const DEFAULT_SETTINGS = {
     "enabled": "on",
+    "pdf_prompt_enabled": "on",
     "engine": "auto",
     "llm_engine": "openai",
     "translate_shortcut": "",

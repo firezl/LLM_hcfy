@@ -47,6 +47,7 @@
     z-index: 2147483647;
     width: min(360px, calc(100vw - 24px));
     padding: 12px;
+    padding-right: 36px;
     border-radius: 10px;
     border: 1px solid var(--jyt-border);
     box-shadow: var(--jyt-shadow);
@@ -61,6 +62,32 @@
         sans-serif
     );
     animation: jyt-pop-in 0.16s ease-out;
+}
+
+.jyt-pdf-prompt-close {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    z-index: 1;
+    box-sizing: border-box;
+    width: 24px;
+    height: 24px;
+    margin: 0;
+    padding: 0;
+    border: 0 !important;
+    border-radius: 4px;
+    background: transparent !important;
+    color: var(--jyt-muted-text) !important;
+    font: 18px/24px "Segoe UI", Arial, sans-serif !important;
+    cursor: pointer;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+}
+
+.jyt-pdf-prompt-close:hover {
+    background: var(--jyt-hover-bg) !important;
+    color: var(--jyt-text) !important;
 }
 
 .jyt-pdf-prompt-title {

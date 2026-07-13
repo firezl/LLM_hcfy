@@ -538,6 +538,10 @@
                             : savedEngine || "auto";
 
                         els.enable_select.value = items.enabled;
+                        if (els.pdf_prompt_enabled) {
+                            els.pdf_prompt_enabled.value =
+                                items.pdf_prompt_enabled === "off" ? "off" : "on";
+                        }
                         els.engine_select.value = uiEngine;
                         if (els.llm_engine_select) {
                             els.llm_engine_select.value = llmEngine;
@@ -1151,6 +1155,7 @@
         function buildFormSettings() {
             return {
                 enabled: fieldValue("enable_select"),
+                pdf_prompt_enabled: fieldValue("pdf_prompt_enabled", "on"),
                 engine: fieldValue("engine_select"),
                 llm_engine: fieldTrim("llm_engine_select", "openai") || "openai",
                 translate_shortcut: normalizeShortcut(fieldValue("translate_shortcut")),
