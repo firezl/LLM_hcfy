@@ -162,6 +162,7 @@ jobs:
           npx --yes web-ext@latest sign `
             --source-dir $sourceDir `
             --artifacts-dir $artifactsDir `
+            --upload-source-code "LLM-Translator-v${{ steps.manifest.outputs.version }}-src.zip" `
             --channel $channel `
             --approval-timeout 0 `
             --no-input `

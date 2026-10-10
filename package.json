@@ -13,7 +13,8 @@
         "validate:config": "node scripts/validate-shared-config.mjs",
         "build:i18n": "node scripts/build-i18n.mjs",
         "check:i18n": "node scripts/build-i18n.mjs --check",
-        "test": "node --test tests/*.test.mjs"
+        "test": "node --test tests/*.test.mjs",
+        "release": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release.ps1"
     },
     "devDependencies": {
         "esbuild": "^0.25.0"

@@ -69,6 +69,19 @@
 
 ## 发布流程
 
+推荐用一键脚本（要求在 `master` 上、工作区干净、不落后远端）：
+
+```powershell
+npm run release              # 补丁版本，如 0.2.6 -> 0.2.7
+npm run release -- minor     # 0.2.6 -> 0.3.0
+npm run release -- 0.3.1     # 指定版本
+npm run release -- -DryRun   # 只检查并打印将要执行的操作
+```
+
+脚本会升级 `manifest.json` 的版本号、运行测试、提交 `chore: release vX.Y.Z`、创建 tag 并推送。
+
+也可以手动完成：
+
 1. 修改 `manifest.json` 的版本号。
 2. 提交代码。
 3. 创建并推送匹配 tag：
@@ -78,6 +91,6 @@
    git push origin v0.1.11
    ```
 
-4. GitHub Actions 会执行校验、打包、创建 GitHub Release，并在对应 Secrets 完整时发布到商店。
+之后 GitHub Actions 会执行校验、打包、创建 GitHub Release，并在对应 Secrets 完整时发布到商店。
 
 没有配置某个平台的 Secrets 时，该平台会自动跳过，不影响其他平台和 GitHub Release。

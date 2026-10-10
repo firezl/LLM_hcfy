@@ -1,5 +1,3 @@
-$ErrorActionPreference = "Stop"
-
 param(
     [Parameter(Mandatory = $true)]
     [string] $PackagePath,
@@ -19,6 +17,8 @@ param(
 
     [int] $RetryAfterSeconds = 20
 )
+
+$ErrorActionPreference = "Stop"
 
 if (-not (Test-Path $PackagePath)) {
     throw "Package not found: $PackagePath"

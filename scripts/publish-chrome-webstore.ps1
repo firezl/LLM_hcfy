@@ -1,5 +1,3 @@
-$ErrorActionPreference = "Stop"
-
 param(
     [Parameter(Mandatory = $true)]
     [string] $PackagePath,
@@ -22,6 +20,8 @@ param(
     [ValidateSet("DEFAULT_PUBLISH", "STAGED_PUBLISH")]
     [string] $PublishType = "DEFAULT_PUBLISH"
 )
+
+$ErrorActionPreference = "Stop"
 
 if (-not (Test-Path $PackagePath)) {
     throw "Package not found: $PackagePath"
