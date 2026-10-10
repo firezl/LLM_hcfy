@@ -87,6 +87,21 @@ export function t(key, vars) {
     return interpolate(getMessage(currentLang, key), vars);
 }
 
+/**
+ * Like t(), but keeps dynamic values visible when the catalog bundle
+ * has not been rebuilt with the new key yet.
+ */
+export function tDetail(key, vars) {
+    const message = t(key, vars);
+    if (message !== key || !vars || typeof vars !== "object") {
+        return message;
+    }
+    const details = Object.values(vars)
+        .map((value) => String(value ?? "").trim())
+        .filter(Boolean);
+    return details.length ? `${message}: ${details.join(" ")}` : message;
+}
+
 export function getCurrentLang() {
     return currentLang;
 }

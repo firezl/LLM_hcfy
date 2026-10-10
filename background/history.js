@@ -1,3 +1,5 @@
+import { t } from "./i18n.js";
+
 const HISTORY_DB_NAME = "jyt-history-db";
 const HISTORY_DB_VERSION = 1;
 const HISTORY_STORE = "items";
@@ -24,7 +26,7 @@ function openHistoryDb() {
 
         request.onsuccess = () => resolve(request.result);
         request.onerror = () =>
-            reject(request.error || new Error("打开翻译历史数据库失败"));
+            reject(request.error || new Error(t("translate.history.openFailed")));
     });
 
     return historyDbPromise;
@@ -34,7 +36,7 @@ function requestToPromise(request) {
     return new Promise((resolve, reject) => {
         request.onsuccess = () => resolve(request.result);
         request.onerror = () =>
-            reject(request.error || new Error("翻译历史数据库请求失败"));
+            reject(request.error || new Error(t("translate.history.requestFailed")));
     });
 }
 
@@ -67,7 +69,7 @@ function iterateCursor(source, { range = null, direction = "next" }, onEach) {
             cursor.continue();
         };
         request.onerror = () =>
-            reject(request.error || new Error("翻译历史游标遍历失败"));
+            reject(request.error || new Error(t("translate.history.cursorFailed")));
     });
 }
 
@@ -150,19 +152,19 @@ async function pruneHistory(limit) {
     const writeTx = db.transaction(HISTORY_STORE, "readwrite");
     const store = writeTx.objectStore(HISTORY_STORE);
     idsToDelete.forEach((id) => store.delete(id));
-    await transactionDone(writeTx, "翻译历史清理失败");
+    await transactionDone(writeTx, t("translate.history.pruneFailed"));
 }
 
 export async function addHistoryItem(rawItem, options = {}) {
     const entry = normalizeHistoryEntry(rawItem);
     if (!entry) {
-        throw new Error("翻译历史字段不完整");
+        throw new Error(t("translate.history.fieldsIncomplete"));
     }
 
     const db = await openHistoryDb();
     const tx = db.transaction(HISTORY_STORE, "readwrite");
     tx.objectStore(HISTORY_STORE).put(entry);
-    await transactionDone(tx, "翻译历史写入失败");
+    await transactionDone(tx, t("translate.history.writeFailed"));
     await pruneHistory(options.limit || DEFAULT_HISTORY_LIMIT);
     return entry;
 }
@@ -198,27 +200,27 @@ export async function listHistoryItems(params = {}) {
 
 export async function updateHistoryFavorite(id, favorite) {
     const cleanId = normalizeText(id, 120);
-    if (!cleanId) throw new Error("历史记录 ID 不能为空");
+    if (!cleanId) throw new Error(t("translate.history.idRequired"));
 
     const db = await openHistoryDb();
     const tx = db.transaction(HISTORY_STORE, "readwrite");
     const store = tx.objectStore(HISTORY_STORE);
     const item = await requestToPromise(store.get(cleanId));
-    if (!item) throw new Error("历史记录不存在");
+    if (!item) throw new Error(t("translate.history.notFound"));
     item.favorite = !!favorite;
     store.put(item);
-    await transactionDone(tx, "收藏状态更新失败");
+    await transactionDone(tx, t("translate.history.favoriteFailed"));
     return item;
 }
 
 export async function deleteHistoryItem(id) {
     const cleanId = normalizeText(id, 120);
-    if (!cleanId) throw new Error("历史记录 ID 不能为空");
+    if (!cleanId) throw new Error(t("translate.history.idRequired"));
 
     const db = await openHistoryDb();
     const tx = db.transaction(HISTORY_STORE, "readwrite");
     tx.objectStore(HISTORY_STORE).delete(cleanId);
-    await transactionDone(tx, "历史记录删除失败");
+    await transactionDone(tx, t("translate.history.deleteFailed"));
     return { ok: true };
 }
 
@@ -229,7 +231,7 @@ export async function clearHistoryItems(params = {}) {
     if (!favoriteOnly) {
         const tx = db.transaction(HISTORY_STORE, "readwrite");
         tx.objectStore(HISTORY_STORE).clear();
-        await transactionDone(tx, "历史记录清空失败");
+        await transactionDone(tx, t("translate.history.clearFailed"));
         return { ok: true };
     }
 
@@ -251,7 +253,7 @@ export async function clearHistoryItems(params = {}) {
     const writeTx = db.transaction(HISTORY_STORE, "readwrite");
     const writeStore = writeTx.objectStore(HISTORY_STORE);
     idsToDelete.forEach((id) => writeStore.delete(id));
-    await transactionDone(writeTx, "历史记录清理失败");
+    await transactionDone(writeTx, t("translate.history.cleanupFailed"));
     return { ok: true };
 }
 
@@ -288,5 +290,5 @@ export async function handleHistoryMessage(message) {
         return { ok: true };
     }
 
-    return { ok: false, error: "不支持的历史消息类型" };
+    return { ok: false, error: t("translate.history.unsupportedMessage") };
 }

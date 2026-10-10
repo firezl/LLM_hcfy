@@ -1,11 +1,12 @@
 import { SYNC_CONFIG_FILE, SYNC_GLOSSARY_FILE } from "./constants.js";
+import { t, tDetail } from "./i18n.js";
 
 const DEFAULT_TIMEOUT_MS = 15000;
 
 function normalizeBaseUrl(baseUrl) {
     const value = String(baseUrl || "").trim();
     if (!value) {
-        throw new Error("WebDAV 地址不能为空");
+        throw new Error(t("translate.webdav.baseUrlRequired"));
     }
     return value.replace(/\/+$/, "");
 }
@@ -55,7 +56,7 @@ export function normalizeWebDavConfig(raw) {
     const password = String(raw?.password || "");
 
     if (!username || !password) {
-        throw new Error("WebDAV 用户名或密码不能为空");
+        throw new Error(t("translate.webdav.credentialsRequired"));
     }
 
     return {
@@ -70,7 +71,7 @@ export function buildRemoteFileUrl(webdavConfig, fileName) {
     const cfg = normalizeWebDavConfig(webdavConfig);
     const safeFileName = String(fileName || "").trim();
     if (!safeFileName) {
-        throw new Error("远端文件名不能为空");
+        throw new Error(t("translate.webdav.fileNameRequired"));
     }
 
     const fullPath = encodePath(`${cfg.remoteDir}/${safeFileName}`);
@@ -87,7 +88,7 @@ async function fetchWithTimeout(url, init, timeoutMs) {
         });
     } catch (err) {
         if (err && err.name === "AbortError") {
-            throw new Error("WebDAV 请求超时");
+            throw new Error(t("translate.webdav.timeout"));
         }
         throw err;
     } finally {
@@ -134,7 +135,10 @@ async function ensureRemoteDirExists(cfg, timeoutMs) {
 
         const text = await response.text();
         throw new Error(
-            `WebDAV 目录创建失败(${response.status}): ${text || "未知错误"}`,
+            tDetail("translate.webdav.mkdirFailed", {
+                status: response.status,
+                error: text || t("translate.webdav.unknownError"),
+            }),
         );
     }
 }
@@ -166,7 +170,10 @@ export async function getRemoteJsonFile(webdavConfig, fileName, timeoutMs) {
     if (!response.ok) {
         const text = await response.text();
         throw new Error(
-            `WebDAV 读取失败(${response.status}): ${text || "未知错误"}`,
+            tDetail("translate.webdav.readFailed", {
+                status: response.status,
+                error: text || t("translate.webdav.unknownError"),
+            }),
         );
     }
 
@@ -189,7 +196,9 @@ export async function getRemoteJsonFile(webdavConfig, fileName, timeoutMs) {
         };
     } catch (err) {
         throw new Error(
-            `WebDAV JSON 解析失败: ${err && err.message ? err.message : String(err)}`,
+            tDetail("translate.webdav.jsonParseFailed", {
+                error: err && err.message ? err.message : String(err),
+            }),
         );
     }
 }
@@ -234,7 +243,10 @@ export async function putRemoteJsonFile(
     if (!response.ok) {
         const text = await response.text();
         throw new Error(
-            `WebDAV 写入失败(${response.status}): ${text || "未知错误"}`,
+            tDetail("translate.webdav.writeFailed", {
+                status: response.status,
+                error: text || t("translate.webdav.unknownError"),
+            }),
         );
     }
 

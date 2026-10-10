@@ -106,9 +106,16 @@
         return interpolate(getMessage(currentLang, key), vars);
     }
 
+    function isContentScope() {
+        return global.JYT_I18N_SCOPE === "content";
+    }
+
     function setLang(uiLang) {
         uiLangSetting = String(uiLang || "auto");
         currentLang = resolveLang(uiLangSetting);
+        if (isContentScope()) {
+            return;
+        }
         if (global.document?.documentElement) {
             global.document.documentElement.lang = currentLang;
         }
@@ -163,6 +170,9 @@
 
     function initFromSettings(uiLang) {
         setLang(uiLang);
+        if (isContentScope()) {
+            return;
+        }
         applyDom(global.document);
     }
 
@@ -196,7 +206,9 @@
             }
             const next = changes.ui_lang.newValue || "auto";
             setLang(next);
-            applyDom(global.document);
+            if (!isContentScope()) {
+                applyDom(global.document);
+            }
             if (typeof onChange === "function") {
                 onChange(next);
             }

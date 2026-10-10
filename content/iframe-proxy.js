@@ -4,6 +4,113 @@
         return;
     }
 
+    let runtimeEnabled = "";
+    let translateShortcut = "";
+    let hadSelection = false;
+
+    function parseShortcut(shortcut) {
+        const raw = String(shortcut || "").trim();
+        if (!raw) return null;
+
+        const parts = raw
+            .split("+")
+            .map((part) => part.trim())
+            .filter(Boolean);
+
+        const cfg = {
+            ctrl: false,
+            alt: false,
+            shift: false,
+            meta: false,
+            key: "",
+        };
+        for (const part of parts) {
+            const lower = part.toLowerCase();
+            if (lower === "ctrl" || lower === "control") {
+                cfg.ctrl = true;
+                continue;
+            }
+            if (lower === "alt") {
+                cfg.alt = true;
+                continue;
+            }
+            if (lower === "shift") {
+                cfg.shift = true;
+                continue;
+            }
+            if (
+                lower === "meta" ||
+                lower === "cmd" ||
+                lower === "command" ||
+                lower === "win"
+            ) {
+                cfg.meta = true;
+                continue;
+            }
+            cfg.key = lower;
+        }
+
+        return cfg.key ? cfg : null;
+    }
+
+    function isShortcutPressed(e, shortcut) {
+        const cfg = parseShortcut(shortcut);
+        if (!cfg) return false;
+
+        const key = String(e.key || "").toLowerCase();
+        return (
+            e.ctrlKey === cfg.ctrl &&
+            e.altKey === cfg.alt &&
+            e.shiftKey === cfg.shift &&
+            e.metaKey === cfg.meta &&
+            key === cfg.key
+        );
+    }
+
+    function readProxySettings() {
+        try {
+            if (!chrome?.storage?.sync?.get) return;
+            chrome.storage.sync.get(
+                { enabled: "on", translate_shortcut: "" },
+                (items) => {
+                    if (chrome.runtime?.lastError) return;
+                    runtimeEnabled =
+                        items?.enabled == null ? "" : String(items.enabled);
+                    translateShortcut =
+                        items?.translate_shortcut == null
+                            ? ""
+                            : String(items.translate_shortcut);
+                },
+            );
+        } catch (_err) {
+            // ignore storage read failures
+        }
+    }
+
+    function watchProxySettings() {
+        try {
+            if (!chrome?.storage?.onChanged?.addListener) return;
+            chrome.storage.onChanged.addListener((changes, area) => {
+                if (area !== "sync" || !changes) return;
+                if (Object.prototype.hasOwnProperty.call(changes, "enabled")) {
+                    const value = changes.enabled.newValue;
+                    runtimeEnabled = value == null ? "" : String(value);
+                }
+                if (
+                    Object.prototype.hasOwnProperty.call(
+                        changes,
+                        "translate_shortcut",
+                    )
+                ) {
+                    const value = changes.translate_shortcut.newValue;
+                    translateShortcut = value == null ? "" : String(value);
+                }
+            });
+        } catch (_err) {
+            // ignore storage listener failures
+        }
+    }
+
     function getSelectionPoint(clientX, clientY) {
         if (clientX != null && clientY != null) {
             return { x: clientX, y: clientY };
@@ -19,6 +126,7 @@
     }
 
     function postToParent(payload) {
+        if (runtimeEnabled !== "on") return;
         try {
             window.parent.postMessage({ __jyt: true, ...payload }, "*");
         } catch (err) {
@@ -71,7 +179,6 @@
         const relayTypes = new Set([
             "IFRAME_SELECTION",
             "IFRAME_SELECTION_CLEARED",
-            "IFRAME_TRIGGER",
             "IFRAME_KEYDOWN",
         ]);
         if (!relayTypes.has(type)) {
@@ -96,6 +203,9 @@
             payload.x = offsetX + data.x;
             payload.y = offsetY + data.y;
         }
+        if (type === "IFRAME_SELECTION" && typeof data.altKey === "boolean") {
+            payload.altKey = data.altKey;
+        }
         if (type === "IFRAME_KEYDOWN") {
             payload.key = data.key;
             payload.code = data.code;
@@ -108,26 +218,40 @@
         postToParent(payload);
     }
 
-    function reportSelection(clientX, clientY) {
+    function noteSelectionCleared() {
+        if (!hadSelection) return;
+        hadSelection = false;
+        postToParent({ type: "IFRAME_SELECTION_CLEARED" });
+    }
+
+    function reportSelection(clientX, clientY, altKey) {
         const sel = window.getSelection();
         const text = sel ? sel.toString().trim() : "";
         if (!text) {
-            postToParent({ type: "IFRAME_SELECTION_CLEARED" });
+            noteSelectionCleared();
             return;
         }
 
+        hadSelection = true;
         const point = getSelectionPoint(clientX, clientY);
         if (!point) {
             return;
         }
 
-        postToParent({
+        const payload = {
             type: "IFRAME_SELECTION",
             text,
             x: point.x,
             y: point.y,
-        });
+        };
+        if (typeof altKey === "boolean") {
+            payload.altKey = altKey;
+        }
+        postToParent(payload);
     }
+
+    readProxySettings();
+    watchProxySettings();
 
     window.addEventListener("message", relayChildMessage);
 
@@ -142,7 +266,7 @@
     document.addEventListener("mouseup", (e) => {
         isMouseDown = false;
         lastMouseUpTime = Date.now();
-        setTimeout(() => reportSelection(e.clientX, e.clientY), 10);
+        setTimeout(() => reportSelection(e.clientX, e.clientY, e.altKey), 10);
     });
 
     document.addEventListener("selectionchange", () => {
@@ -159,40 +283,15 @@
         }
 
         selectionChangeTimer = setTimeout(() => {
-            const sel = window.getSelection();
-            const text = sel ? sel.toString().trim() : "";
-            if (!text) {
-                postToParent({ type: "IFRAME_SELECTION_CLEARED" });
-                return;
-            }
             reportSelection();
         }, 100);
     });
 
-    if (chrome?.runtime?.onMessage?.addListener) {
-        chrome.runtime.onMessage.addListener((message) => {
-            const type = String(message?.type || "");
-            if (type !== "TRANSLATE_SELECTION") {
-                return false;
-            }
-
-            const text = String(message.text || "").trim();
-            if (!text) {
-                return false;
-            }
-
-            const point = getSelectionPoint();
-            const payload = {
-                type: "IFRAME_TRIGGER",
-                text,
-            };
-            appendPoint(payload, point);
-            postToParent(payload);
-            return false;
-        });
-    }
-
     document.addEventListener("keydown", (e) => {
+        if (!isShortcutPressed(e, translateShortcut)) {
+            return;
+        }
+
         const sel = window.getSelection();
         const text = sel ? sel.toString().trim() : "";
         if (!text) {

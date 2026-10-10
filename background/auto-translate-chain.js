@@ -72,11 +72,23 @@ export function buildTranslateRequestForEngine(
     };
 }
 
+function isAbortError(err) {
+    return Boolean(err && err.name === "AbortError");
+}
+
+export function shouldStopAutoChain(state, requestId) {
+    if (!state || state.connected === false) {
+        return true;
+    }
+    return state.cancelled instanceof Set && state.cancelled.has(requestId);
+}
+
 /**
  * Run one background handler and resolve when TRANSLATE_DONE or TRANSLATE_ERROR is posted.
  * Errors are not forwarded to the real port.
+ * A cancelled abort resolves as { ok: false, cancelled: true } instead of an empty response.
  *
- * @returns {Promise<{ ok: true } | { ok: false, error: string }>}
+ * @returns {Promise<{ ok: true } | { ok: false, cancelled: true } | { ok: false, error: string }>}
  */
 export function tryTranslateHandlerOnce(handler, request, port, state) {
     return new Promise((resolve) => {
@@ -111,9 +123,15 @@ export function tryTranslateHandlerOnce(handler, request, port, state) {
             },
         };
 
+        const requestId = request?.requestId;
+
         void Promise.resolve(handler(request, wrappedPort, state))
             .then(() => {
                 if (!settled) {
+                    if (shouldStopAutoChain(state, requestId)) {
+                        finish({ ok: false, cancelled: true });
+                        return;
+                    }
                     finish({
                         ok: false,
                         error: t("translate.router.emptyResponse"),
@@ -121,6 +139,10 @@ export function tryTranslateHandlerOnce(handler, request, port, state) {
                 }
             })
             .catch((err) => {
+                if (isAbortError(err) && shouldStopAutoChain(state, requestId)) {
+                    finish({ ok: false, cancelled: true });
+                    return;
+                }
                 finish({
                     ok: false,
                     error: err && err.message ? err.message : String(err),
@@ -150,6 +172,10 @@ export async function runAutoTranslateChain(
     let previousError = "";
 
     for (let index = 0; index < candidates.length; index += 1) {
+        if (shouldStopAutoChain(state, requestId)) {
+            return;
+        }
+
         const engine = candidates[index];
 
         if (isContentOnlyEngine(engine)) {
@@ -195,6 +221,9 @@ export async function runAutoTranslateChain(
             port,
             state,
         );
+        if (result.cancelled || shouldStopAutoChain(state, requestId)) {
+            return;
+        }
         if (result.ok) {
             return;
         }

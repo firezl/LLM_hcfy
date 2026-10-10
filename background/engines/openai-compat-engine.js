@@ -3,6 +3,7 @@ import {
     buildOpenAIStyleMessages,
     resolveLanguagePair,
 } from "../language.js";
+import { t } from "../i18n.js";
 import { postTranslateError } from "../port-utils.js";
 import { mergeCustomHeaders } from "./custom-headers.js";
 import { mergeCustomPayload } from "./custom-payload.js";
@@ -21,12 +22,14 @@ import { normalizeOpenAICompatEndpoint } from "./url-utils.js";
  * @param {object} config
  * @param {string} config.engine            engine id used for thinking lookup
  * @param {string} config.errorPrefix       label shown in error messages
+ * @param {string} [config.errorPrefixKey]  i18n key for the label, resolved per request
  * @param {string} config.apiUrlKey         settings key for the endpoint
  * @param {string} config.apiKeyKey         settings key for the API key
  * @param {string} config.modelKey          settings key for the model
  * @param {string} config.defaultUrl        fallback endpoint
  * @param {string} config.defaultModel      fallback model
  * @param {string} [config.missingKeyError] message when key is missing
+ * @param {string} [config.missingKeyErrorKey] i18n key resolved per request
  * @param {(ctx: { model: string, promptContent: string, messages: object[], promptParts: object, showThoughts: boolean, settings: object }) => object} config.buildBody
  * @param {(key: string) => object} [config.buildHeaders]
  * @param {(ctx: { showThoughts: boolean }) => boolean} [config.includeThoughts]
@@ -35,12 +38,14 @@ export function createOpenAICompatTranslate(config) {
     const {
         engine,
         errorPrefix,
+        errorPrefixKey,
         apiUrlKey,
         apiKeyKey,
         modelKey,
         defaultUrl,
         defaultModel,
         missingKeyError,
+        missingKeyErrorKey,
         buildBody,
         buildHeaders = (key) => ({
             "Content-Type": "application/json",
@@ -83,13 +88,18 @@ export function createOpenAICompatTranslate(config) {
             return;
         }
 
+        const resolvedPrefix = errorPrefixKey ? t(errorPrefixKey) : errorPrefix;
         if (!key) {
             postTranslateError(
                 port,
                 state,
                 requestId,
-                missingKeyError ||
-                    `请在设置中配置 ${errorPrefix} API 地址与 Key`,
+                missingKeyErrorKey
+                    ? t(missingKeyErrorKey)
+                    : missingKeyError ||
+                      t("translate.engine.missingCredentials", {
+                          engine: resolvedPrefix,
+                      }),
             );
             return;
         }
@@ -119,7 +129,7 @@ export function createOpenAICompatTranslate(config) {
             url: endpoint.url,
             headers,
             body,
-            errorPrefix,
+            errorPrefix: resolvedPrefix,
             includeThoughts: includeThoughts({ showThoughts }),
         });
     };

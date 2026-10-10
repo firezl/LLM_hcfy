@@ -15,8 +15,7 @@ export const streamNimTranslate = createOpenAICompatTranslate({
     defaultUrl: DEFAULT_NIM_API_URL,
     defaultModel: DEFAULT_NIM_MODEL,
     thinkingModelTypeKey: "nim_thinking_model_type",
-    missingKeyError:
-        "请在设置中配置 NVIDIA NIM API Key（在 build.nvidia.com 获取 nvapi- 密钥）",
+    missingKeyErrorKey: "translate.engine.nim.missingKey",
     buildBody: ({ model, messages, settings, showThoughts, thinkingModelType }) => {
         const body = {
             model,

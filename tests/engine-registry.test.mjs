@@ -6,6 +6,7 @@ import {
     CUSTOM_PAYLOAD_SETTING_BY_ENGINE,
     getCustomPayloadSettingKey,
     getPromptSettingKeys,
+    getThoughtsSettingKey,
     getTranslateHandlerKey,
     isContentOnlyEngine,
     LLM_ENGINE_IDS,
@@ -90,6 +91,21 @@ describe("engine-registry", () => {
             getCustomPayloadSettingKey("qwen"),
             "qwen_custom_payload",
         );
+    });
+
+    it("assigns thoughtsKey for llm engines", () => {
+        assert.equal(getThoughtsSettingKey("openai"), "show_thoughts");
+        assert.equal(getThoughtsSettingKey("browser"), null);
+        assert.equal(getThoughtsSettingKey("auto"), null);
+        for (const engineId of LLM_ENGINE_IDS) {
+            if (engineId === "openai") {
+                continue;
+            }
+            assert.equal(
+                getThoughtsSettingKey(engineId),
+                `${engineId}_show_thoughts`,
+            );
+        }
     });
 
     it("includes custom header keys in OpenAI-compatible model configs", () => {

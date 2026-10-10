@@ -1,3 +1,4 @@
+import { tDetail } from "../i18n.js";
 import { safePostMessage } from "../port-utils.js";
 import { mergeCustomHeaders } from "./custom-headers.js";
 import { normalizeFixedHttpEndpoint } from "./url-utils.js";
@@ -88,9 +89,9 @@ export async function handleClaudeGetModels(message, port, state) {
             safePostMessage(port, state, {
                 type: "CLAUDE_OP_ERROR",
                 requestId,
-                error:
-                    "获取 Claude 模型列表失败: " +
-                    (textErr || `${res.status} ${res.statusText}`),
+                error: tDetail("translate.models.claudeFailed", {
+                    error: textErr || `${res.status} ${res.statusText}`,
+                }),
             });
             return;
         }

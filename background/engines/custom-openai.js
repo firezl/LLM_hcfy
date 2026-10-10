@@ -3,6 +3,7 @@ import {
     buildOpenAIStyleMessages,
     resolveLanguagePair,
 } from "../language.js";
+import { t, tDetail } from "../i18n.js";
 import { postTranslateError } from "../port-utils.js";
 import { mergeCustomHeaders } from "./custom-headers.js";
 import { mergeCustomPayload } from "./custom-payload.js";
@@ -76,7 +77,7 @@ export async function streamCustomOpenAITranslate(request, port, state) {
             port,
             state,
             requestId,
-            "请在设置中配置自定义 OpenAI 兼容 API 地址与 Key",
+            t("translate.engine.customOpenai.missingKey"),
         );
         return;
     }
@@ -118,7 +119,7 @@ export async function streamCustomOpenAITranslate(request, port, state) {
         requestId,
         port,
         state,
-        errorPrefix: "自定义 OpenAI 兼容",
+        errorPrefix: t("translate.engineName.customOpenai"),
         requestStream: async (signal) => {
             const sendBody = (body) =>
                 fetch(endpoint.url, {
@@ -142,7 +143,9 @@ export async function streamCustomOpenAITranslate(request, port, state) {
                     res = await sendBody(fallbackBodyWithCustomPayload);
                 } else {
                     return {
-                        error: "自定义 OpenAI 兼容 请求失败: " + textErr,
+                        error: tDetail("translate.engine.customOpenai.requestFailed", {
+                            error: textErr,
+                        }),
                     };
                 }
             }

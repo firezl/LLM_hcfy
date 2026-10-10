@@ -1,4 +1,7 @@
 // content/modules/settings.js — auto-extracted from content_script.js
+import { isSiteDisabled } from "../../libs/site-match.mjs";
+import { shouldDirectTranslate } from "../../libs/trigger-mode.mjs";
+
 (function (global) {
     function install(app) {
         const state = app.state;
@@ -138,6 +141,57 @@
                 return cfg.key ? cfg : null;
             }
 
+            function isSelectionInEditable(selection) {
+                const node = selection?.anchorNode;
+                if (!node) {
+                    return false;
+                }
+                const element = node.nodeType === 1 ? node : node.parentElement;
+                if (!element) {
+                    return false;
+                }
+                if (element.isContentEditable) {
+                    return true;
+                }
+                const tag = String(element.tagName || "").toLowerCase();
+                if (tag === "input" || tag === "textarea") {
+                    return true;
+                }
+                if (typeof element.closest !== "function") {
+                    return false;
+                }
+                return !!element.closest("input, textarea, [contenteditable]");
+            }
+
+            function isRuntimeSiteDisabled() {
+                try {
+                    return isSiteDisabled(
+                        globalThis.location?.hostname || "",
+                        state.runtimeSettings?.disabled_sites,
+                    );
+                } catch (_err) {
+                    return false;
+                }
+            }
+
+            function shouldDirectTranslateSelection({
+                altKey,
+                text,
+                selection,
+                inEditable,
+            } = {}) {
+                const editable =
+                    typeof inEditable === "boolean"
+                        ? inEditable
+                        : isSelectionInEditable(selection);
+                return shouldDirectTranslate({
+                    mode: state.runtimeSettings?.trigger_mode,
+                    altKey: altKey === true,
+                    text,
+                    inEditable: editable,
+                });
+            }
+
             function isShortcutPressed(e, shortcut) {
                 const cfg = parseShortcut(shortcut);
                 if (!cfg) return false;
@@ -158,6 +212,9 @@
             loadRuntimeSettings,
             parseShortcut,
             isShortcutPressed,
+            isSelectionInEditable,
+            isRuntimeSiteDisabled,
+            shouldDirectTranslateSelection,
         });
     }
 

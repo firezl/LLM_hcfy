@@ -173,8 +173,19 @@ var JYT_AUTO_ENGINE = (() => {
     },
     { id: "ollama", kind: "llm" }
   ];
+  function withThoughtsKey(def) {
+    if (def.kind !== "llm") {
+      return def;
+    }
+    return {
+      ...def,
+      thoughtsKey: def.id === "openai" ? "show_thoughts" : `${def.id}_show_thoughts`
+    };
+  }
   var ENGINE_DEFINITIONS = Object.freeze(
-    RAW_ENGINE_DEFINITIONS.map((def) => enrichEngineDefinition(def))
+    RAW_ENGINE_DEFINITIONS.map(
+      (def) => withThoughtsKey(enrichEngineDefinition(def))
+    )
   );
   var LLM_ENGINE_IDS = Object.freeze(
     ENGINE_DEFINITIONS.filter((def) => def.kind === "llm").map((def) => def.id)

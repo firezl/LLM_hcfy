@@ -138,10 +138,13 @@ try {
     Build-Archive $chromeTempDir $zipName
 
     # Firefox XPI（Firefox 兼容：background.scripts）
+    # 直接以 ES module 加载入口：经 background.js 动态 import 时监听器是异步注册的，
+    # Firefox 事件页休眠后无法被 tabs.onUpdated / runtime.onMessage 等事件唤醒。
     $firefoxManifestPath = Join-Path $firefoxTempDir "manifest.json"
     $firefoxManifest = Get-Content $firefoxManifestPath -Raw | ConvertFrom-Json
     $firefoxManifest.background = [ordered]@{
-        scripts = @("background.js")
+        scripts = @("background/index.js")
+        type = "module"
     }
 
     $firefoxManifest | ConvertTo-Json -Depth 100 | Set-Content -Path $firefoxManifestPath -Encoding UTF8
@@ -169,5 +172,5 @@ Write-Host "  - Chrome/Edge: $zipName"
 Write-Host "  - Firefox: $xpiName"
 Write-Host "  - Firefox Source Code: $srcZipName"
 Write-Host "PDF.js assets included in vendor/ directory."
-Write-Host "Firefox package uses background.scripts (background.js)."
+Write-Host "Firefox package uses background.scripts (background/index.js, type: module)."
 

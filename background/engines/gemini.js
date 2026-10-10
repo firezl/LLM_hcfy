@@ -2,6 +2,7 @@ import {
     buildChatPromptParts,
     resolveLanguagePair,
 } from "../language.js";
+import { t, tDetail } from "../i18n.js";
 import { postTranslateError } from "../port-utils.js";
 import { mergeCustomHeaders } from "./custom-headers.js";
 import { mergeCustomPayload } from "./custom-payload.js";
@@ -160,7 +161,7 @@ export async function streamGeminiTranslate(request, port, state) {
             port,
             state,
             requestId,
-            "请在设置中配置 Gemini API Key",
+            t("translate.engine.gemini.missingKey"),
         );
         return;
     }
@@ -170,7 +171,7 @@ export async function streamGeminiTranslate(request, port, state) {
             port,
             state,
             requestId,
-            "请在设置中配置 Gemini 模型",
+            t("translate.engine.gemini.missingModel"),
         );
         return;
     }
@@ -247,7 +248,9 @@ export async function streamGeminiTranslate(request, port, state) {
                     res = await sendBody(fallbackBody);
                 } else {
                     return {
-                        error: "Gemini 请求失败: " + textErr,
+                        error: tDetail("translate.engine.gemini.requestFailed", {
+                            error: textErr,
+                        }),
                     };
                 }
             }

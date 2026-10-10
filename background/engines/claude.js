@@ -2,6 +2,7 @@ import {
     buildChatPromptParts,
     resolveLanguagePair,
 } from "../language.js";
+import { t } from "../i18n.js";
 import { postTranslateError } from "../port-utils.js";
 import { mergeCustomHeaders } from "./custom-headers.js";
 import { mergeCustomPayload } from "./custom-payload.js";
@@ -122,7 +123,7 @@ export async function streamClaudeTranslate(request, port, state) {
             port,
             state,
             requestId,
-            "请在设置中配置 Claude API Key",
+            t("translate.engine.claude.missingKey"),
         );
         return;
     }

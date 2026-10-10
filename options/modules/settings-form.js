@@ -160,6 +160,11 @@
             return el.value;
         }
 
+        function normalizeTriggerMode(value) {
+            const mode = String(value || "").trim();
+            return mode === "auto" || mode === "alt" ? mode : "button";
+        }
+
         function fieldTrim(key, fallback = "") {
             return String(fieldValue(key, fallback)).trim();
         }
@@ -541,6 +546,23 @@
                         if (els.pdf_prompt_enabled) {
                             els.pdf_prompt_enabled.value =
                                 items.pdf_prompt_enabled === "off" ? "off" : "on";
+                        }
+                        if (els.trigger_mode) {
+                            const triggerMode = String(items.trigger_mode || "button").trim();
+                            els.trigger_mode.value =
+                                triggerMode === "auto" || triggerMode === "alt"
+                                    ? triggerMode
+                                    : "button";
+                        }
+                        if (els.disabled_sites) {
+                            els.disabled_sites.value =
+                                items.disabled_sites == null
+                                    ? ""
+                                    : String(items.disabled_sites);
+                        }
+                        if (els.translate_cache_enabled) {
+                            els.translate_cache_enabled.value =
+                                items.translate_cache_enabled === false ? "off" : "on";
                         }
                         els.engine_select.value = uiEngine;
                         if (els.llm_engine_select) {
@@ -1156,6 +1178,10 @@
             return {
                 enabled: fieldValue("enable_select"),
                 pdf_prompt_enabled: fieldValue("pdf_prompt_enabled", "on"),
+                trigger_mode: normalizeTriggerMode(fieldValue("trigger_mode", "button")),
+                disabled_sites: fieldValue("disabled_sites"),
+                translate_cache_enabled:
+                    fieldValue("translate_cache_enabled", "on") !== "off",
                 engine: fieldValue("engine_select"),
                 llm_engine: fieldTrim("llm_engine_select", "openai") || "openai",
                 translate_shortcut: normalizeShortcut(fieldValue("translate_shortcut")),

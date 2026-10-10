@@ -4,6 +4,7 @@
         return {
             lastSelection: "",
             lastSelectionContext: null,
+            lastSelectionRange: null,
             lastSelectionPoint: null,
             isPinned: false,
             translatePort: null,

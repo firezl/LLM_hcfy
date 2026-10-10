@@ -4,6 +4,8 @@ import {
     buildTranslationgemmaPrompt,
     resolveLanguagePair,
 } from "../language.js";
+import { fetchWithTimeout, isUserAbortError } from "../fetch-utils.js";
+import { t, tDetail } from "../i18n.js";
 import { postTranslateError, safePostMessage } from "../port-utils.js";
 import { mergeCustomHeaders } from "./custom-headers.js";
 import { mergeCustomPayload } from "./custom-payload.js";
@@ -114,7 +116,7 @@ export async function streamOllamaTranslate(request, port, state) {
             port,
             state,
             requestId,
-            "请先在设置中选择 Ollama 模型",
+            t("translate.engine.ollama.missingModel"),
         );
         return;
     }
@@ -167,24 +169,28 @@ export async function handleOllamaGetModels(message, port, state) {
     }
 
     try {
-        const res = await fetch(endpoint.tagsUrl, {
-            method: "GET",
-            headers: mergeCustomHeaders(
-                {
-                    Accept: "application/json",
-                },
-                message?.customHeaders,
-            ).headers,
-        });
+        const res = await fetchWithTimeout(
+            endpoint.tagsUrl,
+            {
+                method: "GET",
+                headers: mergeCustomHeaders(
+                    {
+                        Accept: "application/json",
+                    },
+                    message?.customHeaders,
+                ).headers,
+            },
+            { requestId, state },
+        );
 
         if (!res.ok) {
             const textErr = await res.text();
             safePostMessage(port, state, {
                 type: "OLLAMA_OP_ERROR",
                 requestId,
-                error:
-                    "获取 Ollama 模型列表失败: " +
-                    (textErr || `${res.status} ${res.statusText}`),
+                error: tDetail("translate.models.ollamaFailed", {
+                    error: textErr || `${res.status} ${res.statusText}`,
+                }),
             });
             return;
         }
@@ -204,6 +210,9 @@ export async function handleOllamaGetModels(message, port, state) {
             modelIds,
         });
     } catch (err) {
+        if (isUserAbortError(err) || state?.connected === false) {
+            return;
+        }
         safePostMessage(port, state, {
             type: "OLLAMA_OP_ERROR",
             requestId,

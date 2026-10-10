@@ -190,6 +190,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 8px;
     min-height: 0;
     margin-bottom: 6px;
     padding-bottom: 5px;
@@ -222,11 +223,15 @@
     display: flex;
     gap: 2px;
     align-items: center;
+    justify-content: flex-end;
+    max-width: 100%;
+    margin-left: auto;
 }
 
 .jyt-copy,
 .jyt-pin,
 .jyt-add-term,
+.jyt-retry,
 .jyt-close {
     background: transparent;
     border: 0;
@@ -246,7 +251,8 @@
 }
 
 .jyt-copy:hover,
-.jyt-pin:hover {
+.jyt-pin:hover,
+.jyt-retry:hover {
     background: var(--jyt-hover-bg);
     color: var(--jyt-text);
 }
@@ -261,6 +267,15 @@
     line-height: 1;
     min-width: 0;
     min-height: 0;
+}
+
+.jyt-retry {
+    width: auto;
+    min-width: 22px;
+    padding: 0 4px;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
 }
 
 .jyt-add-term:hover {
@@ -410,47 +425,55 @@
 }
 
 .jyt-thought {
-    margin-top: 8px;
-    font-size: 13px;
-    background: var(--jyt-secondary-bg);
-    border: 1px solid var(--jyt-border);
-    border-radius: 8px;
-    overflow: hidden;
+    margin-top: 6px;
+    font-size: 11px;
+    line-height: 1.3;
+    background: none;
+    border: 0;
 }
 
 .jyt-thought summary {
-    padding: 8px 12px;
+    width: fit-content;
+    padding: 0;
     cursor: pointer;
-    color: var(--jyt-text);
-    font-weight: 500;
+    color: var(--jyt-muted-text);
+    font-weight: 400;
     user-select: none;
     outline: none;
-    list-style: none; /* Hide default triangle */
-    display: flex;
+    list-style: none;
+    display: inline-flex;
     align-items: center;
+    gap: 2px;
 }
 
-.jyt-thought summary::after {
-    content: "›";
-    margin-left: auto;
-    font-size: 16px;
-    transition: transform 0.2s;
+.jyt-thought summary::-webkit-details-marker {
+    display: none;
 }
-.jyt-thought[open] summary::after {
+
+.jyt-thought summary::before {
+    content: "›";
+    font-size: 12px;
+    line-height: 1;
+    transition: transform 0.15s ease;
+}
+
+.jyt-thought[open] summary::before {
     transform: rotate(90deg);
 }
 
 .jyt-thought summary:hover {
-    background: var(--jyt-hover-bg);
-    color: var(--jyt-accent);
+    color: var(--jyt-text);
 }
 
 .jyt-thought-content {
-    padding: 0 12px 12px;
-    color: var(--jyt-text);
-    font-style: italic;
-    border-top: 1px solid var(--jyt-border);
     margin-top: 4px;
-    padding-top: 8px;
+    padding: 0;
+    max-height: 7.5em;
+    overflow-y: auto;
+    color: var(--jyt-muted-text);
+    font-size: 12px;
+    font-style: normal;
+    line-height: 1.45;
     white-space: pre-wrap;
+    word-break: break-word;
 }

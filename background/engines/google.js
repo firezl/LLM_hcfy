@@ -1,6 +1,8 @@
 import { GOOGLE_TRANSLATE_ENDPOINT } from "../constants.js";
+import { fetchWithTimeout, reportTranslateFailure } from "../fetch-utils.js";
+import { t, tDetail } from "../i18n.js";
 import { resolveLanguagePair } from "../language.js";
-import { postTranslateError, postTranslateTextResult } from "../port-utils.js";
+import { postTranslateTextResult } from "../port-utils.js";
 
 export async function streamGoogleTranslate(request, port, state) {
     const { requestId, text } = request;
@@ -14,14 +16,17 @@ export async function streamGoogleTranslate(request, port, state) {
     });
 
     try {
-        const res = await fetch(
+        const res = await fetchWithTimeout(
             `${GOOGLE_TRANSLATE_ENDPOINT}?${params.toString()}`,
             {
                 method: "GET",
             },
+            { requestId, state },
         );
         if (!res.ok) {
-            throw new Error(`Google 翻译请求失败: HTTP ${res.status}`);
+            throw new Error(
+                tDetail("translate.google.httpFailed", { status: res.status }),
+            );
         }
 
         const data = await res.json();
@@ -32,16 +37,11 @@ export async function streamGoogleTranslate(request, port, state) {
             .trim();
 
         if (!translated) {
-            throw new Error("Google 翻译返回为空");
+            throw new Error(t("translate.google.empty"));
         }
 
         postTranslateTextResult(port, state, requestId, translated);
     } catch (err) {
-        postTranslateError(
-            port,
-            state,
-            requestId,
-            err && err.message ? err.message : String(err),
-        );
+        reportTranslateFailure(port, state, requestId, err);
     }
 }

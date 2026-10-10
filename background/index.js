@@ -16,6 +16,7 @@ import {
     MESSAGE_TYPE_OLLAMA_GET_MODELS,
     MESSAGE_TYPE_PDF_CHECK_URL,
     MESSAGE_TYPE_PDF_OPEN_IN_VIEWER,
+    MESSAGE_TYPE_PDF_OPEN_IN_BROWSER,
     MESSAGE_TYPE_PDF_PROMPT_DECISION,
     MESSAGE_TYPE_PDF_GET_PENDING_PROMPT,
     MESSAGE_TYPE_TERM_EXPORT,
@@ -71,6 +72,7 @@ const CONTENT_ALLOWED_MESSAGE_TYPES = new Set([
     MESSAGE_TYPE_TERM_UPSERT,
     MESSAGE_TYPE_PDF_CHECK_URL,
     MESSAGE_TYPE_PDF_OPEN_IN_VIEWER,
+    MESSAGE_TYPE_PDF_OPEN_IN_BROWSER,
     MESSAGE_TYPE_PDF_PROMPT_DECISION,
     MESSAGE_TYPE_PDF_GET_PENDING_PROMPT,
 ]);
@@ -102,6 +104,7 @@ extensionApi.runtime.onConnect.addListener((port) => {
     const state = {
         connected: true,
         controllers: new Map(),
+        cancelled: new Set(),
     };
 
     port.onDisconnect.addListener(() => {
@@ -135,6 +138,7 @@ extensionApi.runtime.onConnect.addListener((port) => {
                 return;
             }
 
+            state.cancelled.add(requestId);
             const controller = state.controllers.get(requestId);
             if (controller) {
                 controller.abort();
@@ -183,6 +187,7 @@ extensionApi.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const isPdfMessage =
         type === MESSAGE_TYPE_PDF_CHECK_URL ||
         type === MESSAGE_TYPE_PDF_OPEN_IN_VIEWER ||
+        type === MESSAGE_TYPE_PDF_OPEN_IN_BROWSER ||
         type === MESSAGE_TYPE_PDF_PROMPT_DECISION ||
         type === MESSAGE_TYPE_PDF_GET_PENDING_PROMPT;
     const isTermMessage =

@@ -7,10 +7,7 @@
             return;
         }
 
-        app.createButton();
-        app.loadRuntimeSettings(() => {
-            app.createBubble();
-        });
+        app.loadRuntimeSettings();
         app.registerPdfRuntimeListener();
         registerContextMenuListener(app, state);
         void app.restorePendingPdfPrompt();
@@ -51,6 +48,12 @@
                     ) {
                         void app.dismissPdfPrompt?.();
                     }
+                    if (
+                        key === "disabled_sites" &&
+                        app.isRuntimeSiteDisabled?.()
+                    ) {
+                        app.hideButton();
+                    }
                 }
                 return;
             }
@@ -71,6 +74,10 @@
                 app.hideButton();
                 return;
             }
+            if (app.isRuntimeSiteDisabled?.()) {
+                app.hideButton();
+                return;
+            }
 
             const sel = window.getSelection();
             if (!sel) {
@@ -81,9 +88,8 @@
             const text = sel.toString();
             if (text && text.trim().length > 0) {
                 state.lastSelection = text;
-                state.lastSelectionContext = app.collectSelectionContext
-                    ? app.collectSelectionContext(sel)
-                    : null;
+                state.lastSelectionContext = null;
+                rememberSelectionRange(state, sel);
                 const btn = app.createButton?.();
                 if (btn) {
                     let x;
@@ -101,6 +107,7 @@
                 }
             } else {
                 state.lastSelectionContext = null;
+                state.lastSelectionRange = null;
                 app.hideButton();
             }
         }
@@ -117,13 +124,48 @@
                 app.hideButton();
                 return;
             }
+            if (app.isRuntimeSiteDisabled?.()) {
+                app.hideButton();
+                return;
+            }
 
             const btnEl = app.getTranslateBtn?.();
             if (btnEl && (e.target === btnEl || btnEl.contains(e.target))) {
                 return;
             }
 
-            setTimeout(() => handleSelectionUpdate(e.clientX, e.clientY), 10);
+            const altKey = e.altKey === true;
+            const clientX = e.clientX;
+            const clientY = e.clientY;
+            setTimeout(() => {
+                if (state.runtimeSettings.enabled !== "on") {
+                    app.hideButton();
+                    return;
+                }
+                if (app.isRuntimeSiteDisabled?.()) {
+                    app.hideButton();
+                    return;
+                }
+                const sel = window.getSelection();
+                const text = sel ? sel.toString() : "";
+                if (
+                    app.shouldDirectTranslateSelection?.({
+                        altKey,
+                        text,
+                        selection: sel,
+                    })
+                ) {
+                    const trimmed = String(text || "").trim();
+                    state.lastSelection = trimmed;
+                    state.lastSelectionContext = null;
+                    rememberSelectionRange(state, sel);
+                    state.lastSelectionPoint = { x: clientX, y: clientY };
+                    app.hideButton();
+                    app.triggerTranslate(trimmed, clientX, clientY);
+                    return;
+                }
+                handleSelectionUpdate(clientX, clientY);
+            }, 10);
         });
 
         document.addEventListener("selectionchange", () => {
@@ -150,12 +192,30 @@
         });
 
         document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") {
+                const bubble = app.getTranslateBubble?.();
+                const display = bubble?.style?.display || "";
+                if (bubble && display && display !== "none") {
+                    e.preventDefault();
+                    app.cancelActiveTranslateRequest();
+                    app.clearTermEditorUI(true);
+                    bubble.style.display = "none";
+                    state.isPinned = false;
+                    app.updatePinState(bubble);
+                    app.hideButton();
+                    return;
+                }
+            }
+
             if (
                 !app.isShortcutPressed(
                     e,
                     state.runtimeSettings.translate_shortcut,
                 )
             ) {
+                return;
+            }
+            if (app.isRuntimeSiteDisabled?.()) {
                 return;
             }
 
@@ -165,9 +225,8 @@
 
             e.preventDefault();
             state.lastSelection = text;
-            state.lastSelectionContext = app.collectSelectionContext
-                ? app.collectSelectionContext(sel)
-                : null;
+            state.lastSelectionContext = null;
+            rememberSelectionRange(state, sel);
             const point = app.getSelectionAnchorPoint(sel);
             app.triggerTranslate(text, point.x, point.y);
         });
@@ -209,10 +268,16 @@
                 e.stopPropagation();
 
                 const pdfUrl = anchor.href;
+                const linkTarget = String(anchor.getAttribute("target") || "")
+                    .trim()
+                    .toLowerCase();
                 app.showPdfPrompt({
                     source: "click",
                     pdfUrl,
                     isPdf: null,
+                    openInNewTab:
+                        linkTarget !== "" &&
+                        !["_self", "_top", "_parent"].includes(linkTarget),
                 });
                 void app.checkPdfUrlAndUpdatePrompt(pdfUrl);
             },
@@ -268,11 +333,30 @@
         return null;
     }
 
+    function rememberSelectionRange(state, sel) {
+        try {
+            if (sel && sel.rangeCount > 0) {
+                state.lastSelectionRange = sel.getRangeAt(0).cloneRange();
+                return;
+            }
+        } catch (_err) {
+            state.lastSelectionRange = null;
+            return;
+        }
+        state.lastSelectionRange = null;
+    }
+
+    function clampIframeText(value) {
+        const text = String(value ?? "").trim();
+        if (text.length <= 5000) {
+            return text;
+        }
+        return text.slice(0, 5000);
+    }
+
     function getIframeOffsetForSource(source) {
-        let offsetX = 0;
-        let offsetY = 0;
         if (!source || source === window) {
-            return { offsetX, offsetY };
+            return { offsetX: 0, offsetY: 0, found: false };
         }
 
         const frames = document.querySelectorAll("iframe");
@@ -280,26 +364,46 @@
             try {
                 if (frame.contentWindow === source) {
                     const rect = frame.getBoundingClientRect();
-                    offsetX = rect.left;
-                    offsetY = rect.top;
-                    break;
+                    return {
+                        offsetX: rect.left,
+                        offsetY: rect.top,
+                        found: true,
+                    };
                 }
             } catch (err) {
                 // ignore cross-origin access failures
             }
         }
 
-        return { offsetX, offsetY };
+        return { offsetX: 0, offsetY: 0, found: false };
     }
 
     function registerIframeProxyListener(app, state) {
+        let lastIframeKeydownAt = 0;
+
         window.addEventListener("message", (event) => {
             const data = event.data;
             if (!data || !data.__jyt) {
                 return;
             }
+            if (event.source === window) {
+                return;
+            }
+            if (state.runtimeSettings.enabled !== "on") {
+                return;
+            }
+
+            const located = getIframeOffsetForSource(event.source);
+            if (!located.found) {
+                return;
+            }
+            if (app.isRuntimeSiteDisabled?.()) {
+                app.hideButton();
+                return;
+            }
 
             const type = String(data.type || "");
+            const { offsetX, offsetY } = located;
 
             if (type === "IFRAME_SELECTION_CLEARED") {
                 app.hideButton();
@@ -307,16 +411,14 @@
             }
 
             if (type === "IFRAME_SELECTION") {
-                if (state.runtimeSettings.enabled !== "on") {
-                    app.hideButton();
-                    return;
-                }
-
-                const text = String(data.text || "").trim();
+                const text = clampIframeText(data.text);
                 if (!text) {
                     app.hideButton();
                     return;
                 }
+
+                state.lastSelectionContext = null;
+                state.lastSelectionRange = null;
 
                 if (
                     !Number.isFinite(data.x) ||
@@ -327,9 +429,6 @@
                     return;
                 }
 
-                const { offsetX, offsetY } = getIframeOffsetForSource(
-                    event.source,
-                );
                 const x = offsetX + data.x;
                 const y = offsetY + data.y;
                 if (!Number.isFinite(x) || !Number.isFinite(y)) {
@@ -340,7 +439,18 @@
 
                 state.lastSelection = text;
                 state.lastSelectionPoint = { x, y };
-                state.lastSelectionContext = null;
+
+                if (
+                    app.shouldDirectTranslateSelection?.({
+                        altKey: data.altKey === true,
+                        text,
+                        inEditable: false,
+                    })
+                ) {
+                    app.hideButton();
+                    app.triggerTranslate(text, x, y);
+                    return;
+                }
 
                 const btn = app.createButton?.();
                 if (btn) {
@@ -349,34 +459,7 @@
                 return;
             }
 
-            if (type === "IFRAME_TRIGGER") {
-                const text = String(data.text || "").trim();
-                if (!text || state.runtimeSettings.enabled !== "on") {
-                    return;
-                }
-
-                const { offsetX, offsetY } = getIframeOffsetForSource(
-                    event.source,
-                );
-                const coords = resolveIframePageCoords(
-                    offsetX,
-                    offsetY,
-                    data,
-                    state.lastSelectionPoint,
-                );
-                if (!coords) {
-                    return;
-                }
-                state.lastSelection = text;
-                app.triggerTranslate(text, coords.x, coords.y);
-                return;
-            }
-
             if (type === "IFRAME_KEYDOWN") {
-                if (state.runtimeSettings.enabled !== "on") {
-                    return;
-                }
-
                 const syntheticEvent = {
                     key: data.key,
                     code: data.code,
@@ -393,15 +476,21 @@
                 ) {
                     return;
                 }
+                if (app.isRuntimeSiteDisabled?.()) {
+                    return;
+                }
 
-                const text = String(data.text || "").trim();
+                const text = clampIframeText(data.text);
                 if (!text) {
                     return;
                 }
 
-                const { offsetX, offsetY } = getIframeOffsetForSource(
-                    event.source,
-                );
+                const now = Date.now();
+                if (now - lastIframeKeydownAt < 800) {
+                    return;
+                }
+                lastIframeKeydownAt = now;
+
                 const coords = resolveIframePageCoords(
                     offsetX,
                     offsetY,
@@ -412,6 +501,8 @@
                     return;
                 }
                 state.lastSelection = text;
+                state.lastSelectionContext = null;
+                state.lastSelectionRange = null;
                 app.triggerTranslate(text, coords.x, coords.y);
             }
         });
@@ -437,10 +528,13 @@
             }
 
             state.lastSelection = text;
+            state.lastSelectionContext = null;
             const sel = window.getSelection();
-            state.lastSelectionContext = app.collectSelectionContext
-                ? app.collectSelectionContext(sel)
-                : null;
+            if (sel && sel.rangeCount > 0) {
+                rememberSelectionRange(state, sel);
+            } else {
+                state.lastSelectionRange = null;
+            }
             const point = app.getSelectionAnchorPoint(sel);
             app.triggerTranslate(text, point.x, point.y);
             return false;

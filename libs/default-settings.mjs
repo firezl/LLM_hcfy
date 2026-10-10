@@ -2,6 +2,9 @@
 export const DEFAULT_SETTINGS = {
     enabled: "on",
     pdf_prompt_enabled: "on",
+    trigger_mode: "button",
+    disabled_sites: "",
+    translate_cache_enabled: true,
     engine: "auto",
     llm_engine: "openai",
     translate_shortcut: "",

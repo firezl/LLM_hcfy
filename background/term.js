@@ -1,4 +1,5 @@
 import { extensionApi } from "./extension-api.js";
+import { t } from "./i18n.js";
 
 const TERM_DB_NAME = "jyt-terms-db";
 const TERM_DB_VERSION = 1;
@@ -140,7 +141,7 @@ function openTermDb() {
 
         request.onsuccess = () => resolve(request.result);
         request.onerror = () =>
-            reject(request.error || new Error("打开术语数据库失败"));
+            reject(request.error || new Error(t("translate.term.openFailed")));
     });
 
     return dbPromise;
@@ -150,7 +151,7 @@ function requestToPromise(request) {
     return new Promise((resolve, reject) => {
         request.onsuccess = () => resolve(request.result);
         request.onerror = () =>
-            reject(request.error || new Error("数据库请求失败"));
+            reject(request.error || new Error(t("translate.term.requestFailed")));
     });
 }
 
@@ -225,8 +226,8 @@ async function putTermsToDb(terms) {
 
     await new Promise((resolve, reject) => {
         tx.oncomplete = () => resolve();
-        tx.onerror = () => reject(tx.error || new Error("术语写入失败"));
-        tx.onabort = () => reject(tx.error || new Error("术语写入被中止"));
+        tx.onerror = () => reject(tx.error || new Error(t("translate.term.writeFailed")));
+        tx.onabort = () => reject(tx.error || new Error(t("translate.term.writeAborted")));
     });
 }
 
@@ -238,8 +239,8 @@ async function deleteTermByKey(key) {
 
     await new Promise((resolve, reject) => {
         tx.oncomplete = () => resolve();
-        tx.onerror = () => reject(tx.error || new Error("术语删除失败"));
-        tx.onabort = () => reject(tx.error || new Error("术语删除被中止"));
+        tx.onerror = () => reject(tx.error || new Error(t("translate.term.deleteFailed")));
+        tx.onabort = () => reject(tx.error || new Error(t("translate.term.deleteAborted")));
     });
 }
 
@@ -251,8 +252,8 @@ async function clearTermStore() {
 
     await new Promise((resolve, reject) => {
         tx.oncomplete = () => resolve();
-        tx.onerror = () => reject(tx.error || new Error("术语清空失败"));
-        tx.onabort = () => reject(tx.error || new Error("术语清空被中止"));
+        tx.onerror = () => reject(tx.error || new Error(t("translate.term.clearFailed")));
+        tx.onabort = () => reject(tx.error || new Error(t("translate.term.clearAborted")));
     });
 }
 
@@ -322,7 +323,7 @@ export async function upsertTerm(term) {
     const now = Date.now();
     const normalized = normalizeTermEntry(term, now);
     if (!normalized) {
-        throw new Error("术语字段不完整");
+        throw new Error(t("translate.term.fieldsIncomplete"));
     }
 
     const existing = await getAllTermsFromDb();
@@ -349,7 +350,7 @@ export async function deleteTerm(rawTerm) {
     const targetLang = normalizeLang(rawTerm?.targetLang);
     const sourceTerm = normalizeText(rawTerm?.sourceTerm);
     if (!sourceLang || !targetLang || !sourceTerm) {
-        throw new Error("术语删除参数不完整");
+        throw new Error(t("translate.term.deleteParamsIncomplete"));
     }
 
     const key = termKey(sourceLang, targetLang, sourceTerm);
@@ -498,5 +499,5 @@ export async function handleTermMessage(message) {
         return { ok: true };
     }
 
-    return { ok: false, error: "不支持的术语消息类型" };
+    return { ok: false, error: t("translate.term.unsupportedMessage") };
 }

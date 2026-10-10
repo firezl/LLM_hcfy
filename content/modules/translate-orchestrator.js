@@ -1,4 +1,7 @@
 // content/modules/translate-orchestrator.js
+import { getThoughtsSettingKey } from "../../libs/engine-registry.mjs";
+import { pickDetectedLang } from "../../libs/lang-pick.mjs";
+
 (function (global) {
     function install(app) {
         const state = app.state;
@@ -19,9 +22,130 @@
                 return pdfText.normalizePdfSelectionText(text);
             }
 
-            async function translateText(text, settings, bubble, generation) {
+            const LANG_DETECT_RACE_MS = 300;
+            let languageDetectorWarmupScheduled = false;
+            let bubbleTranslateOverrides = null;
+            let lastTriggerPoint = null;
+
+            function createLangDetectProgressTarget(bubble, streamEl) {
+                let lastWritten = null;
+                return {
+                    set innerText(value) {
+                        if (!bubble || !streamEl) return;
+                        if (bubble.dataset?.state !== "loading") return;
+                        const current = streamEl.innerText || "";
+                        if (current && current !== lastWritten) return;
+                        lastWritten = value == null ? "" : String(value);
+                        streamEl.innerText = lastWritten;
+                    },
+                    get innerText() {
+                        return streamEl?.innerText || "";
+                    },
+                };
+            }
+
+            function scheduleLanguageDetectorWarmup(text, bubble, streamEl) {
+                if (
+                    languageDetectorWarmupScheduled ||
+                    state.languageDetectorInstance
+                ) {
+                    return;
+                }
+                languageDetectorWarmupScheduled = true;
+                const progressEl = createLangDetectProgressTarget(
+                    bubble,
+                    streamEl,
+                );
+                const run = () => {
+                    try {
+                        Promise.resolve(
+                            app.detectLangByLanguageDetector(text, progressEl),
+                        )
+                            .catch(() => {})
+                            .finally(() => {
+                                languageDetectorWarmupScheduled = false;
+                            });
+                    } catch (_err) {
+                        languageDetectorWarmupScheduled = false;
+                    }
+                };
+                if (typeof window.requestIdleCallback === "function") {
+                    window.requestIdleCallback(() => run());
+                } else {
+                    window.setTimeout(run, 500);
+                }
+            }
+
+            function isEngineThinking(settings, engineId) {
+                const thoughtsKey = getThoughtsSettingKey(engineId);
+                if (!thoughtsKey) {
+                    return !!settings?.show_thoughts;
+                }
+                return !!settings?.[thoughtsKey];
+            }
+
+            function thinkingForEngineOverride(settings, engineId) {
+                const thoughtsKey = getThoughtsSettingKey(engineId);
+                if (!thoughtsKey) return false;
+                return !!settings?.[thoughtsKey];
+            }
+
+            function selectionLikeFromSavedRange(range, text) {
+                let anchorNode = null;
+                try {
+                    anchorNode = range.startContainer;
+                } catch (_err) {
+                    anchorNode = null;
+                }
+                return {
+                    rangeCount: 1,
+                    anchorNode,
+                    getRangeAt() {
+                        return range;
+                    },
+                    toString() {
+                        try {
+                            const raw = range.toString();
+                            if (raw && String(raw).trim()) {
+                                return raw;
+                            }
+                        } catch (_err) {
+                            // Use the text captured with the selection.
+                        }
+                        return text;
+                    },
+                };
+            }
+
+            function collectTranslateContext(text) {
+                const range = state.lastSelectionRange;
+                if (
+                    !range ||
+                    typeof app.collectSelectionContext !== "function"
+                ) {
+                    state.lastSelectionContext = null;
+                    return;
+                }
+                state.lastSelectionContext = app.collectSelectionContext(
+                    selectionLikeFromSavedRange(range, text),
+                );
+            }
+
+            function rememberBubbleOverrides(options) {
+                if (!options) {
+                    bubbleTranslateOverrides = null;
+                    return;
+                }
+                const next = {};
+                if (options.engine) next.engine = String(options.engine);
+                if (options.targetLang) next.targetLang = String(options.targetLang);
+                bubbleTranslateOverrides = next;
+            }
+
+            async function translateText(text, settings, bubble, generation, overrides) {
                 const isStale = () => generation !== state.translateGeneration;
-                const selectedEngine = settings.engine || "auto";
+                const extra = overrides && typeof overrides === "object" ? overrides : {};
+                const selectedEngine = extra.engine || settings.engine || "auto";
                 const llmEngine = settings.llm_engine || "openai";
                 const engine = selectedEngine === "llm" ? llmEngine : selectedEngine;
                 text = maybeNormalizePdfSelectionText(text, engine);
@@ -46,22 +170,41 @@
                 app.setBubbleState(bubble, "loading");
 
                 if (!from) {
-                    const [det1, det2, det3] = await Promise.allSettled([
-                        app.detectLangByLanguageDetector(text, streamEl),
-                        app.detectTextLangByChromeI18n(text),
-                        Promise.resolve(app.detectLangHeuristic(text))
-                    ]);
+                    const heuristic = app.detectLangHeuristic(text) || "";
+                    const detections = [];
+                    if (state.languageDetectorInstance) {
+                        detections.push(
+                            app.withTimeout(
+                                app.detectLangByLanguageDetector(text, streamEl),
+                                LANG_DETECT_RACE_MS,
+                                null,
+                            ),
+                        );
+                    } else {
+                        scheduleLanguageDetectorWarmup(text, bubble, streamEl);
+                    }
+                    detections.push(
+                        app.withTimeout(
+                            app.detectTextLangByChromeI18n(text),
+                            LANG_DETECT_RACE_MS,
+                            null,
+                        ),
+                    );
+                    detections.push(Promise.resolve(heuristic));
+                    const settled = await Promise.allSettled(detections);
                     if (isStale()) return;
-                    from = det1.status === 'fulfilled' ? det1.value : null
-                        || det2.status === 'fulfilled' ? det2.value : null
-                        || det3.status === 'fulfilled' ? det3.value : null
-                        || '';
+                    from = pickDetectedLang(settled) || heuristic;
                 }
 
-                let to = targetSetting === "auto" ? "" : targetSetting;
-                if (!to) to = app.detectBrowserLangByNavigator();
-                if (!to) to = "zh";
-                if (to === from) to = from === "zh" ? "en" : "zh";
+                let to;
+                if (extra.targetLang) {
+                    to = String(extra.targetLang);
+                } else {
+                    to = targetSetting === "auto" ? "" : targetSetting;
+                    if (!to) to = app.detectBrowserLangByNavigator();
+                    if (!to) to = "zh";
+                    if (to === from) to = from === "zh" ? "en" : "zh";
+                }
 
                 if (engine === "browser") {
                     try {
@@ -100,56 +243,22 @@
                 }
 
 
-                const BACKGROUND_ENGINE_THOUGHTS = {
-                    ollama: "ollama_show_thoughts",
-                    claude: "claude_show_thoughts",
-                    gemini: "gemini_show_thoughts",
-                    deepseek: "deepseek_show_thoughts",
-                    siliconflow: "siliconflow_show_thoughts",
-                    qwen: "qwen_show_thoughts",
-                    glm: "glm_show_thoughts",
-                    xiaomi: "xiaomi_show_thoughts",
-                    custom_openai: "custom_openai_show_thoughts",
-                    openrouter: "openrouter_show_thoughts",
-                };
-
-                const backgroundEngine = BACKGROUND_ENGINE_THOUGHTS[engine];
-                if (backgroundEngine) {
-                    app.startBackgroundTranslate(
-                        text,
-                        from,
-                        to,
-                        settings,
-                        streamEl,
-                        thoughtEl,
-                        thoughtDetails,
-                        {
-                            isThinking: !!settings[backgroundEngine],
-                            context: state.lastSelectionContext,
-                        },
-                    );
-                    return;
-                }
-
-                if (engine === "auto") {
-                    app.startBackgroundTranslate(
-                        text,
-                        from,
-                        to,
-                        settings,
-                        streamEl,
-                        thoughtEl,
-                        thoughtDetails,
-                        {
-                            engine: "auto",
-                            context: state.lastSelectionContext,
-                        },
-                    );
-                    return;
-                }
-
                 if (isStale()) return;
 
+                const translateOptions = {
+                    isThinking: extra.engine
+                        ? thinkingForEngineOverride(settings, engine)
+                        : isEngineThinking(settings, engine),
+                    context: state.lastSelectionContext,
+                };
+                if (extra.engine) {
+                    translateOptions.engine = engine;
+                } else if (engine === "auto") {
+                    translateOptions.engine = "auto";
+                }
+                if (extra.bypassCache) {
+                    translateOptions.bypassCache = true;
+                }
                 app.startBackgroundTranslate(
                     text,
                     from,
@@ -158,9 +267,7 @@
                     streamEl,
                     thoughtEl,
                     thoughtDetails,
-                    {
-                        context: state.lastSelectionContext,
-                    },
+                    translateOptions,
                 );
             }
 
@@ -174,15 +281,20 @@
                 triggerTranslate(selection, point.x, point.y);
             }
 
-            function triggerTranslate(selection, x, y) {
+            function triggerTranslate(selection, x, y, options) {
                 const text = (selection || "").trim();
                 if (!text) return;
 
-                const sel = window.getSelection();
-                if (app.collectSelectionContext && sel?.toString?.().trim()) {
-                    state.lastSelectionContext =
-                        app.collectSelectionContext(sel);
-                }
+                const requestOptions =
+                    options && typeof options === "object" ? options : null;
+                rememberBubbleOverrides(requestOptions);
+                lastTriggerPoint = {
+                    x: Number(x) || 0,
+                    y: Number(y) || 0,
+                };
+                state.lastTranslateContext = { text };
+
+                collectTranslateContext(text);
 
                 app.cancelActiveTranslateRequest();
                 app.hideButton();
@@ -200,7 +312,43 @@
                 app.setBubbleLoading(bubble, true);
                 app.applyTheme(state.runtimeSettings.theme_mode || "auto");
                 const generation = ++state.translateGeneration;
-                void app.translateText(text, state.runtimeSettings, bubble, generation);
+                void app.translateText(
+                    text,
+                    state.runtimeSettings,
+                    bubble,
+                    generation,
+                    requestOptions,
+                );
+            }
+
+            function retranslate(overrides) {
+                const source = String(
+                    state.lastTranslateContext?.text || state.lastSelection || "",
+                ).trim();
+                if (!source) return false;
+
+                const prev = bubbleTranslateOverrides || {};
+                const next = { ...prev };
+                if (overrides && Object.prototype.hasOwnProperty.call(overrides, "engine")) {
+                    const engine = String(overrides.engine || "").trim();
+                    if (engine) next.engine = engine;
+                    else delete next.engine;
+                }
+                if (
+                    overrides &&
+                    Object.prototype.hasOwnProperty.call(overrides, "targetLang")
+                ) {
+                    const targetLang = String(overrides.targetLang || "").trim();
+                    if (targetLang) next.targetLang = targetLang;
+                    else delete next.targetLang;
+                }
+                if (overrides?.bypassCache) next.bypassCache = true;
+
+                const point = lastTriggerPoint || state.lastSelectionPoint;
+                const x = point && Number.isFinite(point.x) ? point.x : window.innerWidth / 2;
+                const y = point && Number.isFinite(point.y) ? point.y : 80;
+                triggerTranslate(source, x, y, next);
+                return true;
             }
 
         Object.assign(app, {
@@ -208,6 +356,7 @@
             translateText,
             onTranslateClick,
             triggerTranslate,
+            retranslate,
         });
     }
 

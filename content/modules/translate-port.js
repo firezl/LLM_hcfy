@@ -1,4 +1,6 @@
 // content/modules/translate-port.js — auto-extracted from content_script.js
+import { getThoughtsSettingKey } from "../../libs/engine-registry.mjs";
+
 (function (global) {
     function install(app) {
         const state = app.state;
@@ -10,10 +12,25 @@
                 request.responseTimeoutId = null;
             }
 
+            function postTranslateCancel(request) {
+                if (!request?.requestId || !state.translatePort) return;
+                try {
+                    state.translatePort.postMessage({
+                        type: app.MESSAGE_TYPES.TRANSLATE_CANCEL || "TRANSLATE_CANCEL",
+                        requestId: request.requestId,
+                    });
+                } catch (_err) {
+                    // Ignore port send failures when runtime is unavailable.
+                } finally {
+                    app.drainRuntimeLastError();
+                }
+            }
+
             function armActiveRequestTimeout(request) {
                 clearActiveRequestTimeout(request);
                 request.responseTimeoutId = window.setTimeout(() => {
                     if (state.activeRequest !== request) return;
+                    postTranslateCancel(request);
                     request.streamEl.innerText = t("bubble.translate.timeout");
                     app.setBubbleState(
                         request.streamEl?.closest(".jyt-bubble"),
@@ -75,19 +92,6 @@
                 }
             }
 
-            const BACKGROUND_ENGINE_THOUGHTS = {
-                ollama: "ollama_show_thoughts",
-                claude: "claude_show_thoughts",
-                gemini: "gemini_show_thoughts",
-                deepseek: "deepseek_show_thoughts",
-                siliconflow: "siliconflow_show_thoughts",
-                qwen: "qwen_show_thoughts",
-                glm: "glm_show_thoughts",
-                xiaomi: "xiaomi_show_thoughts",
-                custom_openai: "custom_openai_show_thoughts",
-                openrouter: "openrouter_show_thoughts",
-            };
-
             function getEngineDisplayName(engineId) {
                 const key = `options.engine.auto.candidate.${String(engineId || "").trim()}`;
                 if (!key.endsWith(".")) {
@@ -100,7 +104,7 @@
             }
 
             function applyActiveEngineSwitch(currentRequest, engine, settings) {
-                const thoughtSetting = BACKGROUND_ENGINE_THOUGHTS[engine];
+                const thoughtSetting = getThoughtsSettingKey(engine);
                 currentRequest.engine = engine;
                 currentRequest.model = app.getEffectiveModel(settings, engine);
                 currentRequest.isThinking = thoughtSetting
@@ -142,6 +146,7 @@
                 const settings = state.runtimeSettings || {};
                 const { streamEl, thoughtEl } = currentRequest;
                 currentRequest.buffer = "";
+                currentRequest.thoughtBuffer = "";
                 thoughtEl.textContent = "";
                 applyActiveEngineSwitch(
                     currentRequest,
@@ -229,22 +234,23 @@
                     if (!state.activeRequest || !message) return;
                     if (message.requestId !== state.activeRequest.requestId) return;
 
-                    const { streamEl, thoughtEl, thoughtDetails, isThinking } =
+                    const { streamEl, thoughtEl, thoughtDetails } =
                         state.activeRequest;
 
                     if (message.type === "TRANSLATE_CHUNK") {
                         const chunk = message.content || "";
                         state.activeRequest.buffer += chunk;
                         touchActiveRequestTimeout(state.activeRequest);
-                        scheduleRender(state, streamEl, thoughtEl, thoughtDetails, isThinking);
+                        scheduleRender();
                         return;
                     }
 
                     if (message.type === "TRANSLATE_THOUGHT") {
-                        thoughtEl.textContent =
-                            (thoughtEl.textContent || "") + (message.content || "");
-                        if (isThinking && thoughtDetails)
-                            thoughtDetails.style.display = "block";
+                        const currentRequest = state.activeRequest;
+                        currentRequest.thoughtBuffer =
+                            (currentRequest.thoughtBuffer || "") +
+                            (message.content || "");
+                        scheduleRender();
                         return;
                     }
 
@@ -276,36 +282,35 @@
                     }
 
                     if (message.type === "TRANSLATE_DONE") {
-                        clearActiveRequestTimeout(state.activeRequest);
-                        // 取消可能还在排队的 RAF，从 buffer 做最终同步渲染，
-                        // 避免 DONE 先于 RAF 执行导致最后几个 chunk 丢失
+                        const currentRequest = state.activeRequest;
+                        clearActiveRequestTimeout(currentRequest);
                         if (state.renderRafId) {
                             cancelAnimationFrame(state.renderRafId);
                             state.renderRafId = null;
                         }
-                        renderContentAndThought(
-                            state.activeRequest.buffer,
-                            null,
-                            streamEl,
-                            thoughtEl,
-                            thoughtDetails,
-                            isThinking,
+                        const translatedText = translationTextFromBuffer(
+                            currentRequest.buffer,
                         );
-                        streamEl.innerText = app.trimEdgeBlankLines(streamEl.innerText || "");
-                        const translatedText = app.getCleanTranslatedText();
+                        const stuck = isStreamNearBottom(streamEl);
+                        const previousScrollTop = streamEl?.scrollTop || 0;
+                        streamEl.innerText = translatedText;
+                        restoreStreamScroll(streamEl, stuck, previousScrollTop);
+                        flushThoughtDisplay(currentRequest);
+                        const sourceText =
+                            currentRequest.text || state.lastSelection || "";
                         state.lastTranslateContext = {
-                            text: state.activeRequest?.text || state.lastSelection || "",
+                            text: sourceText,
                             translatedText,
-                            from: state.activeRequest?.from || "",
-                            to: state.activeRequest?.to || "",
+                            from: currentRequest.from || "",
+                            to: currentRequest.to || "",
                         };
                         app.saveTranslationHistory({
-                            sourceText: state.activeRequest?.text || state.lastSelection || "",
+                            sourceText,
                             translatedText,
-                            sourceLang: state.activeRequest?.from || "",
-                            targetLang: state.activeRequest?.to || "",
-                            engine: state.activeRequest?.engine || "",
-                            model: state.activeRequest?.model || "",
+                            sourceLang: currentRequest.from || "",
+                            targetLang: currentRequest.to || "",
+                            engine: currentRequest.engine || "",
+                            model: currentRequest.model || "",
                         });
                         app.setBubbleState(streamEl?.closest(".jyt-bubble"), "done");
                         state.activeRequest = null;
@@ -349,44 +354,117 @@
                 const currentRequest = state.activeRequest;
                 state.activeRequest = null;
                 clearActiveRequestTimeout(currentRequest);
+                postTranslateCancel(currentRequest);
+            }
 
-                if (!currentRequest || !state.translatePort) {
+            function isStreamNearBottom(streamEl) {
+                if (!streamEl) return false;
+                return (
+                    streamEl.scrollHeight -
+                        streamEl.scrollTop -
+                        streamEl.clientHeight <=
+                    24
+                );
+            }
+
+            function restoreStreamScroll(streamEl, stuck, previousScrollTop) {
+                if (!streamEl) return;
+                if (stuck) {
+                    streamEl.scrollTop = streamEl.scrollHeight;
                     return;
                 }
+                streamEl.scrollTop = previousScrollTop;
+            }
 
-                try {
-                    state.translatePort.postMessage({
-                        type: app.MESSAGE_TYPES.TRANSLATE_CANCEL || "TRANSLATE_CANCEL",
-                        requestId: currentRequest.requestId,
-                    });
-                } catch (err) {
-                    // Ignore port send failures when runtime is unavailable.
-                } finally {
-                    app.drainRuntimeLastError();
+            function translationTextFromBuffer(buffer) {
+                const clean = String(buffer || "")
+                    .replace(/<think>[\s\S]*?<\/think>/g, "")
+                    .replace(/<think>[\s\S]*/g, "");
+                return app.trimEdgeBlankLines(clean);
+            }
+
+            function extractEmbeddedThought(buffer) {
+                const raw = String(buffer || "");
+                const closed = raw.match(/<think>([\s\S]*?)<\/think>/);
+                if (closed) {
+                    return closed[1].trim();
+                }
+                const open = raw.indexOf("<think>");
+                if (open !== -1) {
+                    return raw.slice(open + 7);
+                }
+                return "";
+            }
+
+            function flushThoughtDisplay(request) {
+                if (!request?.isThinking || !request.thoughtEl) return;
+                const fromMessages = request.thoughtBuffer || "";
+                const thought = fromMessages || extractEmbeddedThought(request.buffer);
+                if (!thought) return;
+                request.thoughtEl.textContent = thought;
+                if (request.thoughtDetails) {
+                    request.thoughtDetails.style.display = "block";
                 }
             }
 
-            function scheduleRender(state, streamEl, thoughtEl, thoughtDetails, isThinking) {
-                if (state.renderRafId) {
-                    cancelAnimationFrame(state.renderRafId);
+            function applyExternalThought(thoughtEl, thoughtDetails, isThinking) {
+                const text = state.activeRequest?.thoughtBuffer || "";
+                if (!text || !isThinking || !thoughtEl) return;
+                thoughtEl.textContent = text;
+                if (thoughtDetails) {
+                    thoughtDetails.style.display = "block";
                 }
+            }
+
+            function scheduleRender() {
+                if (state.renderRafId) return;
                 state.renderRafId = requestAnimationFrame(() => {
                     state.renderRafId = null;
-                    if (!state.activeRequest) return;
-                    const buffer = state.activeRequest.buffer;
+                    const currentRequest = state.activeRequest;
+                    if (!currentRequest) return;
+                    const {
+                        streamEl,
+                        thoughtEl,
+                        thoughtDetails,
+                        isThinking,
+                    } = currentRequest;
+                    const stuck = isStreamNearBottom(streamEl);
+                    const previousScrollTop = streamEl?.scrollTop || 0;
                     renderContentAndThought(
-                        buffer,
+                        currentRequest.buffer,
                         null,
                         streamEl,
                         thoughtEl,
                         thoughtDetails,
                         isThinking,
                     );
-                    streamEl.scrollTop = streamEl.scrollHeight;
+                    restoreStreamScroll(streamEl, stuck, previousScrollTop);
                 });
             }
 
             function renderContentAndThought(
+                buffer,
+                newChunk,
+                streamEl,
+                thoughtEl,
+                thoughtDetails,
+                isThinking,
+            ) {
+                try {
+                    renderContentAndThoughtBody(
+                        buffer,
+                        newChunk,
+                        streamEl,
+                        thoughtEl,
+                        thoughtDetails,
+                        isThinking,
+                    );
+                } finally {
+                    applyExternalThought(thoughtEl, thoughtDetails, isThinking);
+                }
+            }
+
+            function renderContentAndThoughtBody(
                 buffer,
                 newChunk,
                 streamEl,
@@ -485,6 +563,7 @@
                     thoughtDetails,
                     isThinking,
                     buffer: "",
+                    thoughtBuffer: "",
                     text,
                     from: preferredFrom,
                     to: preferredTo,
@@ -502,7 +581,7 @@
                     to: preferredTo,
                 };
 
-                const sent = sendTranslateStart({
+                const payload = {
                     type: app.MESSAGE_TYPES.TRANSLATE_START || "TRANSLATE_START",
                     requestId,
                     text,
@@ -513,7 +592,11 @@
                         extraOptions.context !== undefined
                             ? extraOptions.context
                             : state.lastSelectionContext || null,
-                });
+                };
+                if (extraOptions.bypassCache) {
+                    payload.bypassCache = true;
+                }
+                const sent = sendTranslateStart(payload);
 
                 if (!sent) {
                     clearActiveRequestTimeout(state.activeRequest);

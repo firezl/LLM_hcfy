@@ -1,6 +1,8 @@
 import { DEEPLX_TRANSLATE_ENDPOINT } from "../constants.js";
+import { fetchWithTimeout, reportTranslateFailure } from "../fetch-utils.js";
+import { t, tDetail } from "../i18n.js";
 import { resolveLanguagePair } from "../language.js";
-import { postTranslateError, postTranslateTextResult } from "../port-utils.js";
+import { postTranslateTextResult } from "../port-utils.js";
 import {
     buildDeepLAuthHeaders,
     buildDeepLRequestBody,
@@ -13,7 +15,7 @@ function resolveDeepLXEndpoint(settings) {
     return configured || DEEPLX_TRANSLATE_ENDPOINT;
 }
 
-async function requestDeepLXTranslate(endpoint, apiKey, from, to, text) {
+async function requestDeepLXTranslate(endpoint, apiKey, from, to, text, requestId, state) {
     const official = isOfficialDeepLEndpoint(endpoint);
     const body = buildDeepLRequestBody({
         text,
@@ -27,11 +29,15 @@ async function requestDeepLXTranslate(endpoint, apiKey, from, to, text) {
         ...buildDeepLAuthHeaders(apiKey, { official }),
     };
 
-    const res = await fetch(endpoint, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(body),
-    });
+    const res = await fetchWithTimeout(
+        endpoint,
+        {
+            method: "POST",
+            headers,
+            body: JSON.stringify(body),
+        },
+        { requestId, state },
+    );
 
     if (!res.ok) {
         let detail = "";
@@ -46,14 +52,17 @@ async function requestDeepLXTranslate(endpoint, apiKey, from, to, text) {
             detail = await res.text();
         }
         throw new Error(
-            `DeepLX 翻译请求失败: HTTP ${res.status}${detail ? ` - ${detail}` : ""}`,
+            tDetail("translate.deeplx.httpFailed", {
+                status: res.status,
+                detail: detail ? ` - ${detail}` : "",
+            }),
         );
     }
 
     const data = await res.json();
     const translated = extractDeepLTranslation(data);
     if (!translated) {
-        throw new Error("DeepLX 翻译返回为空");
+        throw new Error(t("translate.deeplx.empty"));
     }
 
     return translated;
@@ -71,14 +80,11 @@ export async function streamDeepLXTranslate(request, port, state) {
             from,
             to,
             text,
+            requestId,
+            state,
         );
         postTranslateTextResult(port, state, requestId, translated);
     } catch (err) {
-        postTranslateError(
-            port,
-            state,
-            requestId,
-            err && err.message ? err.message : String(err),
-        );
+        reportTranslateFailure(port, state, requestId, err);
     }
 }

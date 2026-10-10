@@ -1,6 +1,8 @@
 import { DEEPL_TRANSLATE_ENDPOINT_FREE } from "../constants.js";
+import { fetchWithTimeout, reportTranslateFailure } from "../fetch-utils.js";
+import { t, tDetail } from "../i18n.js";
 import { resolveLanguagePair } from "../language.js";
-import { postTranslateError, postTranslateTextResult } from "../port-utils.js";
+import { postTranslateTextResult } from "../port-utils.js";
 import {
     buildDeepLAuthHeaders,
     buildDeepLRequestBody,
@@ -15,10 +17,10 @@ function resolveDeepLEndpoint(settings) {
     return DEEPL_TRANSLATE_ENDPOINT_FREE;
 }
 
-async function requestDeepLTranslate(endpoint, apiKey, from, to, text) {
+async function requestDeepLTranslate(endpoint, apiKey, from, to, text, requestId, state) {
     const key = String(apiKey || "").trim();
     if (!key) {
-        throw new Error("请先在设置中填写 DeepL API Key");
+        throw new Error(t("translate.deepl.missingKey"));
     }
 
     const body = buildDeepLRequestBody({
@@ -28,14 +30,18 @@ async function requestDeepLTranslate(endpoint, apiKey, from, to, text) {
         official: true,
     });
 
-    const res = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            ...buildDeepLAuthHeaders(key, { official: true }),
+    const res = await fetchWithTimeout(
+        endpoint,
+        {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                ...buildDeepLAuthHeaders(key, { official: true }),
+            },
+            body: JSON.stringify(body),
         },
-        body: JSON.stringify(body),
-    });
+        { requestId, state },
+    );
 
     if (!res.ok) {
         let detail = "";
@@ -49,14 +55,17 @@ async function requestDeepLTranslate(endpoint, apiKey, from, to, text) {
             detail = await res.text();
         }
         throw new Error(
-            `DeepL 翻译请求失败: HTTP ${res.status}${detail ? ` - ${detail}` : ""}`,
+            tDetail("translate.deepl.httpFailed", {
+                status: res.status,
+                detail: detail ? ` - ${detail}` : "",
+            }),
         );
     }
 
     const data = await res.json();
     const translated = extractDeepLTranslation(data);
     if (!translated) {
-        throw new Error("DeepL 翻译返回为空");
+        throw new Error(t("translate.deepl.empty"));
     }
 
     return translated;
@@ -74,14 +83,11 @@ export async function streamDeepLTranslate(request, port, state) {
             from,
             to,
             text,
+            requestId,
+            state,
         );
         postTranslateTextResult(port, state, requestId, translated);
     } catch (err) {
-        postTranslateError(
-            port,
-            state,
-            requestId,
-            err && err.message ? err.message : String(err),
-        );
+        reportTranslateFailure(port, state, requestId, err);
     }
 }

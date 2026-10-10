@@ -1,12 +1,16 @@
 import { PDF_VIEWER_PATH } from "./constants.js";
 import { extensionApi } from "./extension-api.js";
 import { isSsrfRiskyHttpUrl } from "./ssrf-utils.js";
+import { t } from "./i18n.js";
 import { getSettings } from "./settings-cache.js";
 
 const runtimeBaseUrl = extensionApi.runtime.getURL("");
 const isFirefoxExtensionRuntime = runtimeBaseUrl.startsWith("moz-extension://");
 const redirectingTabs = new Map();
 const pendingPdfPrompts = new Map();
+const KEEP_IN_BROWSER_TTL_MS = 15 * 1000;
+const keepInBrowserUrls = new Map();
+const keepInBrowserTabs = new Map();
 
 const PDF_SIGNATURE = [0x25, 0x50, 0x44, 0x46, 0x2d]; // %PDF-
 
@@ -120,14 +124,52 @@ async function safeFetch(url, init) {
     }
 }
 
+// 需要登录或人机验证的站点（如 OpenReview）没有 cookie 时只返回 403 页面；
+// 但对返回 `Access-Control-Allow-Origin: *` 的站点，未获主机权限时带凭据会被 CORS 拒绝，因此失败后再不带凭据重试。
+async function fetchPreferringCookies(url, init) {
+    const withCookies = await safeFetch(url, { ...init, credentials: "include" });
+    if (withCookies) {
+        return withCookies;
+    }
+    return safeFetch(url, init);
+}
+
+// 许多服务器会忽略 Range 头并返回完整文件，只读取开头若干字节后取消剩余下载。
+async function readLeadingBytes(response, maxBytes) {
+    const reader = response.body?.getReader?.();
+    if (!reader) {
+        return new Uint8Array(await response.arrayBuffer()).slice(0, maxBytes);
+    }
+
+    const leading = new Uint8Array(maxBytes);
+    let filled = 0;
+    try {
+        while (filled < maxBytes) {
+            const { done, value } = await reader.read();
+            if (done || !value) {
+                break;
+            }
+            const take = Math.min(value.length, maxBytes - filled);
+            leading.set(value.subarray(0, take), filled);
+            filled += take;
+        }
+    } catch (err) {
+        // keep whatever was read before the stream failed
+    } finally {
+        reader.cancel().catch(() => {});
+    }
+    return leading.subarray(0, filled);
+}
+
 async function detectPdfByResponse(url) {
-    const headResponse = await safeFetch(url, {
+    const headResponse = await fetchPreferringCookies(url, {
         method: "HEAD",
         redirect: "follow",
         cache: "no-store",
     });
 
-    if (headResponse) {
+    // 非 2xx 的 HEAD 不可信：OpenReview 对 HEAD 一律返回 400 text/html，GET 才返回 PDF。
+    if (headResponse?.ok) {
         const contentType = headResponse.headers?.get("content-type") || "";
         const contentTypeVerdict = isLikelyPdfContentType(contentType);
         if (contentTypeVerdict === true) {
@@ -146,7 +188,7 @@ async function detectPdfByResponse(url) {
         }
     }
 
-    const getResponse = await safeFetch(url, {
+    const getResponse = await fetchPreferringCookies(url, {
         method: "GET",
         headers: {
             Range: "bytes=0-7",
@@ -164,7 +206,17 @@ async function detectPdfByResponse(url) {
     }
 
     const contentType = getResponse.headers?.get("content-type") || "";
-    const typedArray = new Uint8Array(await getResponse.arrayBuffer());
+    // 401/403 等错误页（需要登录、人机验证）不能说明目标不是 PDF，只能判定为“未知”。
+    if (!getResponse.ok) {
+        getResponse.body?.cancel?.().catch(() => {});
+        return {
+            isPdf: null,
+            reason: `http-${getResponse.status}`,
+            contentType,
+        };
+    }
+
+    const typedArray = await readLeadingBytes(getResponse, PDF_SIGNATURE.length);
     if (hasPdfSignature(typedArray)) {
         return {
             isPdf: true,
@@ -286,6 +338,69 @@ async function safeSendTabMessage(tabId, payload) {
     }
 }
 
+function isHttpUrl(url) {
+    try {
+        const { protocol } = new URL(url);
+        return protocol === "http:" || protocol === "https:";
+    } catch (err) {
+        return false;
+    }
+}
+
+function pruneExpired(map, now) {
+    for (const [key, expiresAt] of map) {
+        if (expiresAt <= now) {
+            map.delete(key);
+        }
+    }
+}
+
+function rememberKeepInBrowser({ tabId, url }) {
+    const now = Date.now();
+    pruneExpired(keepInBrowserUrls, now);
+    pruneExpired(keepInBrowserTabs, now);
+    if (url) {
+        keepInBrowserUrls.set(url, now + KEEP_IN_BROWSER_TTL_MS);
+    }
+    if (Number.isInteger(tabId)) {
+        keepInBrowserTabs.set(tabId, now + KEEP_IN_BROWSER_TTL_MS);
+    }
+}
+
+// 用户刚选择“保持浏览器打开”后，该次导航（含服务器重定向后的最终 URL）不应再次弹出提示。
+function shouldSkipPromptForKeptNavigation(tabId, url) {
+    const now = Date.now();
+    const urlExpiresAt = keepInBrowserUrls.get(url);
+    const tabExpiresAt = keepInBrowserTabs.get(tabId);
+    const kept =
+        (urlExpiresAt != null && urlExpiresAt > now) ||
+        (tabExpiresAt != null && tabExpiresAt > now);
+    if (!kept) {
+        return false;
+    }
+    keepInBrowserTabs.set(tabId, now + KEEP_IN_BROWSER_TTL_MS);
+    return true;
+}
+
+async function openUrlForSender(sender, url, newTab) {
+    const tab = sender?.tab;
+    if (!newTab) {
+        await safeUpdateTabUrl(tab?.id, url);
+        return;
+    }
+    const createProperties = { url, active: true };
+    if (Number.isInteger(tab?.index)) {
+        createProperties.index = tab.index + 1;
+    }
+    if (Number.isInteger(tab?.id)) {
+        createProperties.openerTabId = tab.id;
+    }
+    if (Number.isInteger(tab?.windowId)) {
+        createProperties.windowId = tab.windowId;
+    }
+    await extensionApi.tabs.create(createProperties);
+}
+
 function buildPromptId() {
     return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -375,6 +490,11 @@ async function handleTabUpdatedAsync(tabId, changeInfo) {
         return;
     }
 
+    if (shouldSkipPromptForKeptNavigation(tabId, nextUrl)) {
+        pendingPdfPrompts.delete(tabId);
+        return;
+    }
+
     const pdfSourceUrl = resolvePdfSourceUrl(nextUrl);
     if (!pdfSourceUrl) {
         if (!isLikelyPdfRouteUrl(nextUrl)) {
@@ -441,6 +561,7 @@ async function handleTabUpdatedAsync(tabId, changeInfo) {
 export function handleTabRemoved(tabId) {
     redirectingTabs.delete(tabId);
     pendingPdfPrompts.delete(tabId);
+    keepInBrowserTabs.delete(tabId);
 }
 
 export async function handlePdfRuntimeMessage(message, sender) {
@@ -472,12 +593,12 @@ export async function handlePdfRuntimeMessage(message, sender) {
     if (type === "PDF_CHECK_URL") {
         const pdfUrl = String(message?.pdfUrl || "");
         if (!pdfUrl) {
-            return { ok: false, error: "缺少 pdfUrl" };
+            return { ok: false, error: t("translate.pdf.missingUrl") };
         }
         // 拒绝网页触发的内网/本机/link-local 探测，防止后台被利用做 SSRF。
         // file:// 与公网地址不受此限制；用户自行导航触发的 handleTabUpdated 路径不经过此处。
         if (isSsrfRiskyHttpUrl(pdfUrl)) {
-            return { ok: false, error: "该地址不可用于 PDF 检测" };
+            return { ok: false, error: t("translate.pdf.unsafeUrl") };
         }
         const verdict = await detectPdfByResponse(pdfUrl);
         return {
@@ -493,18 +614,38 @@ export async function handlePdfRuntimeMessage(message, sender) {
         const pdfUrl = String(message?.pdfUrl || "");
         const tabId = sender?.tab?.id;
         if (!pdfUrl || !Number.isInteger(tabId)) {
-            return { ok: false, error: "缺少参数" };
+            return { ok: false, error: t("translate.pdf.missingParams") };
         }
         if (isFirefoxExtensionRuntime && isFileProtocolUrl(pdfUrl)) {
             return {
                 ok: false,
-                error: "Firefox 不支持扩展直接打开 file:// PDF",
+                error: t("translate.pdf.firefoxFile"),
             };
         }
 
         const targetUrl = toInternalPdfViewerUrl(pdfUrl);
+        if (message?.newTab === true) {
+            await openUrlForSender(sender, targetUrl, true);
+            return { ok: true };
+        }
         redirectingTabs.set(tabId, targetUrl);
         await safeUpdateTabUrl(tabId, targetUrl);
+        return { ok: true };
+    }
+
+    if (type === "PDF_OPEN_IN_BROWSER") {
+        const pdfUrl = String(message?.pdfUrl || "");
+        const tabId = sender?.tab?.id;
+        if (!pdfUrl || !Number.isInteger(tabId)) {
+            return { ok: false, error: t("translate.pdf.missingParams") };
+        }
+        if (!isHttpUrl(pdfUrl)) {
+            return { ok: false, error: t("translate.pdf.unsupportedMessage") };
+        }
+
+        const newTab = message?.newTab === true;
+        rememberKeepInBrowser({ tabId: newTab ? null : tabId, url: pdfUrl });
+        await openUrlForSender(sender, pdfUrl, newTab);
         return { ok: true };
     }
 
@@ -515,28 +656,29 @@ export async function handlePdfRuntimeMessage(message, sender) {
         const pdfUrlFromMessage = String(message?.pdfUrl || "");
 
         if (!Number.isInteger(tabId) || !promptId) {
-            return { ok: false, error: "缺少 promptId 或 tabId" };
+            return { ok: false, error: t("translate.pdf.missingPrompt") };
         }
 
         const pending = pendingPdfPrompts.get(tabId);
         if (!pending || pending.promptId !== promptId) {
-            return { ok: false, error: "提示已失效" };
+            return { ok: false, error: t("translate.pdf.promptExpired") };
         }
 
         const pdfUrl = pending.pdfUrl || pdfUrlFromMessage;
         if (action !== "open") {
             pendingPdfPrompts.delete(tabId);
+            rememberKeepInBrowser({ tabId, url: pdfUrl });
             return { ok: true };
         }
 
         if (pending.verdict === false) {
-            return { ok: false, error: "该链接校验结果不是 PDF" };
+            return { ok: false, error: t("translate.pdf.notPdf") };
         }
 
         if (isFirefoxExtensionRuntime && isFileProtocolUrl(pdfUrl)) {
             return {
                 ok: false,
-                error: "Firefox 不支持扩展直接打开 file:// PDF",
+                error: t("translate.pdf.firefoxFile"),
             };
         }
 
@@ -546,5 +688,5 @@ export async function handlePdfRuntimeMessage(message, sender) {
         return { ok: true };
     }
 
-    return { ok: false, error: "未支持的 PDF 消息类型" };
+    return { ok: false, error: t("translate.pdf.unsupportedMessage") };
 }

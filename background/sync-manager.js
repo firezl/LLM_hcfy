@@ -8,6 +8,7 @@ import {
     SYNC_GLOSSARY_FILE,
 } from "./constants.js";
 import { extensionApi } from "./extension-api.js";
+import { t } from "./i18n.js";
 import { clearTerms, exportTerms, importTerms, listTerms } from "./term.js";
 import {
     getRemoteJsonFile,
@@ -54,6 +55,24 @@ function normalizeTermText(value) {
 
 function termKey(term) {
     return `${normalizeLang(term?.sourceLang)}::${normalizeLang(term?.targetLang)}::${normalizeTermText(term?.sourceTerm).toLowerCase()}`;
+}
+
+function normalizeTriggerMode(value, fallback) {
+    const mode = String(value == null ? fallback : value).trim();
+    return mode === "button" || mode === "auto" || mode === "alt" ? mode : "button";
+}
+
+function normalizeTranslateCacheEnabled(value, fallback) {
+    if (typeof value === "boolean") {
+        return value;
+    }
+    if (value === 1 || value === "1" || value === "true" || value === "on") {
+        return true;
+    }
+    if (value === 0 || value === "0" || value === "false" || value === "off") {
+        return false;
+    }
+    return fallback === true;
 }
 
 function normalizeConfigPayload(raw) {
@@ -119,6 +138,16 @@ function normalizeConfigPayload(raw) {
         if (key === "config_updated_at") {
             const ts = Number(value);
             next[key] = Number.isFinite(ts) && ts > 0 ? Math.floor(ts) : 0;
+            continue;
+        }
+
+        if (key === "trigger_mode") {
+            next[key] = normalizeTriggerMode(value, fallback);
+            continue;
+        }
+
+        if (key === "translate_cache_enabled") {
+            next[key] = normalizeTranslateCacheEnabled(value, fallback);
             continue;
         }
 
@@ -433,7 +462,7 @@ export async function handleSyncMessage(message) {
             message?.payload || message?.config,
         );
         if (!incoming) {
-            throw new Error("配置导入数据格式不正确");
+            throw new Error(t("translate.sync.importFormatInvalid"));
         }
         const applied = await applyConfigFile(incoming);
         return {
@@ -467,7 +496,7 @@ export async function handleSyncMessage(message) {
     if (type === "SYNC_DOWNLOAD") {
         const remote = await fetchRemoteSnapshot(message?.webdav || {});
         if (!remote.config && !remote.glossary) {
-            throw new Error("远端未找到配置或术语文件");
+            throw new Error(t("translate.sync.remoteMissing"));
         }
 
         if (remote.config) {
@@ -514,7 +543,7 @@ export async function handleSyncMessage(message) {
         if (policy === SYNC_CONFLICT_POLICY_ASK && hasConflict) {
             return {
                 ok: false,
-                error: "检测到本地与远端存在冲突，请选择处理策略后重试",
+                error: t("translate.sync.conflict"),
                 errorCode: SYNC_ERROR_CONFLICT,
                 conflict: {
                     configFields: configConflicts,
@@ -566,7 +595,7 @@ export async function handleSyncMessage(message) {
         };
     }
 
-    return { ok: false, error: "不支持的同步消息类型" };
+    return { ok: false, error: t("translate.sync.unsupportedMessage") };
 }
 
 export async function getConfigImportExportPayload() {

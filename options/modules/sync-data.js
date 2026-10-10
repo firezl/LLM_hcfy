@@ -38,6 +38,26 @@
             return Math.min(95, Math.max(5, Math.round(n)));
         }
 
+        function normalizeTriggerMode(value, fallback) {
+            const mode = String(value == null ? fallback : value).trim();
+            return mode === "button" || mode === "auto" || mode === "alt"
+                ? mode
+                : "button";
+        }
+
+        function normalizeTranslateCacheEnabled(value, fallback) {
+            if (typeof value === "boolean") {
+                return value;
+            }
+            if (value === 1 || value === "1" || value === "true" || value === "on") {
+                return true;
+            }
+            if (value === 0 || value === "0" || value === "false" || value === "off") {
+                return false;
+            }
+            return fallback === true;
+        }
+
         function sanitizeConfigPayload(rawPayload) {
             const input =
                 rawPayload && typeof rawPayload === "object" ? rawPayload : {};
@@ -99,6 +119,16 @@
                 if (key === "config_updated_at") {
                     const ts = Number(value);
                     next[key] = Number.isFinite(ts) && ts > 0 ? Math.floor(ts) : 0;
+                    continue;
+                }
+
+                if (key === "trigger_mode") {
+                    next[key] = normalizeTriggerMode(value, fallback);
+                    continue;
+                }
+
+                if (key === "translate_cache_enabled") {
+                    next[key] = normalizeTranslateCacheEnabled(value, fallback);
                     continue;
                 }
 

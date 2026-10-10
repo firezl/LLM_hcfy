@@ -3,6 +3,7 @@ import {
     buildOpenAIStyleMessages,
     resolveLanguagePair,
 } from "../language.js";
+import { t, tDetail } from "../i18n.js";
 import { postTranslateError } from "../port-utils.js";
 import { mergeCustomHeaders } from "./custom-headers.js";
 import { mergeCustomPayload } from "./custom-payload.js";
@@ -60,7 +61,7 @@ export async function streamOpenAITranslate(request, port, state) {
             port,
             state,
             requestId,
-            "请在设置中配置 OpenAI API 地址与 Key",
+            t("translate.engine.openai.missingKey"),
         );
         return;
     }
@@ -79,7 +80,7 @@ export async function streamOpenAITranslate(request, port, state) {
     });
 
     if (!model) {
-        postTranslateError(port, state, requestId, "请先配置 OpenAI 模型");
+        postTranslateError(port, state, requestId, t("translate.engine.openai.missingModel"));
         return;
     }
 
@@ -144,7 +145,11 @@ export async function streamOpenAITranslate(request, port, state) {
                 if (maybeUnsupportedThinking) {
                     res = await sendBody(fallbackBodyWithCustomPayload);
                 } else {
-                    return { error: "OpenAI 请求失败: " + textErr };
+                    return {
+                        error: tDetail("translate.engine.openai.requestFailed", {
+                            error: textErr,
+                        }),
+                    };
                 }
             }
 

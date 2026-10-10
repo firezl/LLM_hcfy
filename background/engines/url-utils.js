@@ -1,3 +1,5 @@
+import { t } from "../i18n.js";
+
 const DEFAULT_OPENAI_CHAT_PATH = "/v1/chat/completions";
 const DEFAULT_OLLAMA_CHAT_PATH = "/api/chat";
 
@@ -34,14 +36,19 @@ function parseHttpUrl(
     } catch (err) {
         return {
             ok: false,
-            error: `${invalidMsgPrefix}地址无效，请填写正确 URL（例如 ${fallbackUrl}）`,
+            error: t("translate.url.invalid", {
+                prefix: invalidMsgPrefix,
+                example: fallbackUrl,
+            }),
         };
     }
 
     if (!/^https?:$/i.test(parsed.protocol)) {
         return {
             ok: false,
-            error: `${invalidMsgPrefix}地址仅支持 http/https 协议`,
+            error: t("translate.url.protocol", {
+                prefix: invalidMsgPrefix,
+            }),
         };
     }
 

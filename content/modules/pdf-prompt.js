@@ -120,8 +120,9 @@
                 updatePdfPromptStatus(t("pdfPrompt.opening"));
 
                 try {
+                    let result;
                     if (state.pdfPromptState.source === "background") {
-                        await app.sendTermMessage(
+                        result = await app.sendTermMessage(
                             app.MESSAGE_TYPES.PDF_PROMPT_DECISION ||
                                 "PDF_PROMPT_DECISION",
                             {
@@ -131,13 +132,17 @@
                             },
                         );
                     } else {
-                        await app.sendTermMessage(
+                        result = await app.sendTermMessage(
                             app.MESSAGE_TYPES.PDF_OPEN_IN_VIEWER ||
                                 "PDF_OPEN_IN_VIEWER",
                             {
                                 pdfUrl: state.pdfPromptState.pdfUrl,
+                                newTab: state.pdfPromptState.openInNewTab,
                             },
                         );
+                    }
+                    if (result && result.ok === false) {
+                        throw new Error(result.error || "");
                     }
                     hidePdfPrompt();
                 } catch (err) {
@@ -270,9 +275,32 @@
                 } catch (err) {
                     // ignore decision failures when user chooses skip
                 }
+                if (window.location.href !== currentState.pdfUrl) {
+                    window.location.href = currentState.pdfUrl;
+                }
+                return;
             }
 
-            if (window.location.href !== currentState.pdfUrl) {
+            // 交给后台打开：后台据此跳过该次导航的重复提示，且新标签页不受弹窗拦截影响（倒计时结束时已无用户手势）。
+            try {
+                const result = await app.sendTermMessage(
+                    app.MESSAGE_TYPES.PDF_OPEN_IN_BROWSER ||
+                        "PDF_OPEN_IN_BROWSER",
+                    {
+                        pdfUrl: currentState.pdfUrl,
+                        newTab: currentState.openInNewTab === true,
+                    },
+                );
+                if (result?.ok) {
+                    return;
+                }
+            } catch (err) {
+                // fall back to navigating from the page
+            }
+
+            if (currentState.openInNewTab) {
+                window.open(currentState.pdfUrl, "_blank", "noopener");
+            } else if (window.location.href !== currentState.pdfUrl) {
                 window.location.href = currentState.pdfUrl;
             }
         }
@@ -285,6 +313,7 @@
                           source: state.pdfPromptState.source,
                           promptId: state.pdfPromptState.promptId,
                           pdfUrl: state.pdfPromptState.pdfUrl,
+                          openInNewTab: state.pdfPromptState.openInNewTab,
                       }
                     : null;
 
@@ -337,6 +366,7 @@
                 promptId: options?.promptId || "",
                 pdfUrl: options?.pdfUrl || "",
                 isPdf: options?.isPdf ?? null,
+                openInNewTab: options?.openInNewTab === true,
             };
 
             ensurePdfPrompt();

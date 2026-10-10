@@ -7,14 +7,13 @@ const DEFAULT_SILICONFLOW_MODEL = "deepseek-ai/DeepSeek-V3";
 
 export const streamSiliconFlowTranslate = createOpenAICompatTranslate({
     engine: "siliconflow",
-    errorPrefix: "硅基流动",
+    errorPrefixKey: "translate.engineName.siliconflow",
     apiUrlKey: "siliconflow_api_url",
     apiKeyKey: "siliconflow_api_key",
     modelKey: "siliconflow_model",
     defaultUrl: DEFAULT_SILICONFLOW_API_URL,
     defaultModel: DEFAULT_SILICONFLOW_MODEL,
-    missingKeyError:
-        "请在设置中配置硅基流动 API Key（在 cloud.siliconflow.cn 获取）",
+    missingKeyErrorKey: "translate.engine.siliconflow.missingKey",
     thinkingModelTypeKey: "siliconflow_thinking_model_type",
     buildBody: ({ model, messages, showThoughts, thinkingModelType }) => {
         const body = {

@@ -30,4 +30,30 @@ function resolveExtensionApi() {
     throw new Error("Extension API unavailable");
 }
 
-export const extensionApi = resolveExtensionApi();
+let resolvedExtensionApi;
+
+function getExtensionApi() {
+    if (!resolvedExtensionApi) {
+        resolvedExtensionApi = resolveExtensionApi();
+    }
+    return resolvedExtensionApi;
+}
+
+// Resolve on first use so unit tests can import background modules
+// before a browser API exists. Service worker startup still touches it immediately.
+export const extensionApi = new Proxy(
+    {},
+    {
+        get(_target, prop) {
+            const api = getExtensionApi();
+            const value = api[prop];
+            if (typeof value === "function") {
+                return value.bind(api);
+            }
+            return value;
+        },
+        has(_target, prop) {
+            return prop in getExtensionApi();
+        },
+    },
+);

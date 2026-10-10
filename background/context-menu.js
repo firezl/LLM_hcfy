@@ -158,11 +158,7 @@ async function handleContextMenuClick(info, tab) {
         text,
     };
 
-    const frameId = info.frameId ?? 0;
-    const sent = await sendTranslateMessage(tab.id, payload, frameId);
-    if (!sent && frameId !== 0) {
-        await sendTranslateMessage(tab.id, payload);
-    }
+    await sendTranslateMessage(tab.id, payload, 0);
 }
 
 export function initContextMenu() {

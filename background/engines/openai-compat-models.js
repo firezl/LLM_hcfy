@@ -1,3 +1,4 @@
+import { t, tDetail } from "../i18n.js";
 import { safePostMessage } from "../port-utils.js";
 import { mergeCustomHeaders } from "./custom-headers.js";
 import { normalizeOpenAICompatEndpoint } from "./url-utils.js";
@@ -56,7 +57,7 @@ export async function handleOpenAICompatGetModels(message, port, state) {
         safePostMessage(port, state, {
             type: "OPENAI_COMPAT_OP_ERROR",
             requestId,
-            error: "请先填写 API 地址",
+            error: t("translate.models.apiUrlRequired"),
         });
         return;
     }
@@ -106,9 +107,9 @@ export async function handleOpenAICompatGetModels(message, port, state) {
             safePostMessage(port, state, {
                 type: "OPENAI_COMPAT_OP_ERROR",
                 requestId,
-                error:
-                    "获取 OpenAI 兼容模型列表失败: " +
-                    (textErr || `${res.status} ${res.statusText}`),
+                error: tDetail("translate.models.openaiCompatFailed", {
+                    error: textErr || `${res.status} ${res.statusText}`,
+                }),
             });
             return;
         }

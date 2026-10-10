@@ -38,6 +38,7 @@ import {
  * @property {boolean} [usesSharedOpenAiSection]
  * @property {OpenAICompatUiConfig} [openaiCompat]
  * @property {'content'} [runtime]
+ * @property {string} [thoughtsKey] settings key for LLM reasoning visibility
  */
 
 /** @type {EngineDefinition[]} */
@@ -104,8 +105,21 @@ const RAW_ENGINE_DEFINITIONS = [
     { id: "ollama", kind: "llm" },
 ];
 
+function withThoughtsKey(def) {
+    if (def.kind !== "llm") {
+        return def;
+    }
+    return {
+        ...def,
+        thoughtsKey:
+            def.id === "openai" ? "show_thoughts" : `${def.id}_show_thoughts`,
+    };
+}
+
 export const ENGINE_DEFINITIONS = Object.freeze(
-    RAW_ENGINE_DEFINITIONS.map((def) => enrichEngineDefinition(def)),
+    RAW_ENGINE_DEFINITIONS.map((def) =>
+        withThoughtsKey(enrichEngineDefinition(def)),
+    ),
 );
 
 export const LLM_ENGINE_IDS = Object.freeze(
@@ -269,6 +283,17 @@ export function getCustomHeadersSettingKey(engineId) {
 
 export function getCustomPayloadSettingKey(engineId) {
     return CUSTOM_PAYLOAD_SETTING_BY_ENGINE[engineId] || null;
+}
+
+/**
+ * Settings key for whether an LLM engine shows reasoning.
+ * OpenAI keeps the legacy `show_thoughts` key; other LLMs use `${id}_show_thoughts`.
+ * @param {string} engineId
+ * @returns {string | null}
+ */
+export function getThoughtsSettingKey(engineId) {
+    const key = getEngineDefinition(engineId)?.thoughtsKey;
+    return key || null;
 }
 
 /**

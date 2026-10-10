@@ -14,6 +14,48 @@ import {
     runAutoTranslateChain,
     tryTranslateHandlerOnce,
 } from "./auto-translate-chain.js";
+import {
+    buildCacheKey,
+    createCachingPort,
+    lookupCacheEntry,
+    postCachedTranslation,
+    translateCache,
+} from "./translate-cache.js";
+
+async function portWithTranslateCache({
+    message,
+    port,
+    state,
+    settings,
+    engine,
+    glossaryTerms,
+    requestId,
+}) {
+    if (settings?.translate_cache_enabled === false) {
+        return port;
+    }
+
+    const cacheKey = await buildCacheKey({
+        engine,
+        settings,
+        message,
+        glossaryTerms,
+    });
+    if (message?.bypassCache !== true) {
+        const hit = lookupCacheEntry(translateCache, cacheKey, false);
+        if (hit && String(hit.text || "").trim()) {
+            postCachedTranslation(port, state, requestId, hit);
+            return null;
+        }
+    }
+
+    return createCachingPort(port, {
+        initialEngine: engine === "auto" ? "" : engine,
+        onResult(entry) {
+            translateCache.set(cacheKey, entry);
+        },
+    });
+}
 
 export async function handleTranslateStart(message, port, state) {
     const requestId = message?.requestId;
@@ -32,10 +74,23 @@ export async function handleTranslateStart(message, port, state) {
             maxTerms: 20,
         });
 
+        const activePort = await portWithTranslateCache({
+            message,
+            port,
+            state,
+            settings,
+            engine,
+            glossaryTerms,
+            requestId,
+        });
+        if (!activePort) {
+            return;
+        }
+
         if (engine === "auto") {
             await runAutoTranslateChain(
                 message,
-                port,
+                activePort,
                 state,
                 settings,
                 glossaryTerms,
@@ -52,7 +107,7 @@ export async function handleTranslateStart(message, port, state) {
 
         if (isContentOnlyEngine(engine)) {
             postTranslateError(
-                port,
+                activePort,
                 state,
                 requestId,
                 t("translate.router.browserHint"),
@@ -64,7 +119,7 @@ export async function handleTranslateStart(message, port, state) {
         const handler = TRANSLATE_HANDLERS[handlerKey];
         if (!handler) {
             postTranslateError(
-                port,
+                activePort,
                 state,
                 requestId,
                 t("translate.router.unsupportedEngine", { engine }),
@@ -72,7 +127,7 @@ export async function handleTranslateStart(message, port, state) {
             return;
         }
 
-        await handler(requestWithGlossary, port, state);
+        await handler(requestWithGlossary, activePort, state);
     } catch (err) {
         // 任何前置异常（如 settings 缓存加载失败）都回传明确错误，
         // 避免 content 端静默等待超时（曾表现为"需点两次才翻译"）。

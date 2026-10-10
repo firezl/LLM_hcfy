@@ -1,3 +1,5 @@
+import { t } from "../i18n.js";
+
 const DEEPL_LANG_TABLE = {
     zh: "ZH",
     "zh-cn": "ZH",
@@ -96,7 +98,7 @@ export function buildDeepLRequestBody({ text, from, to, official = false }) {
     const targetLang = normalizeDeepLLanguage(to);
 
     if (!targetLang) {
-        throw new Error("DeepL 需要明确的目标语言");
+        throw new Error(t("translate.deepl.targetRequired"));
     }
 
     if (official) {

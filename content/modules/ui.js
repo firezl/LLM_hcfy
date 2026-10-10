@@ -1,7 +1,16 @@
 // content/modules/ui.js — auto-extracted from content_script.js
+import { placeFloatingBox } from "../../libs/bubble-position.mjs";
+
 (function (global) {
+    const BUTTON_SIZE = 28;
+    const BUTTON_GAP = 12;
+    const BUTTON_HIDE_MS = 4000;
+    const BUBBLE_ESTIMATED_WIDTH = 280;
+    const BUBBLE_ESTIMATED_HEIGHT = 120;
+
     function install(app) {
         const state = app.state;
+        let buttonHideTimer = null;
             function setBubbleState(bubble, state) {
                 if (!bubble) return;
                 bubble.dataset.state = state || "";
@@ -82,6 +91,87 @@
 
             function getUiButton() {
                 return app.getTranslateBtn?.() || null;
+            }
+
+            function clearButtonHideTimer() {
+                if (buttonHideTimer == null) return;
+                window.clearTimeout(buttonHideTimer);
+                buttonHideTimer = null;
+            }
+
+            function scheduleButtonHide() {
+                clearButtonHideTimer();
+                buttonHideTimer = window.setTimeout(() => {
+                    buttonHideTimer = null;
+                    const btn = getUiButton();
+                    if (btn && btn.style.display !== "none") {
+                        hideButton();
+                    }
+                }, BUTTON_HIDE_MS);
+            }
+
+            function viewportSize() {
+                return {
+                    viewportWidth: window.innerWidth || 0,
+                    viewportHeight: window.innerHeight || 0,
+                };
+            }
+
+            function anchorFromPoint(x, y) {
+                const pointX = Number(x) || 0;
+                const pointY = Number(y) || 0;
+                try {
+                    const sel = window.getSelection();
+                    if (sel && sel.rangeCount > 0) {
+                        const rect = sel.getRangeAt(0).getBoundingClientRect();
+                        if (
+                            rect &&
+                            Number.isFinite(rect.top) &&
+                            (rect.width || rect.height)
+                        ) {
+                            const bottom = Number.isFinite(rect.bottom)
+                                ? rect.bottom
+                                : pointY;
+                            return {
+                                x: pointX,
+                                y: rect.top,
+                                width: 0,
+                                height: Math.max(0, bottom - rect.top),
+                            };
+                        }
+                    }
+                } catch (_err) {
+                    // Selection geometry is optional; fall back to a point.
+                }
+                return { x: pointX, y: pointY, width: 0, height: 0 };
+            }
+
+            function moveFloatingBox(el, anchor, boxWidth, boxHeight, gap) {
+                const view = viewportSize();
+                const placed = placeFloatingBox(
+                    anchor,
+                    boxWidth,
+                    boxHeight,
+                    view.viewportWidth,
+                    view.viewportHeight,
+                    8,
+                    gap,
+                );
+                const nextLeft = `${placed.left}px`;
+                const nextTop = `${placed.top}px`;
+                if (el.style.left !== nextLeft) el.style.left = nextLeft;
+                if (el.style.top !== nextTop) el.style.top = nextTop;
+            }
+
+            function bindBubbleControl(el, onClick) {
+                if (!el) return;
+                el.addEventListener("mousedown", (event) => {
+                    event.stopPropagation();
+                });
+                el.addEventListener("click", (event) => {
+                    event.stopPropagation();
+                    if (onClick) onClick(event);
+                });
             }
 
             function setTermTip(message, isError) {
@@ -265,8 +355,18 @@
                 app.ui.btn = btn;
                 btn.addEventListener("click", (e) => {
                     e.stopPropagation();
+                    clearButtonHideTimer();
                     app.onTranslateClick(e);
                 });
+                btn.addEventListener("mouseenter", () => {
+                    clearButtonHideTimer();
+                });
+                btn.addEventListener("mouseleave", () => {
+                    if (btn.style.display !== "none") {
+                        scheduleButtonHide();
+                    }
+                });
+                applyTheme(state.runtimeSettings?.theme_mode || "auto");
                 return btn;
             }
 
@@ -291,6 +391,13 @@
 
                 const closeBtn = bubble.querySelector(".jyt-close");
                 if (closeBtn) closeBtn.title = app.t("bubble.close.title");
+
+                const retryBtn = bubble.querySelector(".jyt-retry");
+                if (retryBtn) {
+                    const retryLabel = app.t("bubble.retry.title");
+                    retryBtn.title = retryLabel;
+                    retryBtn.textContent = retryLabel;
+                }
 
                 const thoughtDetails = bubble.querySelector("#jyt-thought");
                 const thoughtSummary = thoughtDetails?.querySelector("summary");
@@ -318,6 +425,7 @@
               <div class="jyt-header">
                 <span class="jyt-title"></span>
                 <div class="jyt-controls">
+                  <button class="jyt-retry" type="button"></button>
                   <button class="jyt-copy" type="button">
                     <svg viewBox="0 0 24 24"><path d="M16 1H4C2.9 1 2 1.9 2 3V17H4V3H16V1ZM19 5H8C6.9 5 6 5.9 6 7V21C6 22.1 6.9 23 8 23H19C20.1 23 21 22.1 21 21V7C21 5.9 20.1 5 19 5ZM19 21H8V7H19V21Z" /></svg>
                   </button>
@@ -332,7 +440,7 @@
               </div>
               <div class="jyt-content">
                 <div class="jyt-stream" id="jyt-stream"></div>
-                <details class="jyt-thought" id="jyt-thought"><summary></summary><div id="jyt-thought-content"></div></details>
+                <details class="jyt-thought" id="jyt-thought"><summary></summary><div class="jyt-thought-content" id="jyt-thought-content"></div></details>
               </div>
             `;
                 mount.appendChild(bubble);
@@ -351,8 +459,9 @@
                 let initialTop = 0;
 
                 header.addEventListener("mousedown", (e) => {
-                    if (e.target.closest("button")) return;
+                    if (e.target.closest("button, input, textarea")) return;
                     isDragging = true;
+                    bubble.dataset.jytUserPlaced = "1";
                     startX = e.clientX;
                     startY = e.clientY;
                     const rect = bubble.getBoundingClientRect();
@@ -382,6 +491,11 @@
                     bubble.style.display = "none";
                     state.isPinned = false;
                     updatePinState(bubble);
+                });
+
+                const retryBtn = bubble.querySelector(".jyt-retry");
+                bindBubbleControl(retryBtn, () => {
+                    app.retranslate?.({ bypassCache: true });
                 });
 
                 bubble.querySelector(".jyt-pin").addEventListener("click", (e) => {
@@ -448,19 +562,65 @@
                 bubble.querySelector("#jyt-thought-content").innerText = "";
             }
 
+            function ensureBubbleResizeObserver(bubble) {
+                if (bubble._jytResizeObserver || typeof ResizeObserver !== "function") {
+                    return;
+                }
+                const observer = new ResizeObserver(() => {
+                    if (bubble.dataset.jytUserPlaced === "1") return;
+                    if (!bubble.style.display || bubble.style.display === "none") return;
+                    const anchor = bubble._jytAnchor;
+                    if (!anchor) return;
+                    const rect = bubble.getBoundingClientRect();
+                    if (!rect.width || !rect.height) return;
+                    moveFloatingBox(bubble, anchor, rect.width, rect.height, 8);
+                });
+                observer.observe(bubble);
+                bubble._jytResizeObserver = observer;
+            }
+
             function positionButton(btn, x, y) {
-                btn.style.left = x + 12 + "px";
-                btn.style.top = y + 12 + "px";
+                moveFloatingBox(
+                    btn,
+                    { x: Number(x) || 0, y: Number(y) || 0, width: 0, height: 0 },
+                    BUTTON_SIZE,
+                    BUTTON_SIZE,
+                    BUTTON_GAP,
+                );
                 btn.style.display = "block";
+                if (typeof btn.matches === "function" && btn.matches(":hover")) {
+                    clearButtonHideTimer();
+                } else {
+                    scheduleButtonHide();
+                }
             }
 
             function positionBubble(bubble, x, y) {
-                bubble.style.left = x + 8 + "px";
-                bubble.style.top = y + 8 + "px";
+                if (!bubble) return;
+                const anchor = anchorFromPoint(x, y);
+                bubble._jytAnchor = anchor;
+                delete bubble.dataset.jytUserPlaced;
+                moveFloatingBox(
+                    bubble,
+                    anchor,
+                    BUBBLE_ESTIMATED_WIDTH,
+                    BUBBLE_ESTIMATED_HEIGHT,
+                    8,
+                );
                 bubble.style.display = "block";
+                const rect = bubble.getBoundingClientRect();
+                moveFloatingBox(
+                    bubble,
+                    anchor,
+                    rect.width || BUBBLE_ESTIMATED_WIDTH,
+                    rect.height || BUBBLE_ESTIMATED_HEIGHT,
+                    8,
+                );
+                ensureBubbleResizeObserver(bubble);
             }
 
             function hideButton() {
+                clearButtonHideTimer();
                 const btn = getUiButton();
                 if (btn) btn.style.display = "none";
             }

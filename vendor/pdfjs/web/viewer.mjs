@@ -14663,8 +14663,20 @@ const PDFViewerApplication = {
             appConfig.findBar?.toggleButton?.classList.add("hidden");
         }
         if (file) {
+            // 需要登录或人机验证的站点（如 OpenReview）必须带 cookie 才能取到 PDF；
+            // 但未获主机权限时，对 `Access-Control-Allow-Origin: *` 的站点带凭据会被 CORS 拒绝，故失败后不带凭据重试。
+            const preferCookies = /^https?:\/\//i.test(file);
             this.open({
                 url: file,
+                withCredentials: preferCookies,
+            }).catch((reason) => {
+                if (!preferCookies || reason instanceof InvalidPDFException) {
+                    throw reason;
+                }
+                return this.open({
+                    url: file,
+                    withCredentials: false,
+                });
             });
         } else {
             this._hideViewBookmark();

@@ -40,6 +40,29 @@
                     </select>
                     <div class="jyt-hint" data-i18n="options.general.pdfPrompt.hint"></div>
 
+                    <label data-i18n="options.general.triggerMode.label"></label>
+                    <select id="trigger_mode" data-jyt-setting="trigger_mode">
+                        <option value="button" data-i18n="options.general.triggerMode.button"></option>
+                        <option value="auto" data-i18n="options.general.triggerMode.auto"></option>
+                        <option value="alt" data-i18n="options.general.triggerMode.alt"></option>
+                    </select>
+                    <div class="jyt-hint" data-i18n="options.general.triggerMode.hint"></div>
+
+                    <label data-i18n="options.general.disabledSites.label"></label>
+                    <textarea
+                        id="disabled_sites"
+                        rows="5"
+                        data-i18n-ph="options.general.disabledSites.placeholder"
+                        data-jyt-setting="disabled_sites"></textarea>
+                    <div class="jyt-hint" data-i18n="options.general.disabledSites.hint"></div>
+
+                    <label data-i18n="options.general.translateCache.label"></label>
+                    <select id="translate_cache_enabled" data-jyt-setting="translate_cache_enabled">
+                        <option value="on" data-i18n="options.general.translateCache.on"></option>
+                        <option value="off" data-i18n="options.general.translateCache.off"></option>
+                    </select>
+                    <div class="jyt-hint" data-i18n="options.general.translateCache.hint"></div>
+
                     <label data-i18n="options.general.translateShortcut.label"></label>
                     <input
                         id="translate_shortcut"

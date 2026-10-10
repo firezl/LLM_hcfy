@@ -1,6 +1,13 @@
 import { BING_AUTH_TTL_MS, BING_TRANSLATOR_PAGE_URL } from "../constants.js";
+import {
+    fetchWithTimeout,
+    isFetchTimeoutError,
+    isUserAbortError,
+    reportTranslateFailure,
+} from "../fetch-utils.js";
+import { t, tDetail } from "../i18n.js";
 import { resolveLanguagePair } from "../language.js";
-import { postTranslateError, postTranslateTextResult } from "../port-utils.js";
+import { postTranslateTextResult } from "../port-utils.js";
 
 const bingAuthCache = {
     key: "",
@@ -30,13 +37,13 @@ function extractBingAuthTokens(html) {
     );
 
     if (!igMatch || !helperMatch) {
-        throw new Error("无法解析 Bing 翻译授权参数");
+        throw new Error(t("translate.bing.authParseFailed"));
     }
 
     const helperRaw = helperMatch[1];
     const pairMatch = helperRaw.match(/(\"([^\"]+)\"|\d+)\s*,\s*\"([^\"]+)\"/);
     if (!pairMatch) {
-        throw new Error("Bing 授权参数格式异常");
+        throw new Error(t("translate.bing.authFormatInvalid"));
     }
 
     const key = String((pairMatch[2] || pairMatch[1] || "").replace(/\"/g, ""));
@@ -45,13 +52,13 @@ function extractBingAuthTokens(html) {
     const iid = String(iidMatch?.[1] || "translator.5028");
 
     if (!key || !token || !ig) {
-        throw new Error("Bing 授权参数不完整");
+        throw new Error(t("translate.bing.authIncomplete"));
     }
 
     return { key, token, ig, iid };
 }
 
-async function ensureBingAuth(forceRefresh) {
+async function ensureBingAuth(forceRefresh, requestId, state) {
     if (
         !forceRefresh &&
         bingAuthCache.key &&
@@ -62,12 +69,18 @@ async function ensureBingAuth(forceRefresh) {
         return { ...bingAuthCache };
     }
 
-    const pageRes = await fetch(BING_TRANSLATOR_PAGE_URL, {
-        method: "GET",
-        cache: "no-store",
-    });
+    const pageRes = await fetchWithTimeout(
+        BING_TRANSLATOR_PAGE_URL,
+        {
+            method: "GET",
+            cache: "no-store",
+        },
+        { requestId, state },
+    );
     if (!pageRes.ok) {
-        throw new Error(`请求 Bing 页面失败: HTTP ${pageRes.status}`);
+        throw new Error(
+            tDetail("translate.bing.pageFailed", { status: pageRes.status }),
+        );
     }
 
     const html = await pageRes.text();
@@ -89,8 +102,8 @@ async function ensureBingAuth(forceRefresh) {
     return { ...bingAuthCache };
 }
 
-async function requestBingTranslate(from, to, text, forceAuthRefresh) {
-    const auth = await ensureBingAuth(!!forceAuthRefresh);
+async function requestBingTranslate(from, to, text, forceAuthRefresh, requestId, state) {
+    const auth = await ensureBingAuth(!!forceAuthRefresh, requestId, state);
     const endpoint = new URL("/ttranslatev3", auth.hostOrigin);
     endpoint.searchParams.set("isVertical", "1");
     endpoint.searchParams.set("IG", auth.ig);
@@ -104,23 +117,29 @@ async function requestBingTranslate(from, to, text, forceAuthRefresh) {
         key: auth.key,
     });
 
-    const res = await fetch(endpoint.toString(), {
-        method: "POST",
-        headers: {
-            Accept: "application/json, text/plain, */*",
-            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-            "X-Requested-With": "XMLHttpRequest",
+    const res = await fetchWithTimeout(
+        endpoint.toString(),
+        {
+            method: "POST",
+            headers: {
+                Accept: "application/json, text/plain, */*",
+                "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+                "X-Requested-With": "XMLHttpRequest",
+            },
+            body: body.toString(),
         },
-        body: body.toString(),
-    });
+        { requestId, state },
+    );
 
     if (!res.ok) {
-        throw new Error(`Bing 翻译请求失败: HTTP ${res.status}`);
+        throw new Error(
+            tDetail("translate.bing.httpFailed", { status: res.status }),
+        );
     }
 
     const raw = await res.text();
     if (!raw || !raw.trim()) {
-        throw new Error("Bing 翻译返回空响应");
+        throw new Error(t("translate.bing.emptyResponse"));
     }
 
     let data;
@@ -128,7 +147,7 @@ async function requestBingTranslate(from, to, text, forceAuthRefresh) {
         data = JSON.parse(raw);
     } catch (err) {
         const snippet = raw.slice(0, 120).replace(/\s+/g, " ");
-        throw new Error(`Bing 返回非 JSON 响应: ${snippet}`);
+        throw new Error(tDetail("translate.bing.nonJson", { snippet }));
     }
 
     const translated = Array.isArray(data)
@@ -139,7 +158,7 @@ async function requestBingTranslate(from, to, text, forceAuthRefresh) {
         : "";
 
     if (!translated) {
-        throw new Error("Bing 翻译返回为空");
+        throw new Error(t("translate.bing.empty"));
     }
 
     return translated;
@@ -152,18 +171,30 @@ export async function streamBingTranslate(request, port, state) {
     try {
         let translated = "";
         try {
-            translated = await requestBingTranslate(from, to, text, false);
+            translated = await requestBingTranslate(
+                from,
+                to,
+                text,
+                false,
+                requestId,
+                state,
+            );
         } catch (firstErr) {
-            translated = await requestBingTranslate(from, to, text, true);
+            if (isUserAbortError(firstErr) || isFetchTimeoutError(firstErr)) {
+                throw firstErr;
+            }
+            translated = await requestBingTranslate(
+                from,
+                to,
+                text,
+                true,
+                requestId,
+                state,
+            );
         }
 
         postTranslateTextResult(port, state, requestId, translated);
     } catch (err) {
-        postTranslateError(
-            port,
-            state,
-            requestId,
-            err && err.message ? err.message : String(err),
-        );
+        reportTranslateFailure(port, state, requestId, err);
     }
 }

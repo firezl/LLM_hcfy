@@ -26,6 +26,7 @@ $requiredPaths = @(
     "content/modules/bootstrap.js",
     "libs/shared-config.js",
     "libs/i18n-messages.js",
+    "libs/i18n-content-messages.js",
     "libs/i18n.js",
     "options/modules/dom-refs.js",
     "options/modules/ui-shell.js",
@@ -67,7 +68,7 @@ node --test tests/*.test.mjs
 $contentScript = @($manifest.content_scripts)[0]
 $expectedContentScripts = @(
     "libs/shared-config.js",
-    "libs/i18n-messages.js",
+    "libs/i18n-content-messages.js",
     "libs/i18n.js",
     "dist/content.bundle.js"
 )

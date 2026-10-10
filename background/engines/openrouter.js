@@ -3,6 +3,7 @@ import {
     buildOpenAIStyleMessages,
     resolveLanguagePair,
 } from "../language.js";
+import { t, tDetail } from "../i18n.js";
 import { postTranslateError, safePostMessage } from "../port-utils.js";
 import { mergeCustomHeaders } from "./custom-headers.js";
 import { mergeCustomPayload } from "./custom-payload.js";
@@ -299,7 +300,11 @@ async function streamOpenRouterResponse({
                 if (shouldRetry) {
                     res = await sendBody(fallbackBody);
                 } else {
-                    return { error: "OpenRouter 请求失败: " + textErr };
+                    return {
+                        error: tDetail("translate.engine.openrouter.requestFailed", {
+                            error: textErr,
+                        }),
+                    };
                 }
             }
 
@@ -343,13 +348,18 @@ export async function streamOpenRouterTranslate(request, port, state) {
             port,
             state,
             requestId,
-            "请在设置中配置 OpenRouter API Key",
+            t("translate.engine.openrouter.missingKey"),
         );
         return;
     }
 
     if (!model) {
-        postTranslateError(port, state, requestId, "请先选择 OpenRouter 模型");
+        postTranslateError(
+            port,
+            state,
+            requestId,
+            t("translate.engine.openrouter.missingModel"),
+        );
         return;
     }
 
