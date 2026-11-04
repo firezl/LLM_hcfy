@@ -129,6 +129,8 @@ export function buildCacheMaterial({
         requestedEngine === "auto"
             ? candidateProfiles(settings, buildAutoTranslateCandidates(settings))
             : [];
+    const usesGemini =
+        requestedEngine === "gemini" || profiles.some(({ engine }) => engine === "gemini");
     return {
         engine: requestedEngine,
         model:
@@ -136,6 +138,13 @@ export function buildCacheMaterial({
                 ? ""
                 : resolveEffectiveModel(settings, requestedEngine),
         candidates: profiles,
+        ...(usesGemini && {
+            geminiThinking: {
+                showThoughts: !!settings?.gemini_show_thoughts,
+                level: asText(settings?.gemini_thinking_level),
+                budget: asText(settings?.gemini_thinking_budget),
+            },
+        }),
         preferredFrom: asText(message?.preferredFrom),
         preferredTo: asText(message?.preferredTo),
         text: asText(message?.text),
@@ -188,7 +197,8 @@ export function createTranslateCache({ maxEntries = DEFAULT_MAX_ENTRIES } = {}) 
             if (entries.has(key)) {
                 entries.delete(key);
             }
-            entries.set(key, { engine: engineName, text });
+            const thought = engineName === "gemini" ? asText(value?.thought) : "";
+            entries.set(key, { engine: engineName, text, ...(thought && { thought }) });
             while (entries.size > limit) {
                 const oldest = entries.keys().next().value;
                 entries.delete(oldest);
@@ -237,6 +247,13 @@ export function postCachedTranslation(port, state, requestId, entry) {
         { type: "TRANSLATE_CHUNK", requestId, content: text },
         { type: "TRANSLATE_DONE", requestId },
     ];
+    if (engineName === "gemini" && entry.thought) {
+        messages.splice(1, 0, {
+            type: "TRANSLATE_THOUGHT",
+            requestId,
+            content: entry.thought,
+        });
+    }
     try {
         for (const message of messages) {
             port.postMessage(message);
@@ -259,6 +276,7 @@ export function createCachingPort(realPort, options = {}) {
     const onResult = typeof options.onResult === "function" ? options.onResult : null;
     let engine = asText(options.initialEngine).trim();
     let text = "";
+    let thought = "";
     let skipStore = false;
 
     return {
@@ -271,8 +289,11 @@ export function createCachingPort(realPort, options = {}) {
                 ) {
                     engine = asText(message.engine).trim();
                     text = "";
+                    thought = "";
                 } else if (type === "TRANSLATE_CHUNK") {
                     text += asText(message.content);
+                } else if (type === "TRANSLATE_THOUGHT" && engine === "gemini") {
+                    thought += asText(message.content);
                 } else if (
                     type === "TRANSLATE_USE_BROWSER" ||
                     type === "TRANSLATE_ERROR"
@@ -281,7 +302,7 @@ export function createCachingPort(realPort, options = {}) {
                 } else if (type === "TRANSLATE_DONE") {
                     if (!skipStore && engine && text.trim() && onResult) {
                         try {
-                            onResult({ engine, text });
+                            onResult({ engine, text, ...(thought && { thought }) });
                         } catch (_err) {
                             // Cache bookkeeping must not block the real port.
                         }

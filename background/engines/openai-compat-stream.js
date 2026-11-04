@@ -140,6 +140,7 @@ export function extractChoiceDelta(payload) {
  * @param {string} [options.errorPrefix] engine label used in error messages
  * @param {number} [options.firstByteTimeoutMs] time from fetch start until response headers. Default 15000.
  * @param {number} [options.idleTimeoutMs] max quiet time between body chunks. Default 25000.
+ * @param {boolean} [options.requireDone] require a parsed completion marker before succeeding.
  * @param {(signal: AbortSignal) => Promise<{ response?: Response, error?: string }>} options.requestStream
  *        Performs the fetch (and any retry logic). Return `{ response }` with a
  *        ready-to-stream Response, or `{ error }` with a fully-formed message.
@@ -154,6 +155,7 @@ export async function streamChatToPort(options) {
         errorPrefix = "",
         requestStream,
         parseLine,
+        requireDone = false,
     } = options || {};
     const firstByteTimeoutMs = resolveTimeoutMs(
         options?.firstByteTimeoutMs,
@@ -258,6 +260,7 @@ export async function streamChatToPort(options) {
         const reader = res.body.getReader();
         const decoder = new TextDecoder("utf-8");
         let done = false;
+        let receivedCompletion = false;
         let carry = "";
 
         while (!done) {
@@ -312,6 +315,7 @@ export async function streamChatToPort(options) {
                     }
 
                     if (delta.done) {
+                        receivedCompletion = true;
                         done = true;
                         break;
                     }
@@ -324,7 +328,7 @@ export async function streamChatToPort(options) {
         }
 
         // 处理流结束后 carry 中可能残留的最后一行（无尾部换行的 SSE data 行）
-        if (carry.trim()) {
+        if (!receivedCompletion && carry.trim()) {
             const parsed = parseLine(carry);
             if (parsed) {
                 const deltas = Array.isArray(parsed) ? parsed : [parsed];
@@ -332,6 +336,7 @@ export async function streamChatToPort(options) {
                     if (!delta) {
                         continue;
                     }
+                    if (delta.done) receivedCompletion = true;
                     if (delta.thought) {
                         safePostMessage(port, state, {
                             type: "TRANSLATE_THOUGHT",
@@ -350,6 +355,12 @@ export async function streamChatToPort(options) {
             }
         }
 
+        if (requireDone && !receivedCompletion) {
+            throw new Error(`${prefix}: stream ended before completion`);
+        }
+        if (requireDone) {
+            void reader.cancel().catch(() => {});
+        }
         armTimer("done");
         safePostMessage(port, state, { type: "TRANSLATE_DONE", requestId });
     } catch (err) {

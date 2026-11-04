@@ -144,10 +144,14 @@ import { getThoughtsSettingKey } from "../../libs/engine-registry.mjs";
 
             function handleTranslateFallback(currentRequest, message) {
                 const settings = state.runtimeSettings || {};
-                const { streamEl, thoughtEl } = currentRequest;
+                const { streamEl, thoughtEl, thoughtDetails } = currentRequest;
                 currentRequest.buffer = "";
                 currentRequest.thoughtBuffer = "";
                 thoughtEl.textContent = "";
+                if (thoughtDetails) {
+                    thoughtDetails.style.display = "none";
+                    thoughtDetails.removeAttribute("open");
+                }
                 applyActiveEngineSwitch(
                     currentRequest,
                     message.engine,
@@ -250,6 +254,7 @@ import { getThoughtsSettingKey } from "../../libs/engine-registry.mjs";
                         currentRequest.thoughtBuffer =
                             (currentRequest.thoughtBuffer || "") +
                             (message.content || "");
+                        touchActiveRequestTimeout(currentRequest);
                         scheduleRender();
                         return;
                     }
@@ -398,8 +403,11 @@ import { getThoughtsSettingKey } from "../../libs/engine-registry.mjs";
 
             function flushThoughtDisplay(request) {
                 if (!request?.isThinking || !request.thoughtEl) return;
-                const fromMessages = request.thoughtBuffer || "";
-                const thought = fromMessages || extractEmbeddedThought(request.buffer);
+                const fromMessages = request.thoughtBuffer;
+                const thought =
+                    (fromMessages?.trim() ? fromMessages : "") ||
+                    extractEmbeddedThought(request.buffer) ||
+                    (request.engine === "gemini" ? t("bubble.thought.noSummary") : "");
                 if (!thought) return;
                 request.thoughtEl.textContent = thought;
                 if (request.thoughtDetails) {
@@ -428,6 +436,10 @@ import { getThoughtsSettingKey } from "../../libs/engine-registry.mjs";
                         thoughtDetails,
                         isThinking,
                     } = currentRequest;
+                    if (!currentRequest.buffer) {
+                        applyExternalThought(thoughtEl, thoughtDetails, isThinking);
+                        return;
+                    }
                     const stuck = isStreamNearBottom(streamEl);
                     const previousScrollTop = streamEl?.scrollTop || 0;
                     renderContentAndThought(

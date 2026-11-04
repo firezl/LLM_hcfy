@@ -290,6 +290,43 @@ describe("translate cache", () => {
         });
         assert.equal(customModel.model, "my-model");
     });
+
+    it("caches and replays Gemini summaries separately from translated text", async () => {
+        const cache = createTranslateCache();
+        const input = { engine: "gemini", message: baseMessage() };
+        const key = await buildCacheKey({
+            ...input,
+            settings: { gemini_show_thoughts: true },
+        });
+        const withoutThoughts = await buildCacheKey({
+            ...input,
+            settings: { gemini_show_thoughts: false },
+        });
+        assert.notEqual(key, withoutThoughts);
+
+        const cachingPort = createCachingPort(null, {
+            initialEngine: "gemini",
+            onResult: (entry) => cache.set(key, entry),
+        });
+        cachingPort.postMessage({ type: "TRANSLATE_THOUGHT", content: "结合" });
+        cachingPort.postMessage({ type: "TRANSLATE_THOUGHT", content: "语境" });
+        cachingPort.postMessage({ type: "TRANSLATE_CHUNK", content: "你好" });
+        cachingPort.postMessage({ type: "TRANSLATE_DONE" });
+
+        const messages = [];
+        postCachedTranslation(
+            { postMessage: (message) => messages.push(message) },
+            { connected: true },
+            "cached-gemini",
+            cache.get(key),
+        );
+        assert.deepEqual(messages.map(({ type, content }) => [type, content]), [
+            ["TRANSLATE_ENGINE_STARTED", undefined],
+            ["TRANSLATE_THOUGHT", "结合语境"],
+            ["TRANSLATE_CHUNK", "你好"],
+            ["TRANSLATE_DONE", undefined],
+        ]);
+    });
 });
 
 function storageGet(store, keys) {

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { placeFloatingBox } from "../libs/bubble-position.mjs";
+import "../content/modules/ui.js";
 
 describe("placeFloatingBox", () => {
     it("places the box at the anchor bottom-right when it fits", () => {
@@ -67,4 +68,47 @@ describe("placeFloatingBox", () => {
             { left: 8, top: 8 },
         );
     });
+});
+
+it("keeps the bubble at the trigger point when the selection extends offscreen", (t) => {
+    let onResize;
+    globalThis.window = {
+        innerWidth: 800,
+        innerHeight: 600,
+        getSelection: () => ({
+            rangeCount: 1,
+            getRangeAt: () => ({
+                getBoundingClientRect: () => ({
+                    top: 100, bottom: 900, width: 300, height: 800,
+                }),
+            }),
+        }),
+    };
+    globalThis.ResizeObserver = class {
+        constructor(callback) {
+            onResize = callback;
+        }
+        observe() {}
+    };
+    t.after(() => {
+        delete globalThis.window;
+        delete globalThis.ResizeObserver;
+    });
+
+    const app = {};
+    globalThis.JYT_CS_UI.install(app);
+    let height = 60;
+    const bubble = {
+        style: {},
+        dataset: {},
+        getBoundingClientRect: () => ({ width: 200, height }),
+    };
+
+    app.positionBubble(bubble, 300, 240);
+    assert.equal(bubble.style.left, "308px");
+    assert.equal(bubble.style.top, "248px");
+
+    height = 140;
+    onResize();
+    assert.equal(bubble.style.top, "248px");
 });

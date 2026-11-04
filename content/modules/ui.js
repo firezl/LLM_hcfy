@@ -117,35 +117,6 @@ import { placeFloatingBox } from "../../libs/bubble-position.mjs";
                 };
             }
 
-            function anchorFromPoint(x, y) {
-                const pointX = Number(x) || 0;
-                const pointY = Number(y) || 0;
-                try {
-                    const sel = window.getSelection();
-                    if (sel && sel.rangeCount > 0) {
-                        const rect = sel.getRangeAt(0).getBoundingClientRect();
-                        if (
-                            rect &&
-                            Number.isFinite(rect.top) &&
-                            (rect.width || rect.height)
-                        ) {
-                            const bottom = Number.isFinite(rect.bottom)
-                                ? rect.bottom
-                                : pointY;
-                            return {
-                                x: pointX,
-                                y: rect.top,
-                                width: 0,
-                                height: Math.max(0, bottom - rect.top),
-                            };
-                        }
-                    }
-                } catch (_err) {
-                    // Selection geometry is optional; fall back to a point.
-                }
-                return { x: pointX, y: pointY, width: 0, height: 0 };
-            }
-
             function moveFloatingBox(el, anchor, boxWidth, boxHeight, gap) {
                 const view = viewportSize();
                 const placed = placeFloatingBox(
@@ -597,7 +568,7 @@ import { placeFloatingBox } from "../../libs/bubble-position.mjs";
 
             function positionBubble(bubble, x, y) {
                 if (!bubble) return;
-                const anchor = anchorFromPoint(x, y);
+                const anchor = { x: Number(x) || 0, y: Number(y) || 0 };
                 bubble._jytAnchor = anchor;
                 delete bubble.dataset.jytUserPlaced;
                 moveFloatingBox(

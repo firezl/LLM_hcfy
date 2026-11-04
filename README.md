@@ -66,6 +66,10 @@
 - **主要翻译模型**: 用于常规翻译的模型，如 \gpt-4o-mini\, \deepseek-chat\。
 - **深度思考开关**: 若您的模型支持推理/思考逻辑（如 \deepseek-reasoner\），启用“显示思考过程”选项后，弹窗中将渲染出可折叠的思考过程框。
 
+**Gemini** 使用默认 Google 地址时，Gemini 3 和 Gemini 4 Argon（`gemini-4-argon`）通过 Interactions API 流式翻译。开启 Gemini 的「显示思考过程」后，Google 返回的思考摘要会出现在弹窗的「思考」折叠区。如果这次调用只返回译文，展开思考区可看到相应提示。
+
+Gemini 2.5 的数值预算、Gemma、已有自定义请求体和自定义 Generate Content 代理继续使用原接口。需要为代理显式选择 Interactions API 时，可填写以 `/interactions` 结尾的地址，并使用该接口的自定义请求体字段。
+
 ### 2. 本地私有化模型 (Ollama)
 
 - **默认服务地址**: 默认为 \http://localhost:11434/api/chat\。您可以根据实际部署端口修改。

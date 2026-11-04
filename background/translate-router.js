@@ -52,6 +52,13 @@ async function portWithTranslateCache({
     return createCachingPort(port, {
         initialEngine: engine === "auto" ? "" : engine,
         onResult(entry) {
+            if (
+                entry.engine === "gemini" &&
+                settings.gemini_show_thoughts &&
+                !entry.thought?.trim()
+            ) {
+                return;
+            }
             translateCache.set(cacheKey, entry);
         },
     });
