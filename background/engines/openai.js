@@ -6,7 +6,7 @@ import {
 import { t, tDetail } from "../i18n.js";
 import { postTranslateError } from "../port-utils.js";
 import { mergeCustomHeaders } from "./custom-headers.js";
-import { mergeCustomPayload } from "./custom-payload.js";
+import { mergeCustomPayload, parseCustomPayload } from "./custom-payload.js";
 import {
     parseSseJsonLine,
     extractChoiceDelta,
@@ -17,8 +17,11 @@ import {
     getThinkingEnabledByEngine,
 } from "./thinking-utils.js";
 import { normalizeOpenAICompatEndpoint } from "./url-utils.js";
+import { isResponsesUrl, streamResponsesRequest } from "./responses-stream.js";
+import { resolveConfiguredModel } from "../../libs/default-settings.mjs";
 
 const DEFAULT_OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
+const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
 
 function parseOpenAIDeltaLine(line) {
     const payload = parseSseJsonLine(line);
@@ -49,7 +52,7 @@ export async function streamOpenAITranslate(request, port, state) {
         settings.openai_api_url,
         DEFAULT_OPENAI_API_URL,
     );
-    const key = settings.openai_api_key;
+    const key = String(settings?.openai_api_key || "").trim();
 
     if (!endpoint.ok) {
         postTranslateError(port, state, requestId, endpoint.error);
@@ -66,9 +69,7 @@ export async function streamOpenAITranslate(request, port, state) {
         return;
     }
 
-    const model = String(
-        settings.openai_model || "gpt-5.4-mini",
-    ).trim();
+    const model = resolveConfiguredModel(settings, "openai");
     const showThoughts = getThinkingEnabledByEngine("openai", settings);
     const promptParts = buildChatPromptParts(text, to, {
         glossaryTerms,
@@ -87,7 +88,6 @@ export async function streamOpenAITranslate(request, port, state) {
     const baseBody = {
         model,
         messages: buildOpenAIStyleMessages(promptParts),
-        temperature: 1.0,
         stream: true,
     };
 
@@ -96,6 +96,39 @@ export async function streamOpenAITranslate(request, port, state) {
         showThoughts,
         settings,
     });
+    const { headers } = mergeCustomHeaders(
+        {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${key}`,
+        },
+        request?.customHeaders,
+    );
+
+    const useOfficialResponses =
+        endpoint.url === DEFAULT_OPENAI_API_URL &&
+        !Object.keys(parseCustomPayload(request?.customPayload)).length &&
+        (/^gpt-6/i.test(model) ||
+            (!String(settings?.openai_api_url || "").trim() && /^gpt-5/i.test(model)));
+    if (useOfficialResponses || isResponsesUrl(endpoint.url)) {
+        const effort = thinkingPatch.reasoning_effort;
+        return streamResponsesRequest({
+            requestId,
+            port,
+            state,
+            url: useOfficialResponses ? OPENAI_RESPONSES_URL : endpoint.url,
+            headers,
+            model,
+            messages: baseBody.messages,
+            reasoning: effort && {
+                effort,
+                ...(showThoughts && effort !== "none" && { summary: "auto" }),
+            },
+            maxOutputTokens: Number(settings?.openai_max_completion_tokens),
+            showThoughts,
+            customPayload: request?.customPayload,
+            errorPrefix: "OpenAI",
+        });
+    }
 
     const primaryBody = {
         ...baseBody,
@@ -108,14 +141,6 @@ export async function streamOpenAITranslate(request, port, state) {
     const { body: fallbackBodyWithCustomPayload } = mergeCustomPayload(
         baseBody,
         request?.customPayload,
-    );
-
-    const { headers } = mergeCustomHeaders(
-        {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${key}`,
-        },
-        request?.customHeaders,
     );
 
     await streamChatToPort({

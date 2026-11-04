@@ -581,7 +581,7 @@
                         els.openai_api_url.value = items.openai_api_url;
                         els.openai_api_key.value = items.openai_api_key;
                         const savedOpenAIModel = String(
-                            items.openai_model || "gpt-5.4-mini",
+                            items.openai_model || DEFAULT_SETTINGS.openai_model,
                         ).trim();
                         els.openai_custom_model.value = items.openai_custom_model || "";
                         els.openai_custom_prompt.value =
@@ -657,7 +657,7 @@
                             "https://api.deepseek.com/chat/completions";
                         els.deepseek_api_key.value = items.deepseek_api_key || "";
                         const savedDeepSeekModel =
-                            items.deepseek_model || "deepseek-v4-flash";
+                            items.deepseek_model || DEFAULT_SETTINGS.deepseek_model;
                         els.deepseek_custom_model.value =
                             items.deepseek_custom_model || "";
                         els.deepseek_custom_prompt.value =
@@ -673,7 +673,7 @@
                         els.siliconflow_api_key.value =
                             items.siliconflow_api_key || "";
                         const savedSiliconFlowModel =
-                            items.siliconflow_model || "deepseek-ai/DeepSeek-V3";
+                            items.siliconflow_model || DEFAULT_SETTINGS.siliconflow_model;
                         els.siliconflow_custom_model.value =
                             items.siliconflow_custom_model || "";
                         els.siliconflow_custom_prompt.value =
@@ -686,7 +686,7 @@
                             items.qwen_api_url ||
                             "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
                         els.qwen_api_key.value = items.qwen_api_key || "";
-                        const savedQwenModel = items.qwen_model || "qwen3.5-plus";
+                        const savedQwenModel = items.qwen_model || DEFAULT_SETTINGS.qwen_model;
                         els.qwen_custom_model.value = items.qwen_custom_model || "";
                         els.qwen_custom_prompt.value = items.qwen_custom_prompt || "";
                         els.qwen_show_thoughts.value = items.qwen_show_thoughts
@@ -704,7 +704,7 @@
                             items.glm_api_url ||
                             "https://open.bigmodel.cn/api/paas/v4/chat/completions";
                         els.glm_api_key.value = items.glm_api_key || "";
-                        const savedGLMModel = items.glm_model || "glm-5.1";
+                        const savedGLMModel = items.glm_model || DEFAULT_SETTINGS.glm_model;
                         els.glm_custom_model.value = items.glm_custom_model || "";
                         els.glm_custom_prompt.value = items.glm_custom_prompt || "";
                         els.glm_show_thoughts.value = items.glm_show_thoughts
@@ -718,7 +718,7 @@
                             items.xiaomi_api_url ||
                             "https://api.xiaomimimo.com/v1/chat/completions";
                         els.xiaomi_api_key.value = items.xiaomi_api_key || "";
-                        const savedXiaomiModel = items.xiaomi_model || "mimo-v2.5";
+                        const savedXiaomiModel = items.xiaomi_model || DEFAULT_SETTINGS.xiaomi_model;
                         els.xiaomi_custom_model.value = items.xiaomi_custom_model || "";
                         els.xiaomi_custom_prompt.value =
                             items.xiaomi_custom_prompt || "";
@@ -738,9 +738,9 @@
                             : "0";
                         els.grok_api_url.value =
                             items.grok_api_url ||
-                            "https://api.x.ai/v1/chat/completions";
+                            DEFAULT_SETTINGS.grok_api_url;
                         els.grok_api_key.value = items.grok_api_key || "";
-                        const savedGrokModel = items.grok_model || "grok-4.3";
+                        const savedGrokModel = items.grok_model || DEFAULT_SETTINGS.grok_model;
                         els.grok_custom_model.value = items.grok_custom_model || "";
                         els.grok_custom_prompt.value = items.grok_custom_prompt || "";
                         els.grok_show_thoughts.value = items.grok_show_thoughts
@@ -753,7 +753,7 @@
                             "https://integrate.api.nvidia.com/v1/chat/completions";
                         els.nim_api_key.value = items.nim_api_key || "";
                         const savedNimModel =
-                            items.nim_model || "meta/llama-3.1-70b-instruct";
+                            items.nim_model || DEFAULT_SETTINGS.nim_model;
                         els.nim_custom_model.value = items.nim_custom_model || "";
                         els.nim_custom_prompt.value = items.nim_custom_prompt || "";
                         els.nim_show_thoughts.value = items.nim_show_thoughts
@@ -796,7 +796,7 @@
                             "https://api.anthropic.com/v1/messages";
                         els.claude_api_key.value = items.claude_api_key || "";
                         const savedClaudeModel =
-                            items.claude_model || "claude-sonnet-4-6";
+                            items.claude_model || DEFAULT_SETTINGS.claude_model;
                         els.claude_custom_model.value = items.claude_custom_model || "";
                         els.claude_custom_prompt.value =
                             items.claude_custom_prompt || "";
@@ -1027,7 +1027,7 @@
                             return;
                         }
                         if (!data.grok_api_url) {
-                            data.grok_api_url = "https://api.x.ai/v1/chat/completions";
+                            data.grok_api_url = DEFAULT_SETTINGS.grok_api_url;
                         }
                     }
 

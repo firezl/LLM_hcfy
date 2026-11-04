@@ -37,6 +37,7 @@
             overlay,
             els,
             modelLists,
+            defaultSettings,
             updateEngineDependentUI,
             showToast,
             settingsForm,
@@ -147,12 +148,12 @@
                 els.llm_engine_select.value = "openai";
                 els.openai_api_url.value =
                     els.openai_api_url.value ||
-                    "https://api.openai.com/v1/chat/completions";
+                    "https://api.openai.com/v1/responses";
                 populateOpenAICompatModelSelect(
                     els.openai_model,
                     els.openai_custom_model,
                     [],
-                    els.openai_model.value || "gpt-5.4-mini",
+                    els.openai_model.value || defaultSettings.openai_model,
                 );
                 els.show_thoughts.value = "false";
             } else if (value === "local") {

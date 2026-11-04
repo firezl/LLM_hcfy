@@ -28,7 +28,7 @@ export function supportsOpenAIReasoning(model) {
     }
     return (
         /^o[0-9]/.test(normalizedModel) ||
-        normalizedModel.startsWith("gpt-5") ||
+        /^gpt-[56](?:[.-]|$)/.test(normalizedModel) ||
         /^chatgpt-[0-9]/.test(normalizedModel) ||
         normalizedModel.includes("-reasoning")
     );
@@ -172,6 +172,15 @@ export function buildOpenAIThinkingPatch({ model, showThoughts, settings }) {
                   "medium",
               )
             : "none";
+        if (/^gpt-6/i.test(model) && patch.reasoning_effort === "minimal") {
+            patch.reasoning_effort = "low";
+        }
+        if (
+            /^gpt-6(?:-astra|\.1-sol)(?:-|$)/i.test(model) &&
+            patch.reasoning_effort === "none"
+        ) {
+            patch.reasoning_effort = "low";
+        }
 
         const maxCompletionTokens = Number(
             settings?.openai_max_completion_tokens,

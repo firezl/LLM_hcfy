@@ -10,6 +10,7 @@ import { mergeCustomPayload } from "./custom-payload.js";
 import { streamOpenAICompatRequest } from "./openai-compat-stream.js";
 import { getThinkingEnabledByEngine, pickThinkingModelType } from "./thinking-utils.js";
 import { normalizeOpenAICompatEndpoint } from "./url-utils.js";
+import { resolveConfiguredModel } from "../../libs/default-settings.mjs";
 
 /**
  * Builds a translate handler for an OpenAI-compatible chat completions API.
@@ -25,14 +26,13 @@ import { normalizeOpenAICompatEndpoint } from "./url-utils.js";
  * @param {string} [config.errorPrefixKey]  i18n key for the label, resolved per request
  * @param {string} config.apiUrlKey         settings key for the endpoint
  * @param {string} config.apiKeyKey         settings key for the API key
- * @param {string} config.modelKey          settings key for the model
  * @param {string} config.defaultUrl        fallback endpoint
- * @param {string} config.defaultModel      fallback model
  * @param {string} [config.missingKeyError] message when key is missing
  * @param {string} [config.missingKeyErrorKey] i18n key resolved per request
  * @param {(ctx: { model: string, promptContent: string, messages: object[], promptParts: object, showThoughts: boolean, settings: object }) => object} config.buildBody
- * @param {(key: string) => object} [config.buildHeaders]
+ * @param {(key: string, url: string) => object} [config.buildHeaders]
  * @param {(ctx: { showThoughts: boolean }) => boolean} [config.includeThoughts]
+ * @param {Function} [config.streamRequest] provider-specific transport override
  */
 export function createOpenAICompatTranslate(config) {
     const {
@@ -41,9 +41,7 @@ export function createOpenAICompatTranslate(config) {
         errorPrefixKey,
         apiUrlKey,
         apiKeyKey,
-        modelKey,
         defaultUrl,
-        defaultModel,
         missingKeyError,
         missingKeyErrorKey,
         buildBody,
@@ -67,7 +65,7 @@ export function createOpenAICompatTranslate(config) {
             defaultUrl,
         );
         const key = String(settings?.[apiKeyKey] || "").trim();
-        const model = String(settings?.[modelKey] || defaultModel).trim();
+        const model = resolveConfiguredModel(settings, engine);
         const showThoughts = getThinkingEnabledByEngine(engine, settings);
         const thinkingModelType = thinkingModelTypeKey
             ? pickThinkingModelType(settings?.[thinkingModelTypeKey], "auto")
@@ -103,6 +101,10 @@ export function createOpenAICompatTranslate(config) {
             );
             return;
         }
+        if (!model) {
+            postTranslateError(port, state, requestId, t("translate.engine.openai.missingModel"));
+            return;
+        }
 
         const baseBody = buildBody({
             model,
@@ -112,17 +114,18 @@ export function createOpenAICompatTranslate(config) {
             showThoughts,
             settings,
             thinkingModelType,
+            url: endpoint.url,
         });
         const { body } = mergeCustomPayload(
             baseBody,
             request?.customPayload,
         );
         const { headers } = mergeCustomHeaders(
-            buildHeaders(key),
+            buildHeaders(key, endpoint.url),
             request?.customHeaders,
         );
 
-        await streamOpenAICompatRequest({
+        const streamRequest = {
             requestId,
             port,
             state,
@@ -131,6 +134,10 @@ export function createOpenAICompatTranslate(config) {
             body,
             errorPrefix: resolvedPrefix,
             includeThoughts: includeThoughts({ showThoughts }),
-        });
+        };
+        await (config.streamRequest || streamOpenAICompatRequest)(
+            streamRequest,
+            { model, messages, showThoughts, settings, customPayload: request?.customPayload },
+        );
     };
 }

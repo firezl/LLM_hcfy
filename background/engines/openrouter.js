@@ -14,6 +14,7 @@ import {
 } from "./openai-compat-stream.js";
 import { pickOpenAIReasoningEffort } from "./thinking-utils.js";
 import { normalizeOpenAICompatEndpoint } from "./url-utils.js";
+import { resolveConfiguredModel } from "../../libs/default-settings.mjs";
 
 const DEFAULT_OPENROUTER_API_URL =
     "https://openrouter.ai/api/v1/chat/completions";
@@ -107,6 +108,12 @@ function normalizeOpenRouterModelItem(item) {
 function extractOpenRouterModelItems(payload) {
     const data = Array.isArray(payload?.data) ? payload.data : [];
     return data
+        .filter((item) => {
+            const input = item?.architecture?.input_modalities;
+            const output = item?.architecture?.output_modalities;
+            return (!Array.isArray(input) || input.includes("text")) &&
+                (!Array.isArray(output) || output.includes("text"));
+        })
         .map(normalizeOpenRouterModelItem)
         .filter((item) => item.id);
 }
@@ -326,9 +333,7 @@ export async function streamOpenRouterTranslate(request, port, state) {
         DEFAULT_OPENROUTER_API_URL,
     );
     const apiKey = String(settings?.openrouter_api_key || "").trim();
-    const model = String(
-        settings?.openrouter_model || DEFAULT_OPENROUTER_MODEL,
-    ).trim();
+    const model = resolveConfiguredModel(settings, "openrouter");
     const promptParts = buildChatPromptParts(text, to, {
         glossaryTerms,
         legacyCustomPromptTemplate:

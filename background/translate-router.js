@@ -159,22 +159,12 @@ async function runSingleEngineConnectionTest(engine, settings) {
     }
 
     const requestId = "connection-test-" + Date.now();
-    const request = {
+    const request = buildTranslateRequestForEngine({
         requestId,
         text: "Hello",
         from: "en",
         to: "zh",
-        settings,
-        glossaryTerms: [],
-        customPromptTemplate: "",
-        promptTemplates: {
-            legacy: "",
-            system: "",
-            user: "",
-        },
-        customHeaders: [],
-        customPayload: "",
-    };
+    }, settings, engine, []);
 
     const mockPort = {
         postMessage() {},

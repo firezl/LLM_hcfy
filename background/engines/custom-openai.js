@@ -17,10 +17,11 @@ import {
     getThinkingEnabledByEngine,
 } from "./thinking-utils.js";
 import { normalizeOpenAICompatEndpoint } from "./url-utils.js";
+import { isResponsesUrl, streamResponsesRequest } from "./responses-stream.js";
+import { resolveConfiguredModel } from "../../libs/default-settings.mjs";
 
 const DEFAULT_CUSTOM_OPENAI_API_URL =
     "https://api.openai.com/v1/chat/completions";
-const DEFAULT_CUSTOM_OPENAI_MODEL = "gpt-4o-mini";
 
 function parseCustomOpenAIDeltaLine(line) {
     const payload = parseSseJsonLine(line);
@@ -54,9 +55,7 @@ export async function streamCustomOpenAITranslate(request, port, state) {
         DEFAULT_CUSTOM_OPENAI_API_URL,
     );
     const apiKey = String(settings?.custom_openai_api_key || "").trim();
-    const model = String(
-        settings?.custom_openai_model || DEFAULT_CUSTOM_OPENAI_MODEL,
-    ).trim();
+    const model = resolveConfiguredModel(settings, "custom_openai");
     const showThoughts = getThinkingEnabledByEngine("custom_openai", settings);
     const promptParts = buildChatPromptParts(text, to, {
         glossaryTerms,
@@ -79,6 +78,10 @@ export async function streamCustomOpenAITranslate(request, port, state) {
             requestId,
             t("translate.engine.customOpenai.missingKey"),
         );
+        return;
+    }
+    if (!model) {
+        postTranslateError(port, state, requestId, t("translate.engine.openai.missingModel"));
         return;
     }
 
@@ -114,6 +117,23 @@ export async function streamCustomOpenAITranslate(request, port, state) {
         },
         request?.customHeaders,
     );
+    if (isResponsesUrl(endpoint.url)) {
+        const effort = thinkingPatch.reasoning_effort;
+        return streamResponsesRequest({
+            requestId,
+            port,
+            state,
+            url: endpoint.url,
+            headers,
+            model,
+            messages: baseBody.messages,
+            reasoning: effort && { effort },
+            maxOutputTokens: Number(settings?.custom_openai_max_completion_tokens),
+            showThoughts,
+            customPayload: request?.customPayload,
+            errorPrefix: "Custom OpenAI",
+        });
+    }
 
     await streamChatToPort({
         requestId,

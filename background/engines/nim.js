@@ -1,9 +1,9 @@
 import { createOpenAICompatTranslate } from "./openai-compat-engine.js";
 import { detectThinkingModelType, pickOpenAIReasoningEffort } from "./thinking-utils.js";
+import { DEFAULT_MODELS } from "../../libs/default-settings.mjs";
 
 const DEFAULT_NIM_API_URL =
     "https://integrate.api.nvidia.com/v1/chat/completions";
-const DEFAULT_NIM_MODEL = "meta/llama-3.1-70b-instruct";
 const DEFAULT_MAX_TOKENS = 4096;
 
 export const streamNimTranslate = createOpenAICompatTranslate({
@@ -11,12 +11,17 @@ export const streamNimTranslate = createOpenAICompatTranslate({
     errorPrefix: "NVIDIA NIM",
     apiUrlKey: "nim_api_url",
     apiKeyKey: "nim_api_key",
-    modelKey: "nim_model",
     defaultUrl: DEFAULT_NIM_API_URL,
-    defaultModel: DEFAULT_NIM_MODEL,
+    includeThoughts: ({ showThoughts }) => showThoughts,
     thinkingModelTypeKey: "nim_thinking_model_type",
     missingKeyErrorKey: "translate.engine.nim.missingKey",
-    buildBody: ({ model, messages, settings, showThoughts, thinkingModelType }) => {
+    buildBody: ({ model, messages, settings, showThoughts, thinkingModelType, url }) => {
+        if (
+            model === "meta/llama-3.1-70b-instruct" &&
+            new URL(url).origin === "https://integrate.api.nvidia.com"
+        ) {
+            model = DEFAULT_MODELS.nim;
+        }
         const body = {
             model,
             messages,

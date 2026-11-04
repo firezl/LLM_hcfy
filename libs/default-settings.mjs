@@ -1,3 +1,19 @@
+export const DEFAULT_MODELS = Object.freeze({
+    openai: "gpt-6-luna",
+    custom_openai: "gpt-4o-mini",
+    openrouter: "openrouter/free",
+    deepseek: "deepseek-flash",
+    siliconflow: "deepseek-ai/DeepSeek-V4.1-Flash",
+    qwen: "qwen3.8-flash",
+    glm: "glm-5.3",
+    xiaomi: "mimo-v2.6-flash",
+    grok: "grok-4.7",
+    nim: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
+    claude: "claude-sonnet-5-5",
+    gemini: "gemini-flash-latest",
+    ollama: "qwen3.5:latest",
+});
+
 /** Single source of truth for extension default settings (synced to shared-config.js). */
 export const DEFAULT_SETTINGS = {
     enabled: "on",
@@ -12,7 +28,7 @@ export const DEFAULT_SETTINGS = {
     target_lang: "auto",
     openai_api_url: "",
     openai_api_key: "",
-    openai_model: "gpt-5.4-mini",
+    openai_model: DEFAULT_MODELS.openai,
     openai_custom_model: "",
     openai_custom_prompt: "",
     openai_system_prompt: "",
@@ -25,7 +41,7 @@ export const DEFAULT_SETTINGS = {
     openai_max_completion_tokens: 0,
     custom_openai_api_url: "https://api.openai.com/v1/chat/completions",
     custom_openai_api_key: "",
-    custom_openai_model: "gpt-4o-mini",
+    custom_openai_model: DEFAULT_MODELS.custom_openai,
     custom_openai_custom_model: "",
     custom_openai_custom_prompt: "",
     custom_openai_system_prompt: "",
@@ -38,7 +54,7 @@ export const DEFAULT_SETTINGS = {
     custom_openai_max_completion_tokens: 0,
     openrouter_api_url: "https://openrouter.ai/api/v1/chat/completions",
     openrouter_api_key: "",
-    openrouter_model: "openrouter/free",
+    openrouter_model: DEFAULT_MODELS.openrouter,
     openrouter_custom_model: "",
     openrouter_custom_prompt: "",
     openrouter_system_prompt: "",
@@ -50,7 +66,7 @@ export const DEFAULT_SETTINGS = {
     openrouter_max_completion_tokens: 0,
     deepseek_api_url: "https://api.deepseek.com/chat/completions",
     deepseek_api_key: "",
-    deepseek_model: "deepseek-v4-flash",
+    deepseek_model: DEFAULT_MODELS.deepseek,
     deepseek_custom_model: "",
     deepseek_custom_prompt: "",
     deepseek_system_prompt: "",
@@ -61,7 +77,7 @@ export const DEFAULT_SETTINGS = {
     deepseek_thinking_model_type: "auto",
     siliconflow_api_url: "https://api.siliconflow.cn/v1/chat/completions",
     siliconflow_api_key: "",
-    siliconflow_model: "deepseek-ai/DeepSeek-V3",
+    siliconflow_model: DEFAULT_MODELS.siliconflow,
     siliconflow_custom_model: "",
     siliconflow_custom_prompt: "",
     siliconflow_system_prompt: "",
@@ -73,7 +89,7 @@ export const DEFAULT_SETTINGS = {
     qwen_api_url:
         "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
     qwen_api_key: "",
-    qwen_model: "qwen3.5-plus",
+    qwen_model: DEFAULT_MODELS.qwen,
     qwen_custom_model: "",
     qwen_custom_prompt: "",
     qwen_system_prompt: "",
@@ -85,7 +101,7 @@ export const DEFAULT_SETTINGS = {
     qwen_preserve_thinking: false,
     glm_api_url: "https://open.bigmodel.cn/api/paas/v4/chat/completions",
     glm_api_key: "",
-    glm_model: "glm-5.1",
+    glm_model: DEFAULT_MODELS.glm,
     glm_custom_model: "",
     glm_custom_prompt: "",
     glm_system_prompt: "",
@@ -97,7 +113,7 @@ export const DEFAULT_SETTINGS = {
     glm_clear_thinking: true,
     xiaomi_api_url: "https://api.xiaomimimo.com/v1/chat/completions",
     xiaomi_api_key: "",
-    xiaomi_model: "mimo-v2.5",
+    xiaomi_model: DEFAULT_MODELS.xiaomi,
     xiaomi_custom_model: "",
     xiaomi_custom_prompt: "",
     xiaomi_system_prompt: "",
@@ -107,9 +123,9 @@ export const DEFAULT_SETTINGS = {
     xiaomi_show_thoughts: false,
     xiaomi_thinking_model_type: "auto",
     xiaomi_max_completion_tokens: 0,
-    grok_api_url: "https://api.x.ai/v1/chat/completions",
+    grok_api_url: "https://api.x.ai/v1/responses",
     grok_api_key: "",
-    grok_model: "grok-4.3",
+    grok_model: DEFAULT_MODELS.grok,
     grok_custom_model: "",
     grok_custom_prompt: "",
     grok_system_prompt: "",
@@ -120,7 +136,7 @@ export const DEFAULT_SETTINGS = {
     grok_thinking_model_type: "auto",
     nim_api_url: "https://integrate.api.nvidia.com/v1/chat/completions",
     nim_api_key: "",
-    nim_model: "meta/llama-3.1-70b-instruct",
+    nim_model: DEFAULT_MODELS.nim,
     nim_custom_model: "",
     nim_custom_prompt: "",
     nim_system_prompt: "",
@@ -132,7 +148,7 @@ export const DEFAULT_SETTINGS = {
     nim_max_tokens: 0,
     claude_api_url: "https://api.anthropic.com/v1/messages",
     claude_api_key: "",
-    claude_model: "claude-sonnet-4-6",
+    claude_model: DEFAULT_MODELS.claude,
     claude_custom_model: "",
     claude_custom_prompt: "",
     claude_system_prompt: "",
@@ -147,7 +163,7 @@ export const DEFAULT_SETTINGS = {
     gemini_api_url:
         "https://generativelanguage.googleapis.com/v1beta/models",
     gemini_api_key: "",
-    gemini_model: "gemini-flash-latest",
+    gemini_model: DEFAULT_MODELS.gemini,
     gemini_custom_model: "",
     gemini_custom_prompt: "",
     gemini_system_prompt: "",
@@ -158,7 +174,7 @@ export const DEFAULT_SETTINGS = {
     gemini_thinking_level: "high",
     gemini_thinking_budget: -1,
     ollama_api_url: "http://localhost:11434/api/chat",
-    ollama_model: "qwen3.5:latest",
+    ollama_model: DEFAULT_MODELS.ollama,
     ollama_custom_model: "",
     ollama_custom_prompt: "",
     ollama_system_prompt: "",
@@ -181,3 +197,11 @@ export const DEFAULT_SETTINGS = {
     context_translate_mode: "enhanced",
     config_updated_at: 0,
 };
+
+export function resolveConfiguredModel(settings, engine) {
+    const key = `${engine}_model`;
+    const selected = String(settings?.[key] || DEFAULT_SETTINGS[key] || "").trim();
+    return selected === "custom"
+        ? String(settings?.[`${engine}_custom_model`] || "").trim()
+        : selected;
+}

@@ -48,6 +48,6 @@ describe("engine-conventions", () => {
             (cfg) => cfg.name === "deepseek",
         );
         assert.equal(deepseek.apiUrlId, "deepseek_api_url");
-        assert.equal(deepseek.defaultModel, "deepseek-v4-flash");
+        assert.equal(deepseek.defaultModel, "deepseek-flash");
     });
 });

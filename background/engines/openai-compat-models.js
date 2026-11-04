@@ -2,29 +2,24 @@ import { t, tDetail } from "../i18n.js";
 import { safePostMessage } from "../port-utils.js";
 import { mergeCustomHeaders } from "./custom-headers.js";
 import { normalizeOpenAICompatEndpoint } from "./url-utils.js";
+import { DEFAULT_SETTINGS } from "../../libs/default-settings.mjs";
 
 const DEFAULT_OPENAI_COMPAT_API_URL =
     "https://api.openai.com/v1/chat/completions";
 
 const PREDEFINED_QWEN_MODELS = [
+    "qwen3.8-flash",
+    "qwen3.8-max",
+    "qwen3.7-plus",
+    "qwen3.6-plus",
     "qwen3.5-plus",
     "qwen-plus",
-    "qwen-turbo",
-    "qwen-max",
-    "qwen-long",
-    "deepseek-v3",
-    "deepseek-r1",
-    "qwen2.5-72b-instruct",
-    "qwen2.5-14b-instruct",
-    "qwen2.5-7b-instruct",
-    "qwen2.5-coder-32b-instruct",
-    "qwen2.5-coder-7b-instruct",
+    "qwen-flash",
 ];
 
-function shouldFallbackToPredefinedModels(engine, apiUrl) {
-    const isQwen = engine === "qwen" || /qwen/i.test(engine || "");
-    const isDashScope = /dashscope/i.test(apiUrl || "");
-    return isQwen || isDashScope;
+function isDashScopeHost(hostname) {
+    return /^dashscope(?:-[a-z]+)?\.aliyuncs\.com$/.test(hostname) ||
+        hostname.endsWith(".maas.aliyuncs.com");
 }
 
 function sendPredefinedModels(port, state, requestId) {
@@ -35,8 +30,7 @@ function sendPredefinedModels(port, state, requestId) {
     });
 }
 
-function extractOpenAIModelIds(payload) {
-    const data = Array.isArray(payload?.data) ? payload.data : [];
+function extractOpenAIModelIds(data) {
     return Array.from(
         new Set(
             data.map((item) => String(item?.id || "").trim()).filter(Boolean),
@@ -44,16 +38,44 @@ function extractOpenAIModelIds(payload) {
     );
 }
 
+async function fetchDashScopeModelIds(url, headers, state) {
+    url.pathname = "/api/v1/models";
+    url.searchParams.set("capabilities", "TG");
+    url.searchParams.set("page_size", "100");
+    const modelIds = new Set();
+    let page = 1;
+    let seen = 0;
+
+    while (state?.connected !== false) {
+        url.searchParams.set("page_no", String(page++));
+        const response = await fetch(url.href, { method: "GET", headers });
+        if (!response.ok) throw new Error(`DashScope model list: HTTP ${response.status}`);
+
+        const payload = await response.json();
+        const { models, total } = payload?.output || {};
+        if (!Array.isArray(models)) throw new Error("Invalid DashScope model list");
+        for (const item of models) {
+            if (typeof item?.model === "string" && item.model.trim()) {
+                modelIds.add(item.model.trim());
+            }
+        }
+        seen += models.length;
+        if (!models.length || !Number.isFinite(total) || seen >= total) break;
+    }
+    return [...modelIds];
+}
+
 export async function handleOpenAICompatGetModels(message, port, state) {
     const requestId =
         message?.requestId || `openai-compat-models-${Date.now()}`;
 
-    const rawApiUrl = String(message?.apiUrl || "").trim();
+    const rawApiUrl = String(
+        message?.apiUrl ||
+        (message?.engine === "openai" ? DEFAULT_OPENAI_COMPAT_API_URL : "") ||
+        DEFAULT_SETTINGS[`${message?.engine}_api_url`] ||
+        "",
+    ).trim();
     if (!rawApiUrl) {
-        if (shouldFallbackToPredefinedModels(message?.engine, message?.apiUrl)) {
-            sendPredefinedModels(port, state, requestId);
-            return;
-        }
         safePostMessage(port, state, {
             type: "OPENAI_COMPAT_OP_ERROR",
             requestId,
@@ -68,10 +90,6 @@ export async function handleOpenAICompatGetModels(message, port, state) {
     );
 
     if (!endpoint.ok) {
-        if (shouldFallbackToPredefinedModels(message?.engine, message?.apiUrl)) {
-            sendPredefinedModels(port, state, requestId);
-            return;
-        }
         safePostMessage(port, state, {
             type: "OPENAI_COMPAT_OP_ERROR",
             requestId,
@@ -91,18 +109,35 @@ export async function handleOpenAICompatGetModels(message, port, state) {
         headers,
         message?.customHeaders,
     ).headers;
+    const modelsUrl = new URL(endpoint.modelsUrl);
+    const dashScope = isDashScopeHost(modelsUrl.hostname);
+    if (modelsUrl.origin === "https://api.x.ai") {
+        modelsUrl.pathname = "/v1/language-models";
+    }
 
     try {
-        const res = await fetch(endpoint.modelsUrl, {
+        if (dashScope) {
+            const modelIds = apiKey
+                ? await fetchDashScopeModelIds(modelsUrl, mergedHeaders, state)
+                : [];
+            if (!modelIds.length) {
+                sendPredefinedModels(port, state, requestId);
+                return;
+            }
+            safePostMessage(port, state, {
+                type: "OPENAI_COMPAT_MODELS_RESPONSE",
+                requestId,
+                modelIds,
+            });
+            return;
+        }
+
+        const res = await fetch(modelsUrl.href, {
             method: "GET",
             headers: mergedHeaders,
         });
 
         if (!res.ok) {
-            if (shouldFallbackToPredefinedModels(message?.engine, message?.apiUrl)) {
-                sendPredefinedModels(port, state, requestId);
-                return;
-            }
             const textErr = await res.text();
             safePostMessage(port, state, {
                 type: "OPENAI_COMPAT_OP_ERROR",
@@ -115,7 +150,8 @@ export async function handleOpenAICompatGetModels(message, port, state) {
         }
 
         const payload = await res.json();
-        const modelIds = extractOpenAIModelIds(payload);
+        const models = payload?.data ?? payload?.models;
+        const modelIds = extractOpenAIModelIds(Array.isArray(models) ? models : []);
 
         safePostMessage(port, state, {
             type: "OPENAI_COMPAT_MODELS_RESPONSE",
@@ -123,7 +159,7 @@ export async function handleOpenAICompatGetModels(message, port, state) {
             modelIds,
         });
     } catch (err) {
-        if (shouldFallbackToPredefinedModels(message?.engine, message?.apiUrl)) {
+        if (dashScope) {
             sendPredefinedModels(port, state, requestId);
             return;
         }

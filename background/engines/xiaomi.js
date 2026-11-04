@@ -2,27 +2,28 @@ import { createOpenAICompatTranslate } from "./openai-compat-engine.js";
 import { detectThinkingModelType } from "./thinking-utils.js";
 
 const DEFAULT_XIAOMI_API_URL = "https://api.xiaomimimo.com/v1/chat/completions";
-const DEFAULT_XIAOMI_MODEL = "mimo-v2.5";
 
 export const streamXiaomiTranslate = createOpenAICompatTranslate({
     engine: "xiaomi",
     errorPrefix: "Xiaomi",
     apiUrlKey: "xiaomi_api_url",
     apiKeyKey: "xiaomi_api_key",
-    modelKey: "xiaomi_model",
     defaultUrl: DEFAULT_XIAOMI_API_URL,
-    defaultModel: DEFAULT_XIAOMI_MODEL,
-    buildHeaders: (key) => ({
+    includeThoughts: ({ showThoughts }) => showThoughts,
+    buildHeaders: (key, url) => ({
         "Content-Type": "application/json",
-        "api-key": key,
         Authorization: `Bearer ${key}`,
+        ...(new URL(url).hostname !== "api.xiaomimimo.com" && { "api-key": key }),
     }),
     thinkingModelTypeKey: "xiaomi_thinking_model_type",
-    buildBody: ({ model, messages, showThoughts, settings, thinkingModelType }) => {
+    buildBody: ({ model, messages, showThoughts, settings, thinkingModelType, url }) => {
+        if (new URL(url).origin === "https://api.xiaomimimo.com") {
+            if (model === "mimo-v2.5") model = "mimo-v2.6-flash";
+            if (model === "mimo-v2.5-pro") model = "mimo-v2.6-pro";
+        }
         const body = {
             model,
             messages,
-            temperature: 1.0,
             stream: true,
         };
         const resolved =

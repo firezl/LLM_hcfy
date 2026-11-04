@@ -5,31 +5,22 @@ import {
 import { t } from "../i18n.js";
 import { postTranslateError } from "../port-utils.js";
 import { mergeCustomHeaders } from "./custom-headers.js";
-import { mergeCustomPayload } from "./custom-payload.js";
-import { streamChatToPort } from "./openai-compat-stream.js";
+import { mergeCustomPayload, parseCustomPayload } from "./custom-payload.js";
+import { parseSseJsonLine, streamChatToPort } from "./openai-compat-stream.js";
 import { normalizeFixedHttpEndpoint } from "./url-utils.js";
+import { resolveConfiguredModel } from "../../libs/default-settings.mjs";
 
 const DEFAULT_CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
-const DEFAULT_CLAUDE_MODEL = "claude-sonnet-4-6";
 
-function parseClaudeSSELine(line) {
-    const trimmed = String(line || "").trim();
-    if (!trimmed || !trimmed.startsWith("data:")) {
-        return null;
-    }
-    const payload = trimmed.substring(5).trim();
-    if (!payload || payload === "[DONE]") {
-        return null;
-    }
-    try {
-        return JSON.parse(payload);
-    } catch (err) {
-        return null;
-    }
+export function claudeApiVersion(url, customPayload = {}) {
+    const official = new URL(url).origin === "https://api.anthropic.com";
+    const usesRemovedSampling = ["temperature", "top_p", "top_k"]
+        .some((key) => Object.hasOwn(customPayload, key));
+    return official && !usesRemovedSampling ? "2026-10-21" : "2023-06-01";
 }
 
 function parseClaudeDeltaLine(line) {
-    const event = parseClaudeSSELine(line);
+    const event = parseSseJsonLine(line);
     if (!event) {
         return null;
     }
@@ -52,23 +43,33 @@ function parseClaudeDeltaLine(line) {
     return null;
 }
 
-function buildClaudeThinkingConfig(settings) {
+function buildClaudeThinkingConfig(model, settings, maxTokens) {
+    const sonnet55 = /^claude-sonnet-5-5(?:-|$)/i.test(model);
+    const alwaysThinking = /^claude-(?:(?:fable|mythos)(?:-preview|-5)|opus-5-5)(?:-|$)/i.test(model);
+    const adaptive =
+        alwaysThinking ||
+        /^claude-(?:sonnet|opus|haiku)-(?:5(?:-|$)|4-[678](?:-|$))/i.test(model);
+    const extendedOnly =
+        /^claude-(?:sonnet|opus|haiku)-4(?:-[015])?(?:-\d{8}|$)/i.test(model) ||
+        /^claude-3-7-sonnet/i.test(model);
+
     if (!settings?.claude_show_thoughts) {
-        return {
-            type: "disabled",
-        };
+        if (sonnet55) return { type: "between_tools" };
+        if (alwaysThinking) return { type: "adaptive", display: "omitted" };
+        return { type: "disabled" };
     }
 
     const mode = String(settings?.claude_thinking_mode || "adaptive")
         .trim()
         .toLowerCase();
-    if (mode === "enabled") {
+    if (extendedOnly || (!adaptive && mode === "enabled")) {
+        if (maxTokens <= 1024) return { type: "disabled" };
         const budget = Number(settings?.claude_thinking_budget);
         const budgetTokens =
             Number.isFinite(budget) && budget > 0 ? Math.floor(budget) : 2048;
         return {
             type: "enabled",
-            budget_tokens: budgetTokens,
+            budget_tokens: Math.min(maxTokens - 1, Math.max(1024, budgetTokens)),
             display: "summarized",
         };
     }
@@ -98,7 +99,7 @@ export async function streamClaudeTranslate(request, port, state) {
         },
     );
     const apiKey = String(settings?.claude_api_key || "").trim();
-    const model = String(settings?.claude_model || DEFAULT_CLAUDE_MODEL).trim();
+    const model = resolveConfiguredModel(settings, "claude");
     const maxTokensRaw = Number(settings?.claude_max_tokens);
     const maxTokens =
         Number.isFinite(maxTokensRaw) && maxTokensRaw > 0
@@ -127,15 +128,16 @@ export async function streamClaudeTranslate(request, port, state) {
         );
         return;
     }
-
-    const thinking = buildClaudeThinkingConfig(settings);
-    if (
-        thinking.type === "enabled" &&
-        Number.isFinite(thinking.budget_tokens) &&
-        thinking.budget_tokens >= maxTokens
-    ) {
-        thinking.budget_tokens = Math.max(1024, maxTokens - 1);
+    if (!model) {
+        postTranslateError(port, state, requestId, t("translate.engine.openai.missingModel"));
+        return;
     }
+
+    const thinking = buildClaudeThinkingConfig(model, settings, maxTokens);
+    const configuredEffort = String(settings?.claude_thinking_effort || "").toLowerCase();
+    const effort = ["low", "medium", "high"].includes(configuredEffort)
+        ? configuredEffort
+        : "medium";
 
     const baseBody = {
         model,
@@ -148,11 +150,15 @@ export async function streamClaudeTranslate(request, port, state) {
             },
         ],
         thinking,
+        ...((thinking.type === "adaptive" || thinking.type === "between_tools") && {
+            output_config: { effort: settings?.claude_show_thoughts ? effort : "low" },
+        }),
     };
     if (String(promptParts.systemPrompt || "").trim()) {
         baseBody.system = promptParts.systemPrompt;
     }
-    const { body } = mergeCustomPayload(baseBody, request?.customPayload);
+    const customPayload = parseCustomPayload(request?.customPayload);
+    const { body } = mergeCustomPayload(baseBody, customPayload);
 
     await streamChatToPort({
         requestId,
@@ -166,7 +172,7 @@ export async function streamClaudeTranslate(request, port, state) {
                     {
                         "Content-Type": "application/json",
                         "x-api-key": apiKey,
-                        "anthropic-version": "2023-06-01",
+                        "anthropic-version": claudeApiVersion(endpoint.url, customPayload),
                     },
                     request?.customHeaders,
                 ).headers,

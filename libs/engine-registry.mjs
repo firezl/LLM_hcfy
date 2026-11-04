@@ -7,6 +7,7 @@ import {
     enrichEngineDefinition,
     engineSectionId,
 } from "./engine-conventions.mjs";
+import { DEFAULT_MODELS } from "./default-settings.mjs";
 
 /** @typedef {'builtin' | 'llm'} EngineKind */
 
@@ -57,12 +58,12 @@ const RAW_ENGINE_DEFINITIONS = [
         id: "openai",
         kind: "llm",
         usesSharedOpenAiSection: true,
-        openaiCompat: { defaultModel: "gpt-5.4-mini" },
+        openaiCompat: { defaultModel: DEFAULT_MODELS.openai },
     },
     {
         id: "custom_openai",
         kind: "llm",
-        openaiCompat: { defaultModel: "gpt-4o-mini" },
+        openaiCompat: { defaultModel: DEFAULT_MODELS.custom_openai },
     },
     { id: "openrouter", kind: "llm" },
     { id: "gemini", kind: "llm" },
@@ -70,37 +71,37 @@ const RAW_ENGINE_DEFINITIONS = [
     {
         id: "deepseek",
         kind: "llm",
-        openaiCompat: { defaultModel: "deepseek-v4-flash" },
+        openaiCompat: { defaultModel: DEFAULT_MODELS.deepseek },
     },
     {
         id: "siliconflow",
         kind: "llm",
-        openaiCompat: { defaultModel: "deepseek-ai/DeepSeek-V3" },
+        openaiCompat: { defaultModel: DEFAULT_MODELS.siliconflow },
     },
     {
         id: "qwen",
         kind: "llm",
-        openaiCompat: { defaultModel: "qwen3.5-plus" },
+        openaiCompat: { defaultModel: DEFAULT_MODELS.qwen },
     },
     {
         id: "glm",
         kind: "llm",
-        openaiCompat: { defaultModel: "glm-5.1" },
+        openaiCompat: { defaultModel: DEFAULT_MODELS.glm },
     },
     {
         id: "xiaomi",
         kind: "llm",
-        openaiCompat: { defaultModel: "mimo-v2.5" },
+        openaiCompat: { defaultModel: DEFAULT_MODELS.xiaomi },
     },
     {
         id: "grok",
         kind: "llm",
-        openaiCompat: { defaultModel: "grok-4.3" },
+        openaiCompat: { defaultModel: DEFAULT_MODELS.grok },
     },
     {
         id: "nim",
         kind: "llm",
-        openaiCompat: { defaultModel: "meta/llama-3.1-70b-instruct" },
+        openaiCompat: { defaultModel: DEFAULT_MODELS.nim },
     },
     { id: "ollama", kind: "llm" },
 ];

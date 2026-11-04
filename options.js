@@ -379,6 +379,7 @@ document.addEventListener("DOMContentLoaded", () => {
         overlay: onboarding,
         els,
         modelLists,
+        defaultSettings: DEFAULT_SETTINGS,
         updateEngineDependentUI,
         showToast,
         settingsForm,

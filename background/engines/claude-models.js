@@ -2,6 +2,7 @@ import { tDetail } from "../i18n.js";
 import { safePostMessage } from "../port-utils.js";
 import { mergeCustomHeaders } from "./custom-headers.js";
 import { normalizeFixedHttpEndpoint } from "./url-utils.js";
+import { claudeApiVersion } from "./claude.js";
 
 const DEFAULT_CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
 
@@ -68,7 +69,7 @@ export async function handleClaudeGetModels(message, port, state) {
     const apiKey = String(message?.apiKey || "").trim();
     const headers = {
         Accept: "application/json",
-        "anthropic-version": "2023-06-01",
+        "anthropic-version": claudeApiVersion(endpoint.modelsUrl),
     };
     if (apiKey) {
         headers["x-api-key"] = apiKey;
@@ -79,30 +80,37 @@ export async function handleClaudeGetModels(message, port, state) {
     ).headers;
 
     try {
-        const res = await fetch(endpoint.modelsUrl, {
-            method: "GET",
-            headers: mergedHeaders,
-        });
-
-        if (!res.ok) {
-            const textErr = await res.text();
-            safePostMessage(port, state, {
-                type: "CLAUDE_OP_ERROR",
-                requestId,
-                error: tDetail("translate.models.claudeFailed", {
-                    error: textErr || `${res.status} ${res.statusText}`,
-                }),
+        const url = new URL(endpoint.modelsUrl);
+        const modelIds = new Set();
+        const cursors = new Set();
+        while (state?.connected !== false) {
+            const res = await fetch(url.href, {
+                method: "GET",
+                headers: mergedHeaders,
             });
-            return;
+            if (!res.ok) {
+                const textErr = await res.text();
+                safePostMessage(port, state, {
+                    type: "CLAUDE_OP_ERROR",
+                    requestId,
+                    error: tDetail("translate.models.claudeFailed", {
+                        error: textErr || `${res.status} ${res.statusText}`,
+                    }),
+                });
+                return;
+            }
+            const payload = await res.json();
+            for (const id of extractClaudeModelIds(payload)) modelIds.add(id);
+            const cursor = payload?.last_id;
+            if (!payload?.has_more || !cursor || cursors.has(cursor)) break;
+            cursors.add(cursor);
+            url.searchParams.set("after_id", cursor);
         }
-
-        const payload = await res.json();
-        const modelIds = extractClaudeModelIds(payload);
 
         safePostMessage(port, state, {
             type: "CLAUDE_MODELS_RESPONSE",
             requestId,
-            modelIds,
+            modelIds: [...modelIds],
         });
     } catch (err) {
         safePostMessage(port, state, {

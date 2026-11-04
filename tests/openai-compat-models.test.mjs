@@ -76,7 +76,36 @@ describe("handleOpenAICompatGetModels", () => {
         assert.equal(messages.length, 1);
         assert.equal(messages[0].type, "OPENAI_COMPAT_MODELS_RESPONSE");
         assert.ok(messages[0].modelIds.includes("qwen3.5-plus"));
-        assert.ok(messages[0].modelIds.includes("deepseek-v3"));
+        assert.ok(messages[0].modelIds.includes("qwen3.8-flash"));
+    });
+
+    it("fetches the paginated DashScope text catalog from the configured workspace", async () => {
+        const pages = [];
+        globalThis.fetch = async (value, options) => {
+            const url = new URL(value);
+            assert.equal(url.hostname, "workspace.cn-beijing.maas.aliyuncs.com");
+            assert.equal(url.pathname, "/api/v1/models");
+            assert.equal(url.searchParams.get("capabilities"), "TG");
+            assert.equal(options.headers.Authorization, "Bearer test-key");
+            const page = url.searchParams.get("page_no");
+            pages.push(page);
+            return {
+                ok: true,
+                async json() {
+                    return { output: { total: 2, models: [
+                        { model: page === "1" ? "qwen3.8-flash" : "qwen3.8-max" },
+                    ] } };
+                },
+            };
+        };
+        const messages = [];
+        await handleOpenAICompatGetModels({
+            engine: "qwen",
+            apiUrl: "https://workspace.cn-beijing.maas.aliyuncs.com/compatible-mode/v1",
+            apiKey: "test-key",
+        }, { postMessage: (message) => messages.push(message) }, { connected: true });
+        assert.deepEqual(pages, ["1", "2"]);
+        assert.deepEqual(messages[0].modelIds, ["qwen3.8-flash", "qwen3.8-max"]);
     });
 
     it("falls back to predefined list when fetch fails for DashScope URL regardless of engine name", async () => {
@@ -107,6 +136,6 @@ describe("handleOpenAICompatGetModels", () => {
         assert.equal(messages.length, 1);
         assert.equal(messages[0].type, "OPENAI_COMPAT_MODELS_RESPONSE");
         assert.ok(messages[0].modelIds.includes("qwen3.5-plus"));
-        assert.ok(messages[0].modelIds.includes("deepseek-r1"));
+        assert.ok(messages[0].modelIds.includes("qwen3.8-max"));
     });
 });

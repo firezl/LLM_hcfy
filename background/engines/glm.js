@@ -3,16 +3,14 @@ import { detectThinkingModelType } from "./thinking-utils.js";
 
 const DEFAULT_GLM_API_URL =
     "https://open.bigmodel.cn/api/paas/v4/chat/completions";
-const DEFAULT_GLM_MODEL = "glm-5.1";
 
 export const streamGLMTranslate = createOpenAICompatTranslate({
     engine: "glm",
     errorPrefix: "GLM",
     apiUrlKey: "glm_api_url",
     apiKeyKey: "glm_api_key",
-    modelKey: "glm_model",
     defaultUrl: DEFAULT_GLM_API_URL,
-    defaultModel: DEFAULT_GLM_MODEL,
+    includeThoughts: ({ showThoughts }) => showThoughts,
     thinkingModelTypeKey: "glm_thinking_model_type",
     buildBody: ({ model, messages, showThoughts, settings, thinkingModelType }) => {
         const body = {
@@ -25,7 +23,11 @@ export const streamGLMTranslate = createOpenAICompatTranslate({
             thinkingModelType === "auto"
                 ? detectThinkingModelType(model)
                 : thinkingModelType;
-        if (resolved !== "none") {
+        if (/^glm-5\.3(?:-|$)/i.test(model)) {
+            body.thinking = { type: "enabled" };
+            body.reasoning_effort = showThoughts ? "high" : "low";
+            delete body.do_sample;
+        } else if (resolved !== "none") {
             body.thinking = {
                 type: showThoughts ? "enabled" : "disabled",
                 clear_thinking: settings?.glm_clear_thinking !== false,

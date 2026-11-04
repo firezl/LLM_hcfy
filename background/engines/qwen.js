@@ -6,14 +6,14 @@ import {
 import { t } from "../i18n.js";
 import { postTranslateError } from "../port-utils.js";
 import { mergeCustomHeaders } from "./custom-headers.js";
-import { mergeCustomPayload } from "./custom-payload.js";
+import { mergeCustomPayload, parseCustomPayload } from "./custom-payload.js";
 import { streamChatToPort } from "./openai-compat-stream.js";
 import { getThinkingEnabledByEngine } from "./thinking-utils.js";
 import { normalizeFixedHttpEndpoint } from "./url-utils.js";
+import { resolveConfiguredModel } from "../../libs/default-settings.mjs";
 
 const DEFAULT_QWEN_API_URL =
     "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
-const DEFAULT_QWEN_MODEL = "qwen3.5-plus";
 
 function parseQwenStreamLine(line) {
     const trimmed = String(line || "").trim();
@@ -85,7 +85,7 @@ export async function streamQwenTranslate(request, port, state) {
         },
     );
     const key = String(settings?.qwen_api_key || "").trim();
-    const model = String(settings?.qwen_model || DEFAULT_QWEN_MODEL).trim();
+    const model = resolveConfiguredModel(settings, "qwen");
     const showThoughts = getThinkingEnabledByEngine("qwen", settings);
     const promptParts = buildChatPromptParts(text, to, {
         glossaryTerms,
@@ -105,18 +105,19 @@ export async function streamQwenTranslate(request, port, state) {
         endpoint.url = endpoint.url.replace("/api/v1/services/aigc/text-generation/generation", "/compatible-mode/v1/chat/completions");
     }
 
-    if (!key) {
+    if (!key || !model) {
         postTranslateError(
             port,
             state,
             requestId,
-            t("translate.engine.qwen.missingKey"),
+            t(model ? "translate.engine.qwen.missingKey" : "translate.engine.openai.missingModel"),
         );
         return;
     }
 
     const isCompatibleMode = endpoint.url.includes("/compatible-mode/") || endpoint.url.includes("/chat/completions");
 
+    const customPayload = parseCustomPayload(request?.customPayload);
     let baseBody;
     if (isCompatibleMode) {
         baseBody = {
@@ -126,8 +127,14 @@ export async function streamQwenTranslate(request, port, state) {
             enable_thinking: showThoughts,
         };
         const thinkingBudget = Number(settings?.qwen_thinking_budget);
-        if (showThoughts && Number.isFinite(thinkingBudget) && thinkingBudget > 0) {
+        if (
+            showThoughts && Number.isFinite(thinkingBudget) && thinkingBudget > 0 &&
+            !customPayload.reasoning_effort
+        ) {
             baseBody.thinking_budget = Math.floor(thinkingBudget);
+        }
+        if (/^qwen3\.(?:8-(?:flash|max)|7-(?:plus|flash|max)|6-(?:plus|flash))(?:-|$)/i.test(model)) {
+            baseBody.preserve_thinking = !!settings?.qwen_preserve_thinking;
         }
     } else {
         const parameters = {
@@ -152,7 +159,7 @@ export async function streamQwenTranslate(request, port, state) {
         };
     }
 
-    const { body } = mergeCustomPayload(baseBody, request?.customPayload);
+    const { body } = mergeCustomPayload(baseBody, customPayload);
 
     await streamChatToPort({
         requestId,
@@ -167,6 +174,7 @@ export async function streamQwenTranslate(request, port, state) {
                         "Content-Type": "application/json",
                         Authorization: `Bearer ${key}`,
                         Accept: "text/event-stream",
+                        ...(!isCompatibleMode && { "X-DashScope-SSE": "enable" }),
                     },
                     request?.customHeaders,
                 ).headers,
